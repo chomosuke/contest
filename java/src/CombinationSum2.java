@@ -16,31 +16,31 @@ public class CombinationSum2 {
 
         ArrayList<List<Integer>> results = new ArrayList<>();
 
-        Deque<Combination> combinations = new ArrayDeque<>();
+        Queue<Combination> combinations = new ArrayDeque<>();
 
         // put all candidates into maybeResults
         for (Count count : counts) {
             Combination combination = new Combination();
             combination.add(count.value);
-            combinations.addLast(combination);
+            combinations.add(combination);
         }
 
         while (!combinations.isEmpty()) {
-            Combination combination = combinations.pollFirst();
+            Combination combination = combinations.poll();
 
             // see if this combination is a result
             if (combination.getSum() == target) {
                 results.add(combination.getList());
             } else if (combination.getSum() < target) {
                 for (int i = bSearch(counts, combination.getMax()); // with sorted counts, to ensure unique combination
-                     i < counts.size(); i++) {
+                    i < counts.size(); i++) {
                     // get some new combinations
                     Count count = counts.get(i);
                     if (count.count > combination.getCount(count.value)) {
                         // can make new combinations
                         Combination newCombination = combination.copy();
                         newCombination.add(count.value);
-                        combinations.addLast(newCombination);
+                        combinations.add(newCombination);
                     }
                 }
             }

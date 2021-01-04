@@ -1,11 +1,5 @@
-mod permute;
+mod total_n_queens;
 
 fn main() {
-    let vecs = permute(vec![1,2,3]);
-    for vec in vecs {
-        for e in vec {
-            print!("{} ", e);
-        }
-        print!("\n");
-    }
+    println!("{}", total_n_queens::total_n_queens(15));
 }

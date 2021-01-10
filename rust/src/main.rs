@@ -1,5 +1,5 @@
-mod total_n_queens;
+mod insert_interval;
 
 fn main() {
-    println!("{}", total_n_queens::total_n_queens(15));
+    println!("{:?}", insert_interval::insert(vec![vec![1,5]], vec![5,7]));
 }

@@ -1,5 +1,5 @@
-mod insert_interval;
+mod min_distance;
 
 fn main() {
-    println!("{:?}", insert_interval::insert(vec![vec![1,5]], vec![5,7]));
+    println!("{:?}", min_distance::min_distance("park".to_string(), "spake".to_string()));
 }

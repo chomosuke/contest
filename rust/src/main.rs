@@ -9,15 +9,17 @@ struct Scanner {
 }
 
 impl Scanner {
+    #[allow(dead_code)]
     pub fn new() -> Scanner {
         return Scanner {
             tokens: VecDeque::new(),
         };
     }
 
+    #[allow(dead_code)]
     pub fn next<T: FromStr>(&mut self) -> T where
         <T as FromStr>::Err: Debug {
-        let mut token = loop {
+        let token = loop {
             let front = self.tokens.pop_front();
             if let Some(token) = front {
                 break token;
@@ -38,6 +40,7 @@ impl Scanner {
         }
     }
 
+    #[allow(dead_code)]
     pub fn next_line(&mut self) -> String {
         if !self.tokens.is_empty() {
             panic!("You have unprocessed token");

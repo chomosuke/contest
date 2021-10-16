@@ -2,7 +2,7 @@ use std::io::stdin;
 use std::str::FromStr;
 use std::fmt::Debug;
 use std::any::type_name;
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 
 struct Scanner {
     tokens: VecDeque<String>,
@@ -56,19 +56,36 @@ impl Scanner {
 fn main() {
     let mut sc = Scanner::new();
     let n = sc.next::<usize>();
-    let mut events = Vec::<(i64, i64)>::with_capacity(n);
+    let mut titles = Vec::<Vec<u8>>::new();
     for _ in 0..n {
-        events.push((sc.next::<i64>(), sc.next::<i64>()));
+        titles.push(sc.next_line().into_bytes());
     }
-    events.sort_unstable();
-    let mut max_end = events[0].1;
-    let mut count = 0;
-    for (_, end) in &events[1..] {
-        if end < &max_end {
-            count += 1;
-        } else {
-            max_end = *end;
+    let mut title_len = 1;
+    loop {
+        let mut sub_strs =  HashSet::<&[u8]>::new();
+        for title in titles.iter() {
+            for i in 0..(title.len() - title_len) {
+                sub_strs.insert(&title[i..(i + title_len)]);
+            }
         }
+        // check everything
+        let mut guess = vec!['a' as u8; title_len];
+        'trail_with_current_len: loop {
+            if !sub_strs.contains(&*guess) {
+                println!("{}", String::from_utf8_lossy(&*guess));
+                return;
+            }
+            let mut last = guess.len() - 1;
+            guess[last] += 1;
+            while guess[last] > 'z' as u8 {
+                if last == 0 {
+                    break 'trail_with_current_len;
+                }
+                guess[last] = 'a' as u8;
+                last -= 1;
+                guess[last] += 1;
+            }
+        }
+        title_len += 1;
     }
-    println!("{}", count);
 }

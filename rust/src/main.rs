@@ -10,14 +10,14 @@ struct Scanner {
 
 impl Scanner {
     #[allow(dead_code)]
-    pub fn new() -> Scanner {
+    fn new() -> Scanner {
         return Scanner {
             tokens: VecDeque::new(),
         };
     }
 
     #[allow(dead_code)]
-    pub fn next<T: FromStr>(&mut self) -> T where
+    fn next<T: FromStr>(&mut self) -> T where
         <T as FromStr>::Err: Debug {
         let token = loop {
             let front = self.tokens.pop_front();
@@ -41,7 +41,7 @@ impl Scanner {
     }
 
     #[allow(dead_code)]
-    pub fn next_line(&mut self) -> String {
+    fn next_line(&mut self) -> String {
         if !self.tokens.is_empty() {
             panic!("You have unprocessed token");
         }
@@ -55,19 +55,20 @@ impl Scanner {
 
 fn main() {
     let mut sc = Scanner::new();
-    let n = sc.next::<i32>();
-    let k = sc.next::<i32>();
-    let mut disass = 0;
-    let mut ass = n;
-    for _ in 0..k {
-        let m = sc.next::<i32>();
-        for i in 0..m {
-            if sc.next::<i32>() == i + 1 {
-                ass -= 1;
-            } else if i != 0 {
-                disass += 1;
-            }
+    let n = sc.next::<usize>();
+    let mut events = Vec::<(i64, i64)>::with_capacity(n);
+    for _ in 0..n {
+        events.push((sc.next::<i64>(), sc.next::<i64>()));
+    }
+    events.sort_unstable();
+    let mut max_end = events[0].1;
+    let mut count = 0;
+    for (_, end) in &events[1..] {
+        if end < &max_end {
+            count += 1;
+        } else {
+            max_end = *end;
         }
     }
-    println!("{}", disass + ass);
+    println!("{}", count);
 }

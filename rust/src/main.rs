@@ -2,7 +2,7 @@ use std::io::stdin;
 use std::str::FromStr;
 use std::fmt::Debug;
 use std::any::type_name;
-use std::collections::{HashSet, VecDeque};
+use std::collections::{VecDeque};
 
 struct Scanner {
     tokens: VecDeque<String>,
@@ -55,37 +55,27 @@ impl Scanner {
 
 fn main() {
     let mut sc = Scanner::new();
-    let n = sc.next::<usize>();
-    let mut titles = Vec::<Vec<u8>>::new();
+    let n = sc.next::<i64>();
+    let m = sc.next::<i64>();
+    let asc = sc.next::<i32>() == 0;
     for _ in 0..n {
-        titles.push(sc.next_line().into_bytes());
+        sc.next_line();
     }
-    let mut title_len = 1;
-    loop {
-        let mut sub_strs =  HashSet::<&[u8]>::new();
-        for title in titles.iter() {
-            for i in 0..(title.len() - title_len) {
-                sub_strs.insert(&title[i..(i + title_len)]);
+
+    // simply implement selection sort
+    let mut swaps = Vec::<(i64, i64)>::new();
+    for end in (1..=m).rev() {
+        for i in 1..end {
+            if asc {
+                swaps.push((i, i + 1));
+            } else {
+                swaps.push((i + 1, i));
             }
         }
-        // check everything
-        let mut guess = vec!['a' as u8; title_len];
-        'trail_with_current_len: loop {
-            if !sub_strs.contains(&*guess) {
-                println!("{}", String::from_utf8_lossy(&*guess));
-                return;
-            }
-            let mut last = guess.len() - 1;
-            guess[last] += 1;
-            while guess[last] > 'z' as u8 {
-                if last == 0 {
-                    break 'trail_with_current_len;
-                }
-                guess[last] = 'a' as u8;
-                last -= 1;
-                guess[last] += 1;
-            }
-        }
-        title_len += 1;
+    }
+
+    println!("{}", m*(m-1)/2);
+    for swap in swaps {
+        println!("{} {}", swap.0, swap.1);
     }
 }

@@ -2,7 +2,8 @@ use std::io::stdin;
 use std::str::FromStr;
 use std::fmt::Debug;
 use std::any::type_name;
-use std::collections::{VecDeque};
+use std::collections::{HashMap, VecDeque};
+use std::iter::FromIterator;
 
 struct Scanner {
     tokens: VecDeque<String>,
@@ -55,27 +56,39 @@ impl Scanner {
 
 fn main() {
     let mut sc = Scanner::new();
-    let n = sc.next::<i64>();
-    let m = sc.next::<i64>();
-    let asc = sc.next::<i32>() == 0;
-    for _ in 0..n {
-        sc.next_line();
-    }
+    let t = sc.next::<i128>();
+    for _ in 0..t {
+        let n = sc.next::<usize>();
+        let mut counts = HashMap::<i128, i128>::new();
+        for _ in 0..n {
+            let k = sc.next::<i128>();
+            counts.insert(k, *counts.get(&k).unwrap_or(&(0 as i128)) + 1);
+        } // k is the filling flavor, v is the count
+        let mut counts_of_counts = HashMap::<i128, i128>::new();
+        for count_of_counts in counts.values() {
+            counts_of_counts.insert(
+                *count_of_counts,
+                *counts_of_counts.get(count_of_counts).unwrap_or(&(0 as i128)) + 1
+            );
+        } // k is the count, and v is the number of flavor with that count.
+        let counts_of_counts = Vec::from_iter(counts_of_counts.iter());
+        // in another word, v is the length of the string, and k is number of those string.
 
-    // simply implement selection sort
-    let mut swaps = Vec::<(i64, i64)>::new();
-    for end in (1..=m).rev() {
-        for i in 1..end {
-            if asc {
-                swaps.push((i, i + 1));
-            } else {
-                swaps.push((i + 1, i));
+        let mut max_k = counts_of_counts[0].0;
+        let mut biggest_k_i: usize = 0;
+        for i in 1..counts_of_counts.len() {
+            if counts_of_counts[i].0 > &max_k {
+                max_k = counts_of_counts[i].0;
+                biggest_k_i = i;
             }
         }
-    }
 
-    println!("{}", m*(m-1)/2);
-    for swap in swaps {
-        println!("{} {}", swap.0, swap.1);
+        let biggest_k = counts_of_counts[biggest_k_i];
+
+        let mut sum: i128 = - biggest_k.0 * biggest_k.1;
+        for (k, v) in counts_of_counts {
+            sum += k * v;
+        }
+        println!("{}", sum / (biggest_k.0 - 1) + biggest_k.1 - 1);
     }
 }

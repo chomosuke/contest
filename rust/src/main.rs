@@ -83,83 +83,30 @@ impl<K: Eq + Hash> CountMap<K> {
 
 fn main() {
     let mut sc = Scanner::new();
-    let t = sc.next::<usize>();
-    for _ in 0..t {
-
-        // input
-        let n = sc.next::<usize>();
-        let mut a = Vec::<usize>::with_capacity(n);
-        for _ in 0..n {
-            a.push(sc.next::<usize>() - 1);
+    let n = sc.next::<i64>();
+    let mut k = sc.next::<usize>();
+    let mut facts = Vec::<i64>::new();
+    for i in 1..=((n as f64).sqrt() as i64) {
+        if n % i == 0 {
+            k -= 1;
+            facts.push(i);
         }
-
-        // minimize max_c;
-        let mut existing_c = HashMap::<usize, usize>::new();
-        let mut count = 0;
-        for i in 0..n {
-            if !existing_c.contains_key(&a[i]) {
-                existing_c.insert(a[i], count);
-                count += 1;
-            }
+        if k == 0 {
+            break;
         }
-        let max_c = count - 1;
-        for i in 0..n {
-            let temp = existing_c.get(&a[i]).unwrap();
-            a[i] = *temp;
-        }
-
-        let mut num_before = Vec::<Vec<usize>>::with_capacity(n + 1);
-        // num_before[i][c] = number of c before i exclusive.
-
-        num_before.push(vec![0; max_c + 1]);
-        for i in 1..=a.len() {
-            num_before.push(Vec::<usize>::with_capacity(max_c + 1));
-            for c in 0..=max_c {
-                let prev = num_before[i - 1][c];
-                num_before[i].push(prev);
-            }
-            num_before[i][a[i - 1]] += 1;
-        }
-
-        let mut max_num_c_between = HashMap::<(usize, usize), usize>::new();
-        // max_num_c_between.get((start, end)); the maximum number of same c that is in [start, end)
-
-        let mut max_p = 0;
-        for c in 0..=max_c {
-            let mut start = 0 as usize;
-            let mut end = n;
-            'outer: while end > start {
-                // now count the max_num_c_between
-                if !max_num_c_between.contains_key(&(start, end)) {
-                    max_num_c_between.insert((start, end), 0);
-                    for c in 0..=max_c {
-                        max_num_c_between.insert(
-                            (start, end),
-                            max(
-                                num_before[end][c] - num_before[start][c],
-                                *max_num_c_between.get(&(start, end)).unwrap()
-                            ),
-                        );
-                    }
-                }
-                max_p = max(
-                    max_p,
-                    num_before[start][c] * 2 + *max_num_c_between.get(&(start, end)).unwrap()
-                );
-                // now move start and end
-                let prev_before = num_before[start][c];
-                while num_before[start][c] == prev_before {
-                    start += 1;
-                    if start >= n {
-                        break 'outer;
-                    }
-                }
-                while num_before[n][c] - num_before[end][c] == prev_before {
-                    end -= 1;
-                }
-            }
-        }
-
-        println!("{}", max_p);
     }
+    if k == 0 {
+        println!("{}", facts.pop().unwrap());
+    } else {
+        let len = facts.len();
+        if n == facts[len - 1] * facts[len - 1] {
+            k += 1;
+        }
+        if len < k {
+            println!("{}", -1);
+        } else {
+            println!("{}", n / facts[len - k]);
+        }
+    }
+    
 }

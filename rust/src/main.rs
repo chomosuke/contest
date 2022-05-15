@@ -82,10 +82,27 @@ impl<K: Eq + Hash> CountMap<K> {
 
 fn main() {
     let mut sc = Scanner::new();
-    let l = sc.next::<i128>();
-    let r = sc.next::<i128>();
-    println!("YES");
-    for i in (l..r).step_by(2) {
-        println!("{} {}", i, i + 1);
+    let n = sc.next::<i128>();
+    let k = sc.next::<i128>();
+    let mut al = Vec::with_capacity(n as usize);
+    for i in 1..=n {
+        al.push((sc.next::<i128>(), i));
+    }
+    al.sort_unstable();
+    let mut m = 0;
+    let mut ts = 0;
+    let mut il = Vec::new();
+    for inst in al {
+        ts += inst.0;
+        if ts <= k {
+            m += 1;
+            il.push(inst.1);
+        } else {
+            break;
+        }
+    }
+    println!("{}", m);
+    for i in il {
+        print!("{} ", i);
     }
 }

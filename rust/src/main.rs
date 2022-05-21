@@ -82,27 +82,51 @@ impl<K: Eq + Hash> CountMap<K> {
 
 fn main() {
     let mut sc = Scanner::new();
-    let n = sc.next::<i128>();
-    let k = sc.next::<i128>();
-    let mut al = Vec::with_capacity(n as usize);
-    for i in 1..=n {
-        al.push((sc.next::<i128>(), i));
-    }
-    al.sort_unstable();
-    let mut m = 0;
-    let mut ts = 0;
-    let mut il = Vec::new();
-    for inst in al {
-        ts += inst.0;
-        if ts <= k {
-            m += 1;
-            il.push(inst.1);
-        } else {
-            break;
+    let t = sc.next::<u16>();
+
+    for _ in 0..t {
+        let n = sc.next::<usize>();
+        let m = sc.next::<usize>();
+
+        let mut board = Vec::<Vec<u64>>::with_capacity(n);
+        for _ in 0..n {
+            let mut row = Vec::<u64>::with_capacity(m);
+            for _ in 0..m {
+                row.push(sc.next::<u64>());
+            }
+            board.push(row);
         }
-    }
-    println!("{}", m);
-    for i in il {
-        print!("{} ", i);
+
+        // now find max sum
+        let mut max_sum = 0;
+        for i in 0..n {
+            for j in 0..m {
+                max_sum = max(max_sum, sum(&board, i, j));
+            }
+        }
+
+        println!("{}", max_sum);
     }
 }
+
+fn sum(board: &Vec<Vec<u64>>, i: usize, j: usize) -> u64 {
+    let mut sum: u64 = 0;
+
+    for r in 0..board.len() {
+        if r == i {
+            sum += board[i][j];
+        } else {
+            let c = r as i64 - i as i64 + j as i64;
+            if c >= 0 && (c as usize) < board[r].len() {
+                sum += board[r][c as usize];
+            }
+            let c = i as i64 - r as i64  + j as i64;
+            if c >= 0 && (c as usize) < board[r].len() {
+                sum += board[r][c as usize];
+            }
+        }
+    }
+
+    sum
+}
+

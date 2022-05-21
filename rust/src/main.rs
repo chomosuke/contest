@@ -80,53 +80,66 @@ impl<K: Eq + Hash> CountMap<K> {
     }
 }
 
+type Point = (i128, i128);
+
 fn main() {
     let mut sc = Scanner::new();
-    let t = sc.next::<u16>();
+    let t = sc.next::<i128>();
 
     for _ in 0..t {
         let n = sc.next::<usize>();
-        let m = sc.next::<usize>();
+        let k = sc.next::<i128>();
 
-        let mut board = Vec::<Vec<u64>>::with_capacity(n);
+        let mut points = Vec::<Point>::with_capacity(n);
         for _ in 0..n {
-            let mut row = Vec::<u64>::with_capacity(m);
-            for _ in 0..m {
-                row.push(sc.next::<u64>());
-            }
-            board.push(row);
+            let point = (sc.next::<i128>(), sc.next::<i128>());
+            points.push(point);
         }
 
-        // now find max sum
-        let mut max_sum = 0;
-        for i in 0..n {
-            for j in 0..m {
-                max_sum = max(max_sum, sum(&board, i, j));
-            }
-        }
+        let edges = find_edges(&points);
 
-        println!("{}", max_sum);
+        println!("{}", if solve(&points, &edges, k) { 1 } else { -1 });
     }
 }
 
-fn sum(board: &Vec<Vec<u64>>, i: usize, j: usize) -> u64 {
-    let mut sum: u64 = 0;
+type Edges = (Point, Point, Point, Point);
 
-    for r in 0..board.len() {
-        if r == i {
-            sum += board[i][j];
-        } else {
-            let c = r as i64 - i as i64 + j as i64;
-            if c >= 0 && (c as usize) < board[r].len() {
-                sum += board[r][c as usize];
-            }
-            let c = i as i64 - r as i64  + j as i64;
-            if c >= 0 && (c as usize) < board[r].len() {
-                sum += board[r][c as usize];
-            }
+fn find_edges(points: &Vec<Point>) -> Edges {
+    let mut tl = points[0];
+    let mut tr = points[0];
+    let mut bl = points[0];
+    let mut br = points[0];
+    for point in points.iter() {
+        if point.0 + point.1 < tl.0 + tl.1 {
+            tl = *point;
+        }
+        if point.0 - point.1 > tr.0 - tr.1 {
+            tr = *point;
+        }
+        if point.0 - point.1 < bl.0 - bl.1 {
+            bl = *point;
+        }
+        if point.0 + point.1 > br.0 + br.1 {
+            br = *point;
         }
     }
 
-    sum
+    (tl, tr, bl, br)
+}
+
+fn solve(points: &Vec<Point>, edges: &Edges, k: i128) -> bool {
+    for point in points.iter() {
+        if md(&edges.0, point) <= k
+        && md(&edges.1, point) <= k
+        && md(&edges.2, point) <= k
+        && md(&edges.3, point) <= k {
+            return true;
+        }
+    }
+    return false;
+}
+
+fn md(p1: &Point, p2: &Point) -> i128 {
+    (p1.0 - p2.0).abs() + (p1.1 - p2.1).abs()
 }
 

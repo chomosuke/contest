@@ -107,20 +107,10 @@ impl<K: Eq + Hash> CountMap<K> {
 
 fn main() {
     let mut sc = Scanner::new();
-    sc.add_delimiter(':');
+    let n = sc.next::<i128>();
+    let a = sc.next::<i128>();
+    let b = sc.next::<i128>();
 
-    let h1 = sc.next::<i128>();
-    let m1 = sc.next::<i128>();
-    let h2 = sc.next::<i128>();
-    let m2 = sc.next::<i128>();
-
-    let m1 = m1 + h1 * 60;
-    let m2 = m2 + h2 * 60;
-
-    let m3 = (m1 + m2) / 2;
-    let h3 = m3 / 60;
-    let m3 = m3 % 60;
-
-    println!("{:02}:{:02}", h3, m3);
+    println!("{}", (a + b - 1).rem_euclid(n) + 1);
 }
 

@@ -105,12 +105,32 @@ impl<K: Eq + Hash> CountMap<K> {
     }
 }
 
+#[allow(dead_code)]
+type I = i128;
+#[allow(dead_code)]
+type U = usize;
+
 fn main() {
     let mut sc = Scanner::new();
-    let n = sc.next::<i128>();
-    let a = sc.next::<i128>();
-    let b = sc.next::<i128>();
+    let n = sc.next();
 
-    println!("{}", (a + b - 1).rem_euclid(n) + 1);
+    let mut a = Vec::<I>::with_capacity(n);
+    for _ in 0..n {
+        a.push(sc.next());
+    }
+
+    let mut last_even = true;
+    for a in a.iter_mut() {
+        if *a % 2 != 0 {
+            if last_even {
+                *a += 1;
+            } else {
+                *a -= 1;
+            }
+            last_even = !last_even;
+        }
+        *a /= 2;
+        println!("{}", a);
+    }
 }
 

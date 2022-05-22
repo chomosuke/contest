@@ -1,7 +1,7 @@
 #![allow(unused_imports)]
 use std::any::type_name;
 use std::cmp::{max, min};
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::io::stdin;
@@ -9,13 +9,36 @@ use std::str::FromStr;
 
 struct Scanner {
     tokens: VecDeque<String>,
+    delimiters: Vec<char>,
 }
 impl Scanner {
     #[allow(dead_code)]
     fn new() -> Scanner {
         Scanner {
             tokens: VecDeque::new(),
+            delimiters: Vec::new(),
         }
+    }
+
+    #[allow(dead_code)]
+    fn add_delimiter(&mut self, delimiter: char) {
+        self.remove_delimiter(delimiter);
+        self.delimiters.push(delimiter);
+    }
+
+    #[allow(dead_code)]
+    fn remove_delimiter(&mut self, delimiter: char) {
+        let mut j = 0;
+        let mut i = 0;
+        while i < self.delimiters.len() {
+            while self.delimiters[i] == delimiter {
+                i += 1;
+            }
+            self.delimiters[j] = self.delimiters[i];
+            j += 1;
+            i += 1;
+        }
+        self.delimiters.truncate(j);
     }
 
     #[allow(dead_code)]
@@ -32,14 +55,16 @@ impl Scanner {
         };
         token
             .parse::<T>()
-            .unwrap_or_else(|_| panic!("input isn't a {}", type_name::<T>()))
+            .unwrap_or_else(|_| panic!("input {} isn't a {}", token, type_name::<T>()))
     }
 
     fn receive_input(&mut self) {
         let mut buffer = String::new();
         stdin().read_line(&mut buffer).expect("Failed to read.");
-        for token in buffer.split_whitespace() {
-            self.tokens.push_back(String::from(token));
+        for tokens in buffer.split_whitespace() {
+            for token in tokens.split(&self.delimiters[..]) {
+                self.tokens.push_back(String::from(token));
+            }
         }
     }
 
@@ -80,66 +105,22 @@ impl<K: Eq + Hash> CountMap<K> {
     }
 }
 
-type Point = (i128, i128);
-
 fn main() {
     let mut sc = Scanner::new();
-    let t = sc.next::<i128>();
+    sc.add_delimiter(':');
 
-    for _ in 0..t {
-        let n = sc.next::<usize>();
-        let k = sc.next::<i128>();
+    let h1 = sc.next::<i128>();
+    let m1 = sc.next::<i128>();
+    let h2 = sc.next::<i128>();
+    let m2 = sc.next::<i128>();
 
-        let mut points = Vec::<Point>::with_capacity(n);
-        for _ in 0..n {
-            let point = (sc.next::<i128>(), sc.next::<i128>());
-            points.push(point);
-        }
+    let m1 = m1 + h1 * 60;
+    let m2 = m2 + h2 * 60;
 
-        let edges = find_edges(&points);
+    let m3 = (m1 + m2) / 2;
+    let h3 = m3 / 60;
+    let m3 = m3 % 60;
 
-        println!("{}", if solve(&points, &edges, k) { 1 } else { -1 });
-    }
-}
-
-type Edges = (Point, Point, Point, Point);
-
-fn find_edges(points: &Vec<Point>) -> Edges {
-    let mut tl = points[0];
-    let mut tr = points[0];
-    let mut bl = points[0];
-    let mut br = points[0];
-    for point in points.iter() {
-        if point.0 + point.1 < tl.0 + tl.1 {
-            tl = *point;
-        }
-        if point.0 - point.1 > tr.0 - tr.1 {
-            tr = *point;
-        }
-        if point.0 - point.1 < bl.0 - bl.1 {
-            bl = *point;
-        }
-        if point.0 + point.1 > br.0 + br.1 {
-            br = *point;
-        }
-    }
-
-    (tl, tr, bl, br)
-}
-
-fn solve(points: &Vec<Point>, edges: &Edges, k: i128) -> bool {
-    for point in points.iter() {
-        if md(&edges.0, point) <= k
-        && md(&edges.1, point) <= k
-        && md(&edges.2, point) <= k
-        && md(&edges.3, point) <= k {
-            return true;
-        }
-    }
-    return false;
-}
-
-fn md(p1: &Point, p2: &Point) -> i128 {
-    (p1.0 - p2.0).abs() + (p1.1 - p2.1).abs()
+    println!("{:02}:{:02}", h3, m3);
 }
 

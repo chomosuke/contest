@@ -112,25 +112,41 @@ type U = usize;
 
 fn main() {
     let mut sc = Scanner::new();
-    let n = sc.next();
+    let t = sc.next();
 
-    let mut a = Vec::<I>::with_capacity(n);
-    for _ in 0..n {
-        a.push(sc.next());
-    }
+    for _ in 0..t {
+        sc.next::<I>();
+        let s = sc
+            .next_line()
+            .into_bytes();
 
-    let mut last_even = true;
-    for a in a.iter_mut() {
-        if *a % 2 != 0 {
-            if last_even {
-                *a += 1;
-            } else {
-                *a -= 1;
+        let mut count0 = 0;
+        for b in s.iter() {
+            if *b == b'0' {
+                count0 += 1;
             }
-            last_even = !last_even;
         }
-        *a /= 2;
-        println!("{}", a);
+
+        let mut o = Vec::new();
+        for (i, b) in s.iter().enumerate() {
+            if *b == b'1' && i < count0 {
+                o.push(i + 1);
+            }
+            if *b == b'0' && i >= count0 {
+                o.push(i + 1);
+            }
+        }
+
+        if o.is_empty() {
+            println!("0");
+            continue;
+        }
+        println!("1");
+        print!("{}", o.len());
+        for b in o.iter() {
+            print!(" {}", b);
+        }
+        println!();
     }
 }
 

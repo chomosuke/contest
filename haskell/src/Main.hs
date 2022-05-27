@@ -1,6 +1,7 @@
 module Main where
-import Control.Monad (replicateM)
+import Control.Monad (replicateM, when)
 
+-- helper for reading numbers
 getInts :: IO [Int]
 getInts = fmap getInts getLine
   where
@@ -9,16 +10,27 @@ getInts = fmap getInts getLine
       let h = read (takeWhile isNum s) :: Int
           t = getInts (dropWhile (not . isNum) (dropWhile isNum s)) :: [Int]
       in h:t
-
+getInt :: IO Int
 getInt = fmap head getInts
+linesBy :: (a -> Bool) -> [a] -> [[a]]
+linesBy predicate = foldr f []
+  where
+    f e (firstList:rest) = if predicate e
+      then []:firstList:rest
+      else (e:firstList):rest
+    f e [] = if predicate e
+      then [[]]
+      else [[e]]
+wordsBy :: (a -> Bool) -> [a] -> [[a]]
+wordsBy predicate xs = filter (not . null) (linesBy predicate xs)
 
 main :: IO ()
 main = do
-  n <- getInt
-  hs <- replicateM n getInt
-  print (solve hs 0)
+  str <- getLine
+  print (solve str)
 
-solve :: [Int] -> Int -> Int
-solve [h] currentHeight = abs (h - currentHeight) + 1
-solve (h:hs) currentHeight = abs (h - currentHeight) + 2 + solve hs h
-solve [] _ = 0
+solve :: String -> Int
+solve str = maximum (map ((1+) . length) (linesBy isVowels str))
+
+isVowels :: Char -> Bool
+isVowels = (`elem` "AEIOUY")

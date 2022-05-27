@@ -30,12 +30,12 @@ version :: Version
 version = Version [0,1,0,0] []
 bindir, libdir, dynlibdir, datadir, libexecdir, sysconfdir :: FilePath
 
-bindir     = "C:\\Users\\a1332\\Desktop\\Code\\contest\\haskell\\.stack-work\\install\\12e25cde\\bin"
-libdir     = "C:\\Users\\a1332\\Desktop\\Code\\contest\\haskell\\.stack-work\\install\\12e25cde\\lib\\x86_64-windows-ghc-9.0.2\\haskell-0.1.0.0-23zl7XLBSXc6B9tH5kid4R-haskell"
-dynlibdir  = "C:\\Users\\a1332\\Desktop\\Code\\contest\\haskell\\.stack-work\\install\\12e25cde\\lib\\x86_64-windows-ghc-9.0.2"
-datadir    = "C:\\Users\\a1332\\Desktop\\Code\\contest\\haskell\\.stack-work\\install\\12e25cde\\share\\x86_64-windows-ghc-9.0.2\\haskell-0.1.0.0"
-libexecdir = "C:\\Users\\a1332\\Desktop\\Code\\contest\\haskell\\.stack-work\\install\\12e25cde\\libexec\\x86_64-windows-ghc-9.0.2\\haskell-0.1.0.0"
-sysconfdir = "C:\\Users\\a1332\\Desktop\\Code\\contest\\haskell\\.stack-work\\install\\12e25cde\\etc"
+bindir     = "C:\\Users\\a1332\\Desktop\\Code\\contest\\haskell\\.stack-work\\install\\cdb9c740\\bin"
+libdir     = "C:\\Users\\a1332\\Desktop\\Code\\contest\\haskell\\.stack-work\\install\\cdb9c740\\lib\\x86_64-windows-ghc-9.0.2\\haskell-0.1.0.0-23zl7XLBSXc6B9tH5kid4R-haskell"
+dynlibdir  = "C:\\Users\\a1332\\Desktop\\Code\\contest\\haskell\\.stack-work\\install\\cdb9c740\\lib\\x86_64-windows-ghc-9.0.2"
+datadir    = "C:\\Users\\a1332\\Desktop\\Code\\contest\\haskell\\.stack-work\\install\\cdb9c740\\share\\x86_64-windows-ghc-9.0.2\\haskell-0.1.0.0"
+libexecdir = "C:\\Users\\a1332\\Desktop\\Code\\contest\\haskell\\.stack-work\\install\\cdb9c740\\libexec\\x86_64-windows-ghc-9.0.2\\haskell-0.1.0.0"
+sysconfdir = "C:\\Users\\a1332\\Desktop\\Code\\contest\\haskell\\.stack-work\\install\\cdb9c740\\etc"
 
 getBinDir, getLibDir, getDynLibDir, getDataDir, getLibexecDir, getSysconfDir :: IO FilePath
 getBinDir = catchIO (getEnv "haskell_bindir") (\_ -> return bindir)

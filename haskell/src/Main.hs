@@ -4,7 +4,7 @@ import Control.Monad (replicateM)
 getInts :: IO [Int]
 getInts = fmap getInts getLine
   where
-    isNum c = c `elem` "1234567890"
+    isNum c = c `elem` ['0'..'9']
     getInts s =
       let h = read (takeWhile isNum s) :: Int
           t = getInts (dropWhile (not . isNum) (dropWhile isNum s)) :: [Int]

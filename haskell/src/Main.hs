@@ -1,11 +1,13 @@
 module Main where
-import Control.Monad (replicateM, when)
+import Control.Monad (replicateM)
+import Data.List (sort)
 
 -- helper for reading numbers
 getInts :: IO [Int]
 getInts = fmap getInts getLine
   where
     isNum c = c `elem` ['0'..'9']
+    getInts [] = []
     getInts s =
       let h = read (takeWhile isNum s) :: Int
           t = getInts (dropWhile (not . isNum) (dropWhile isNum s)) :: [Int]
@@ -23,14 +25,20 @@ linesBy predicate = foldr f []
       else [[e]]
 wordsBy :: (a -> Bool) -> [a] -> [[a]]
 wordsBy predicate xs = filter (not . null) (linesBy predicate xs)
+join :: [a] -> [[a]] -> [a]
+join delimiter [x] = x
+join delimiter (x:xs) = x ++ delimiter ++ join delimiter xs
+join delimiter [] = []
+allSame :: Eq a => [a] -> Bool
+allSame (x1:x2:xs) = x1 == x2 && allSame (x2:xs)
+allSame _ = True
 
 main :: IO ()
 main = do
-  str <- getLine
-  print (solve str)
+  n <- getInt
+  as <- getInts
+  putStrLn (join " " (map show (solve n as)))
 
-solve :: String -> Int
-solve str = maximum (map ((1+) . length) (linesBy isVowels str))
-
-isVowels :: Char -> Bool
-isVowels = (`elem` "AEIOUY")
+solve :: Int -> [Int] -> [Int]
+solve n as = if allSame sorted then [-1] else sorted
+  where sorted = sort as

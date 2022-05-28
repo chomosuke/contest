@@ -112,13 +112,15 @@ type U = usize;
 
 fn main() {
     let mut sc = Scanner::new();
-    let n = sc.next();
+    let n = sc.next::<U>();
 
+    let mut h: I = 0;
+    let mut t: I = 0;
     for _ in 0..n {
-        if sc.next::<U>() == 1 {
-            println!("-1");
-            return;
-        }
+        let h2: I = sc.next();
+        t += (h - h2).abs();
+        t += 2; // eat and jump
+        h = h2
     }
-    println!("1");
+    println!("{}", t - 1);
 }

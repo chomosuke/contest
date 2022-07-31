@@ -9,43 +9,27 @@ use std::str::FromStr;
 
 struct Scanner {
     tokens: VecDeque<String>,
-    delimiters: Vec<char>,
+    delimiters: Option<HashSet<char>>,
 }
 impl Scanner {
     #[allow(dead_code)]
     fn new() -> Scanner {
         Scanner {
             tokens: VecDeque::new(),
-            delimiters: Vec::new(),
+            delimiters: None,
         }
     }
 
     #[allow(dead_code)]
-    fn add_delimiter(&mut self, delimiter: char) {
-        self.remove_delimiter(delimiter);
-        self.delimiters.push(delimiter);
-    }
-
-    #[allow(dead_code)]
-    fn remove_delimiter(&mut self, delimiter: char) {
-        let mut j = 0;
-        let mut i = 0;
-        while i < self.delimiters.len() {
-            while self.delimiters[i] == delimiter {
-                i += 1;
-            }
-            self.delimiters[j] = self.delimiters[i];
-            j += 1;
-            i += 1;
+    fn with_delimiters(delimiters: &[char]) -> Scanner {
+        Scanner {
+            tokens: VecDeque::new(),
+            delimiters: Some(delimiters.iter().copied().collect()),
         }
-        self.delimiters.truncate(j);
     }
 
     #[allow(dead_code)]
-    fn next<T: FromStr>(&mut self) -> T
-    where
-        <T as FromStr>::Err: Debug,
-    {
+    fn next<T: FromStr>(&mut self) -> T {
         let token = loop {
             let front = self.tokens.pop_front();
             if let Some(token) = front {
@@ -59,11 +43,15 @@ impl Scanner {
     }
 
     fn receive_input(&mut self) {
-        let mut buffer = String::new();
-        stdin().read_line(&mut buffer).expect("Failed to read.");
-        for tokens in buffer.split_whitespace() {
-            for token in tokens.split(&self.delimiters[..]) {
-                self.tokens.push_back(String::from(token));
+        let mut line = String::new();
+        stdin().read_line(&mut line).expect("Failed to read.");
+        if let Some(delimiters) = &self.delimiters {
+            for token in line.split(|c| delimiters.contains(&c)) {
+                self.tokens.push_back(token.to_string());
+            }
+        } else {
+            for token in line.split_whitespace() {
+                self.tokens.push_back(token.to_string());
             }
         }
     }
@@ -73,9 +61,9 @@ impl Scanner {
         if !self.tokens.is_empty() {
             panic!("You have unprocessed token");
         }
-        let mut buffer = String::new();
-        stdin().read_line(&mut buffer).expect("Failed to read.");
-        buffer
+        let mut line = String::new();
+        stdin().read_line(&mut line).expect("Failed to read.");
+        line
     }
 }
 

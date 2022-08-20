@@ -8,36 +8,39 @@ using namespace std;
 
 typedef long long ll;
 
+ll key(ll i, char c) {
+    return i ^ (((ll)c) << 48);
+}
+
 int main() {
-    ll n;
-    cin >> n;
-    vector<vector<char>> grid;
-    for (ll i = 0; i < n; i++) {
-        vector<char> row;
-        grid.push_back(row);
-        for (ll j = 0; j < n; j++) {
-            char c;
-            cin >> c;
-            grid[i].push_back(c);
+    int x;
+    cin >> x >> x;
+    string s, t;
+    cin >> s >> t;
+
+    // at i, the next char c is at
+    unordered_map<ll, ll> index;
+
+    for (ll i = s.size() - 1; i >= 0; i--) {
+        index[key(i, s[i])] = i;
+        for (ll j = i - 1; j >= 0 && s[j] != s[i]; j--) {
+            index[key(j, s[i])] = i;
         }
     }
-    for (ll i = 0; i < n; i++) {
-        for (ll j = 0; j < n; j++) {
-            bool print = true;
-            for (ll k = 0; k < n; k++) {
-                if (k != i && grid[i][j] == grid[k][j]) {
-                    print = false;
-                    break;
-                }
-                if (k != j && grid[i][j] == grid[i][k]) {
-                    print = false;
-                    break;
-                }
-            }
-            if (print) {
-                cout << grid[i][j];
-            }
+
+    ll i = 0;
+    ll n = 0;
+    while (i < t.size()) {
+        n++;
+        ll prevI = i;
+        for (ll j = 0; j < s.size() && i < t.size() && 0 < index.count(key(j, t[i])); j++) {
+            j = index[key(j, t[i])];
+            i++;
+        }
+        if (i == prevI) {
+            n = -1;
+            break;
         }
     }
-    cout << endl;
+    cout << n << endl;
 }

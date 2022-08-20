@@ -1,5 +1,5 @@
-#include <iostream>
 #include <algorithm>
+#include <iostream>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -8,9 +8,7 @@ using namespace std;
 
 typedef long long ll;
 
-ll key(ll i, char c) {
-    return i ^ (((ll)c) << 48);
-}
+ll key(ll i, char c) { return i ^ (((ll)c) << 48); }
 
 int main() {
     int x;
@@ -33,7 +31,9 @@ int main() {
     while (i < t.size()) {
         n++;
         ll prevI = i;
-        for (ll j = 0; j < s.size() && i < t.size() && 0 < index.count(key(j, t[i])); j++) {
+        for (ll j = 0;
+             j < s.size() && i < t.size() && 0 < index.count(key(j, t[i]));
+             j++) {
             j = index[key(j, t[i])];
             i++;
         }

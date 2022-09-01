@@ -1,0 +1,48 @@
+\documentclass{article}
+
+\usepackage{parskip}
+
+\usepackage{amsmath} % actually amsopn
+\makeatletter
+\DeclareRobustCommand{\var}[1]{\begingroup\newmcodes@\mathit{#1}\endgroup}
+\makeatother
+
+\usepackage{mathtools}
+\DeclarePairedDelimiter\ceil{\lceil}{\rceil}
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
+
+\usepackage[a4paper, margin={0.5in, 0.6in}]{geometry}
+
+\begin{document}
+
+\section*{Math}
+
+\(log_k(x)\) is the number of times we have to divide \(x\) by \(k\) to get to \(1\).
+\[log_k(a \, b) = log_k(a) + log_k(b)\]
+\[log_k(x^n) = n \cdot log_k(x)\]
+\[log_k(\frac{a}{b}) = log_k(a) - log_k(b)\]
+\[log_u(x) = \frac{log_k(x)}{log_k(u)}\]
+
+The natural logarithm \(ln(x)\) of a number \(x\) is a logarithm whose base is \(e \approx 2.71828\).\\
+The number of digits of an integer \(x\) in base \(b\) is \(\floor{log_b(x) + 1}\).
+
+\section*{Time complexity}
+
+We can use time complexity to estimate if a particular algorithm is going to be efficient enough.
+\begin{center}
+	Assuming time limit is 1 second:\\
+	\vspace{1mm}
+	\begin{tabular}{c|c}
+		Input size & Required time complexity\\
+		\hline
+		\(n \leq 10\) & \(O(n!)\) \\
+		\(n \leq 20\) & \(O(2^n)\) \\
+		\(n \leq 500\) & \(O(n^3)\) \\
+		\(n \leq 5000\) & \(O(n^2)\) \\
+		\(n \leq 10^6\) & \(O(n\,log\,n)\) \\
+		\(n \geq 10^6\) & \(O(log\,n)\) \\
+	\end{tabular}
+\end{center}
+It is important to remember that time complexity is only an estimate.
+
+\end{document}

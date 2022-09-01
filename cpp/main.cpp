@@ -15,9 +15,8 @@ void print_vector(const vector<Int> &v) {
     if (v.size() == 0) {
         return;
     }
-    cout << v[0];
-    for (Int i = 1; i < v.size(); i++) {
-        cout << " " << v[i];
+    for (auto x : v) {
+        cout << x << " ";
     }
     cout << endl;
 }
@@ -25,7 +24,7 @@ void print_vector(const vector<Int> &v) {
 Int find(const vector<Int> &v, Int target) {
     Int i = 0;
     for (Int j = v.size() / 2; j >= 1; j /= 2) {
-        while (i+j < v.size() && v[i+j] <= target) {
+        while (i + j < v.size() && v[i + j] <= target) {
             i += j;
         }
     }
@@ -52,4 +51,19 @@ int main() {
         cin >> target;
         cout << find(v, target) << endl;
     }
+
+    // different way of creating a vector
+    // this is calling a constructor
+    // size 10, init 0
+    vector<Int> v2(10);
+    // size 10, init 5
+    vector<Int> v3(10, 5);
+
+    // There's also string in cpp
+    string a = "hatti";
+    // you can concat string like:
+    string b = a + a; // hattihatti
+    // you can get substr
+    string c = b.substr(3, 4); // tiva
+    // start at index 3 with len 4
 }

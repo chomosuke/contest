@@ -1,7 +1,11 @@
 #include <algorithm>
+#include <bitset>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
+#include <map>
+#include <queue>
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -11,59 +15,53 @@ using namespace std;
 typedef intmax_t Int;
 typedef long double Float;
 
-void print_vector(const vector<Int> &v) {
-    if (v.size() == 0) {
-        return;
-    }
-    for (auto x : v) {
-        cout << x << " ";
-    }
-    cout << endl;
-}
+vector<Int> coins;
 
-Int find(const vector<Int> &v, Int target) {
-    Int i = 0;
-    for (Int j = v.size() / 2; j >= 1; j /= 2) {
-        while (i + j < v.size() && v[i + j] <= target) {
-            i += j;
-        }
+map<tuple<Int, Int>, Int> memoize;
+Int min_coin_count(Int target, Int index) {
+    if (memoize.count({target, index}) == 1) {
+        return memoize[{target, index}];
     }
-    if (v[i] == target) {
-        return i;
+    if (target == 0) {
+        memoize[{target, index}] = 0;
+        return memoize[{target, index}];
+    }
+    if (index == coins.size()) {
+        // no coin left
+        // since target != 0 => impossible to satisfy
+        memoize[{target, index}] = -1;
+        return memoize[{target, index}];
+    }
+    Int exclude = min_coin_count(target, index + 1);
+    if (target < coins[index]) {
+        // can't include because target will go negative
+        memoize[{target, index}] = exclude;
+        return memoize[{target, index}];
+    }
+    Int include = 1 + min_coin_count(target - coins[index], index + 1);
+    if (include == 0) {
+        memoize[{target, index}] = exclude;
+    } else if (exclude == -1) {
+        memoize[{target, index}] = include;
     } else {
-        return -1;
+        memoize[{target, index}] = min(include, exclude);
     }
+    return memoize[{target, index}];
 }
 
 int main() {
-    vector<Int> v = {4, 2, 5, 3, 5, 8, 3};
-    sort(v.begin(), v.end());
-    print_vector(v);
-    sort(v.rbegin(), v.rend());
-    print_vector(v);
-
-    // default sort comparitor is [](Int a, Int b) { return a < b; }
-    sort(v.begin(), v.end(), [](Int a, Int b) { return a < b; });
-    print_vector(v);
-
-    while (true) {
-        Int target;
-        cin >> target;
-        cout << find(v, target) << endl;
+    // input:
+    // n c1 c2 c3 ... cn t
+    // find the smallest amount of coin that'll make upto t
+    // if impossible, print -1
+    Int n;
+    cin >> n;
+    for (Int i = 0; i < n; i++) {
+        Int coin;
+        cin >> coin;
+        coins.push_back(coin);
     }
-
-    // different way of creating a vector
-    // this is calling a constructor
-    // size 10, init 0
-    vector<Int> v2(10);
-    // size 10, init 5
-    vector<Int> v3(10, 5);
-
-    // There's also string in cpp
-    string a = "hatti";
-    // you can concat string like:
-    string b = a + a; // hattihatti
-    // you can get substr
-    string c = b.substr(3, 4); // tiva
-    // start at index 3 with len 4
+    Int t;
+    cin >> t;
+    cout << min_coin_count(t, 0);
 }

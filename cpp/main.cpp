@@ -10,43 +10,71 @@
 #include <unordered_set>
 #include <vector>
 
+namespace hash_tuple {
+template <typename TT> struct hash {
+    size_t operator()(TT const &tt) const { return std::hash<TT>()(tt); }
+};
+namespace {
+
+template <class T> inline void hash_combine(std::size_t &seed, T const &v) {
+    seed ^= hash_tuple::hash<T>()(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+}
+
+template <class Tuple, size_t Index = std::tuple_size<Tuple>::value - 1>
+struct HashValueImpl {
+    static void apply(size_t &seed, Tuple const &tuple) {
+        HashValueImpl<Tuple, Index - 1>::apply(seed, tuple);
+        hash_combine(seed, std::get<Index>(tuple));
+    }
+};
+
+template <class Tuple> struct HashValueImpl<Tuple, 0> {
+    static void apply(size_t &seed, Tuple const &tuple) {
+        hash_combine(seed, std::get<0>(tuple));
+    }
+};
+} // namespace
+
+template <typename... TT> struct hash<std::tuple<TT...>> {
+    size_t operator()(std::tuple<TT...> const &tt) const {
+        size_t seed = 0;
+        HashValueImpl<std::tuple<TT...>>::apply(seed, tt);
+        return seed;
+    }
+};
+} // namespace hash_tuple
+// unordered_map<tuple<Int, Float>, Int, hash_tuple::hash<tuple<Int, Float>>>
+// memoize;
+
 using namespace std;
 
-typedef intmax_t Int;
+typedef int64_t Int;
+const Int Int_max = INT64_MAX / 2;
+const Int Int_min = INT64_MIN / 2;
 typedef long double Float;
 
 vector<Int> coins;
 
-map<tuple<Int, Int>, Int> memoize;
-Int min_coin_count(Int target, Int index) {
-    if (memoize.count({target, index}) == 1) {
-        return memoize[{target, index}];
+unordered_map<tuple<Int>, Int, hash_tuple::hash<tuple<Int>>> memoize;
+Int min_coin_count(Int target) {
+    if (memoize.count({target}) == 1) {
+        return memoize[{target}];
     }
     if (target == 0) {
-        memoize[{target, index}] = 0;
-        return memoize[{target, index}];
+        return 0;
     }
-    if (index == coins.size()) {
-        // no coin left
-        // since target != 0 => impossible to satisfy
-        memoize[{target, index}] = -1;
-        return memoize[{target, index}];
+    Int best = Int_max;
+    for (auto coin : coins) {
+        if (target == coin) {
+            return 1;
+        }
+        if (target > coin) {
+            Int rec = min_coin_count(target - coin);
+            best = min(best, 1 + rec);
+        }
     }
-    Int exclude = min_coin_count(target, index + 1);
-    if (target < coins[index]) {
-        // can't include because target will go negative
-        memoize[{target, index}] = exclude;
-        return memoize[{target, index}];
-    }
-    Int include = 1 + min_coin_count(target - coins[index], index + 1);
-    if (include == 0) {
-        memoize[{target, index}] = exclude;
-    } else if (exclude == -1) {
-        memoize[{target, index}] = include;
-    } else {
-        memoize[{target, index}] = min(include, exclude);
-    }
-    return memoize[{target, index}];
+    memoize[{target}] = best;
+    return best;
 }
 
 int main() {
@@ -63,5 +91,5 @@ int main() {
     }
     Int t;
     cin >> t;
-    cout << min_coin_count(t, 0);
+    cout << min_coin_count(t);
 }

@@ -95,46 +95,31 @@ impl<E: Eq + Hash> MultiSet<E> {
 }
 
 #[allow(dead_code)]
-fn hash_map_to_vec<K: Clone, V: Clone>(hash_map: &HashMap<K, V>) -> Vec<(K, V)> {
-    return hash_map
-        .iter()
-        .map(|(k, v)| ((*k).clone(), (*v).clone()))
-        .collect::<Vec<(K, V)>>();
-}
-
-#[allow(dead_code)]
 type I = i128;
 #[allow(dead_code)]
 type U = usize;
 
 fn main() {
     let mut sc = Scanner::new();
-    let n = sc.next::<U>();
-    // key is the end element and value is the size of candidate list
-    let mut candidates = BTreeMap::<I, I>::new();
-    for _ in 0..n {
-        let e = sc.next::<I>();
-        let new_length = if let Some((_, length)) = candidates.range(..e).max() {
-            // end element will be smaller than e
-            // can append e to the list
-            length + 1
-        } else {
-            1
-        };
-        candidates.insert(e, new_length);
-        // and delete list with the same length and bigger end element
-        let mut to_be_deleted = Vec::new();
-        let list_with_bigger_end = candidates.range((Excluded(e), Unbounded));
-        for (end, length) in list_with_bigger_end {
-            if end > &e && length == &new_length {
-                to_be_deleted.push(*end);
-            } else {
-                break;
-            }
-        }
-        for k in to_be_deleted {
-            candidates.remove(&k);
-        }
+    let str1 = sc.next_line();
+    let str2 = sc.next_line();
+    println!("{}", distance(str1.as_bytes(), str2.as_bytes(), 0, 0, &mut HashMap::new()))
+}
+
+fn distance(str1: &[u8], str2: &[u8], i1: U, i2: U, memoize: &mut HashMap<(U, U), U>) -> U {
+    if let Some(&d) = memoize.get(&(i1, i2)) {
+        return d;
     }
-    println!("{}", candidates.range(..).max().unwrap().1);
+    if i1 == str1.len() {
+        return str2.len() - i2;
+    }
+    if i2 == str2.len() {
+        return str1.len() - i1;
+    }
+    let cost = if str1[i1] == str2[i2] { 0 } else { 1 };
+    let d = (distance(str1, str2, i1 + 1, i2, memoize) + 1)
+                   .min(distance(str1, str2, i1, i2 + 1, memoize) + 1)
+                   .min(distance(str1, str2, i1 + 1, i2 + 1, memoize) + cost);
+    memoize.insert((i1, i2), d);
+    d
 }

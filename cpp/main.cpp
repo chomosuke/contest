@@ -49,11 +49,13 @@ template <typename... TT> struct hash<std::tuple<TT...>> {
 using namespace std;
 
 typedef int64_t Int;
-const Int Int_max = INT64_MAX / 2;
-const Int Int_min = INT64_MIN / 2;
+const Int Int_max = INT64_MAX;
+const Int Int_min = INT64_MIN;
 typedef long double Float;
 
 vector<Int> coins;
+
+unordered_map<Int, Int> first_coin;
 
 unordered_map<tuple<Int>, Int, hash_tuple::hash<tuple<Int>>> memoize;
 Int min_coin_count(Int target) {
@@ -65,12 +67,12 @@ Int min_coin_count(Int target) {
     }
     Int best = Int_max;
     for (auto coin : coins) {
-        if (target == coin) {
-            return 1;
-        }
-        if (target > coin) {
+        if (target >= coin) {
             Int rec = min_coin_count(target - coin);
-            best = min(best, 1 + rec);
+            if (rec != Int_max && 1 + rec < best) {
+                first_coin[target] = coin;
+                best = 1 + rec;
+            }
         }
     }
     memoize[{target}] = best;
@@ -91,5 +93,21 @@ int main() {
     }
     Int t;
     cin >> t;
-    cout << min_coin_count(t);
+    Int count = min_coin_count(t);
+    if (count != Int_max) {
+        cout << count << endl;
+    } else {
+        cout << -1 << endl;
+        return 0;
+    }
+    Int target = t;
+    if (target > 0){
+        cout << first_coin[target];
+        target -= first_coin[target];
+    }
+    while (target > 0) {
+        cout << ' ' << first_coin[target];
+        target -= first_coin[target];
+    }
+    cout << endl;
 }

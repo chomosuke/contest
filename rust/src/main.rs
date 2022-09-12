@@ -1,6 +1,6 @@
 #![allow(unused_imports)]
 use std::any::type_name;
-use std::cmp::{max, min};
+use std::cmp::*;
 use std::collections::*;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -101,42 +101,63 @@ type U = usize;
 
 fn main() {
     let mut sc = Scanner::new();
-    let m = sc.next::<I>();
-    let n = sc.next::<U>();
-    println!("{}", count(&vec![0; n], m))
-}
-
-// symbols are n u ( )
-fn count(row: &[u8], m: I) -> I {
-    if m == 0 {
-        for &x in row {
-            if x == b'u' {
-                return 0;
+    let t = sc.next::<U>();
+    for _ in 0..t {
+        let n = sc.next::<U>();
+        let q = sc.next::<U>();
+        let mut a = Vec::with_capacity(n);
+        let mut s = HashMap::<I, Vec<U>>::with_capacity(q);
+        for _ in 0..n {
+            a.push(sc.next::<I>());
+        }
+        a.sort();
+        let mut sum_so_far = Vec::with_capacity(n);
+        sum_so_far.push(0);
+        for ai in &a {
+            sum_so_far.push(sum_so_far.last().unwrap() + ai);
+        }
+        for i in 0..q {
+            let si = sc.next::<I>();
+            let mut ls = s.remove(&si).unwrap_or_default();
+            ls.push(i);
+            s.insert(si, ls);
+        }
+        let mut ans = vec![false; q];
+        tests(&a, &sum_so_far, &s, &mut ans);
+        for p in ans {
+            if p {
+                println!("Yes");
+            } else {
+                println!("No");
             }
         }
-        return 1;
     }
-    enumerate(row, &mut vec![0; row.len()], 0, m)
 }
 
-fn enumerate(row: &[u8], next_row: &mut Vec<u8>, i: U, m: I) -> I {
-    if i == next_row.len() {
-        return count(next_row, m - 1);
+fn tests(a: &[I], sum_so_far: &[I], s: &HashMap<I, Vec<U>>, ans: &mut [bool]) {
+    if let Some(ls) = s.get(&(sum_so_far.last().unwrap() - sum_so_far[0])) {
+        for &l in ls {
+            ans[l] = true;
+        }
     }
-    if row[i] == b'u' {
-        next_row[i] = b'n';
-        return enumerate(row, next_row, i + 1, m);
+    if a.len() <= 1 {
+        return;
     }
-    if i > 0 && next_row[i - 1] == b'(' {
-        next_row[i] = b')';
-        return enumerate(row, next_row, i + 1, m);
+    let mid = (a[0] + a.last().unwrap()) / 2;
+    let split = a
+        .binary_search_by(|ai| {
+            let r = ai.cmp(&mid);
+            if r == Ordering::Greater {
+                Ordering::Greater
+            } else {
+                Ordering::Less
+            }
+        })
+        .err()
+        .unwrap();
+    if split == a.len() {
+        return;
     }
-    let mut sum = 0;
-    if i < next_row.len() - 1 {
-        next_row[i] = b'(';
-        sum += enumerate(row, next_row, i + 1, m);
-    }
-    next_row[i] = b'u';
-    sum += enumerate(row, next_row, i + 1, m);
-    sum
+    tests(&a[..split], &sum_so_far[..(split + 1)], s, ans);
+    tests(&a[split..], &sum_so_far[split..], s, ans);
 }

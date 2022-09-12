@@ -1,11 +1,12 @@
 #![allow(unused_imports)]
 use std::any::type_name;
 use std::cmp::{max, min};
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::*;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::io::stdin;
 use std::str::FromStr;
+use std::ops::Bound::*;
 
 struct Scanner {
     tokens: VecDeque<String>,
@@ -95,7 +96,10 @@ impl<E: Eq + Hash> MultiSet<E> {
 
 #[allow(dead_code)]
 fn hash_map_to_vec<K: Clone, V: Clone>(hash_map: &HashMap<K, V>) -> Vec<(K, V)> {
-    return hash_map.iter().map(|(k, v)| ((*k).clone(), (*v).clone())).collect::<Vec<(K, V)>>();
+    return hash_map
+        .iter()
+        .map(|(k, v)| ((*k).clone(), (*v).clone()))
+        .collect::<Vec<(K, V)>>();
 }
 
 #[allow(dead_code)]
@@ -106,28 +110,31 @@ type U = usize;
 fn main() {
     let mut sc = Scanner::new();
     let n = sc.next::<U>();
-    let mut coins = Vec::new();
+    // key is the end element and value is the size of candidate list
+    let mut candidates = BTreeMap::<I, I>::new();
     for _ in 0..n {
-        coins.push(sc.next::<I>());
+        let e = sc.next::<I>();
+        let new_length = if let Some((_, length)) = candidates.range(..e).max() {
+            // end element will be smaller than e
+            // can append e to the list
+            length + 1
+        } else {
+            1
+        };
+        candidates.insert(e, new_length);
+        // and delete list with the same length and bigger end element
+        let mut to_be_deleted = Vec::new();
+        let list_with_bigger_end = candidates.range((Excluded(e), Unbounded));
+        for (end, length) in list_with_bigger_end {
+            if end > &e && length == &new_length {
+                to_be_deleted.push(*end);
+            } else {
+                break;
+            }
+        }
+        for k in to_be_deleted {
+            candidates.remove(&k);
+        }
     }
-    let t = sc.next::<I>();
-    println!("{}", count(t, &coins, &mut HashMap::new()));
-}
-
-fn count(t: I, coins: &Vec<I>, memoize: &mut HashMap<I, I>) -> I {
-    if let Some(m) = memoize.get(&t) {
-        return *m;
-    }
-    if t == 0 {
-        return 1;
-    }
-    if t < 0 {
-        return 0;
-    }
-    let mut sum = 0;
-    for coin in coins {
-        sum += count(t - coin, coins, memoize);
-    }
-    memoize.insert(t, sum);
-    sum
+    println!("{}", candidates.range(..).max().unwrap().1);
 }

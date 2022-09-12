@@ -70,27 +70,32 @@ impl Scanner {
 type Count = usize;
 
 #[derive(Clone)]
-struct CountMap<K: Eq + Hash> {
-    hash_map: HashMap<K, Count>,
+struct MultiSet<E: Eq + Hash> {
+    hash_map: HashMap<E, Count>,
 }
-impl<K: Eq + Hash> CountMap<K> {
+impl<E: Eq + Hash> MultiSet<E> {
     #[allow(dead_code)]
-    fn new() -> CountMap<K> {
-        CountMap {
-            hash_map: HashMap::<K, Count>::new(),
+    fn new() -> MultiSet<E> {
+        MultiSet {
+            hash_map: HashMap::<E, Count>::new(),
         }
     }
 
     #[allow(dead_code)]
-    fn get(&self, key: &K) -> &Count {
-        return self.hash_map.get(key).unwrap_or(&0);
+    fn count(&self, e: &E) -> &Count {
+        return self.hash_map.get(e).unwrap_or(&0);
     }
 
     #[allow(dead_code)]
-    fn change(&mut self, key: K, value: Count) {
-        let next = self.get(&key) + value;
-        self.hash_map.insert(key, next);
+    fn insert(&mut self, e: E) {
+        let next = self.count(&e) + 1;
+        self.hash_map.insert(e, next);
     }
+}
+
+#[allow(dead_code)]
+fn hash_map_to_vec<K: Clone, V: Clone>(hash_map: &HashMap<K, V>) -> Vec<(K, V)> {
+    return hash_map.iter().map(|(k, v)| ((*k).clone(), (*v).clone())).collect::<Vec<(K, V)>>();
 }
 
 #[allow(dead_code)]
@@ -101,14 +106,28 @@ type U = usize;
 fn main() {
     let mut sc = Scanner::new();
     let n = sc.next::<U>();
-
-    let mut h: I = 0;
-    let mut t: I = 0;
+    let mut coins = Vec::new();
     for _ in 0..n {
-        let h2: I = sc.next();
-        t += (h - h2).abs();
-        t += 2; // eat and jump
-        h = h2
+        coins.push(sc.next::<I>());
     }
-    println!("{}", t - 1);
+    let t = sc.next::<I>();
+    println!("{}", count(t, &coins, &mut HashMap::new()));
+}
+
+fn count(t: I, coins: &Vec<I>, memoize: &mut HashMap<I, I>) -> I {
+    if let Some(m) = memoize.get(&t) {
+        return *m;
+    }
+    if t == 0 {
+        return 1;
+    }
+    if t < 0 {
+        return 0;
+    }
+    let mut sum = 0;
+    for coin in coins {
+        sum += count(t - coin, coins, memoize);
+    }
+    memoize.insert(t, sum);
+    sum
 }

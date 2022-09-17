@@ -134,45 +134,61 @@ type U = usize;
 
 fn main() {
     let mut sc = Scanner::new();
-    let n = sc.next::<U>();
-    let mut a = Vec::with_capacity(n);
-    for _ in 0..n {
-        a.push(sc.next::<I>());
-    }
-    let sum: I = a.iter().sum();
-    let target = sum / 3;
-    if sum != target * 3 {
-        println!("0");
-        return;
-    }
-    let mut sum = 0;
-    let mut target_indexes = Vec::new();
-    for (i, ai) in a.iter().enumerate().take(a.len() - 1) {
-        sum += ai;
-        if sum == target {
-            target_indexes.push(i);
+    let x1 = sc.next::<I>();
+    let y1 = sc.next::<I>();
+    let x2 = sc.next::<I>();
+    let y2 = sc.next::<I>();
+    let x3 = sc.next::<I>();
+    let y3 = sc.next::<I>();
+    let x4 = sc.next::<I>();
+    let y4 = sc.next::<I>();
+    let x5 = sc.next::<I>();
+    let y5 = sc.next::<I>();
+    let x6 = sc.next::<I>();
+    let y6 = sc.next::<I>();
+    let blacks = vec![(x3, y3, x4, y4), (x5, y5, x6, y6)];
+
+    // one of the black entirely cover the white
+    for &(x1b, y1b, x2b, y2b) in &blacks {
+        if x1 >= x1b && y1 >= y1b && x2 <= x2b && y2 <= y2b {
+            println!("NO");
+            return;
         }
     }
-    sum = 0;
-    let mut target_indexes_rev = Vec::new();
-    for (i, ai) in a.iter().enumerate().rev().take(a.len() - 1) {
-        sum += ai;
-        if sum == target {
-            target_indexes_rev.push(i - 1);
-        }
-    }
-    let target_indexes_rev: Vec<U> = target_indexes_rev.into_iter().rev().collect();
-    let (mut i, mut j) = (0, 0);
-    let mut count = 0;
-    'outer: while i < target_indexes.len() && j < target_indexes_rev.len() {
-        while target_indexes[i] >= target_indexes_rev[j] {
-            j += 1;
-            if j >= target_indexes_rev.len() {
-                break 'outer;
+
+    // one of the corner isn't covered
+    let points = vec![(x1, y1), (x2, y1), (x1, y2), (x2, y2)];
+    for &(x, y) in &points {
+        let mut covered = false;
+        for &(x1b, y1b, x2b, y2b) in &blacks {
+            if x1b <= x && y1b <= y && x2b >= x && y2b >= y {
+                covered = true;
             }
         }
-        count += target_indexes_rev.len() - j;
-        i += 1;
+        if !covered {
+            println!("YES");
+            return;
+        }
     }
-    println!("{}", count);
+
+    // At this point the two black square must both cover 2 of the white square's corner.
+    // If they touch, then the white square is covered, otherwise the white square isn't.
+    for (i, &(x1, y1, x2, y2)) in blacks.iter().enumerate() {
+        let other_i = (i + 1) % 2;
+        let other_points = &blacks[other_i];
+        let other_points = vec![
+            (other_points.0, other_points.1),
+            (other_points.2, other_points.3),
+            (other_points.0, other_points.3),
+            (other_points.2, other_points.1),
+        ];
+        for &(x, y) in &other_points {
+            // if x, y is in the other square then it covers
+            if x >= x1 && y >= y1 && x <= x2 && y <= y2 {
+                println!("NO");
+                return;
+            }
+        }
+    }
+    println!("YES");
 }

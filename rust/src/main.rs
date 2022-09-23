@@ -1,4 +1,4 @@
-#![allow(unused_imports)]
+#![allow(unused_imports, dead_code)]
 use std::any::type_name;
 use std::cmp::*;
 use std::collections::*;
@@ -6,6 +6,11 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::io::stdin;
 use std::ops::Bound::*;
+use std::ops::Deref;
+use std::ops::Index;
+use std::ops::IndexMut;
+use std::ops::Range;
+use std::ops::RangeBounds;
 use std::str::FromStr;
 
 struct Scanner {
@@ -13,7 +18,6 @@ struct Scanner {
     delimiters: Option<HashSet<char>>,
 }
 impl Scanner {
-    #[allow(dead_code)]
     fn new() -> Scanner {
         Scanner {
             tokens: VecDeque::new(),
@@ -21,7 +25,6 @@ impl Scanner {
         }
     }
 
-    #[allow(dead_code)]
     fn with_delimiters(delimiters: &[char]) -> Scanner {
         Scanner {
             tokens: VecDeque::new(),
@@ -29,7 +32,6 @@ impl Scanner {
         }
     }
 
-    #[allow(dead_code)]
     fn next<T: FromStr>(&mut self) -> T {
         let token = loop {
             let front = self.tokens.pop_front();
@@ -57,7 +59,6 @@ impl Scanner {
         }
     }
 
-    #[allow(dead_code)]
     fn next_line(&mut self) -> String {
         if !self.tokens.is_empty() {
             panic!("You have unprocessed token");
@@ -68,26 +69,21 @@ impl Scanner {
     }
 }
 
-type Count = usize;
-
 #[derive(Clone)]
 struct MultiSet<E: Eq + Hash> {
-    hash_map: HashMap<E, Count>,
+    hash_map: HashMap<E, U>,
 }
 impl<E: Eq + Hash> MultiSet<E> {
-    #[allow(dead_code)]
     fn new() -> MultiSet<E> {
         MultiSet {
-            hash_map: HashMap::<E, Count>::new(),
+            hash_map: HashMap::<E, U>::new(),
         }
     }
 
-    #[allow(dead_code)]
-    fn count(&self, e: &E) -> &Count {
+    fn count(&self, e: &E) -> &U {
         return self.hash_map.get(e).unwrap_or(&0);
     }
 
-    #[allow(dead_code)]
     fn insert(&mut self, e: E) {
         let next = self.count(&e) + 1;
         self.hash_map.insert(e, next);
@@ -98,7 +94,6 @@ trait BinarySearchable<T> {
     fn binary_search_leq(&self, x: &T) -> usize;
     fn binary_search_geq(&self, x: &T) -> usize;
 }
-
 impl<T: Ord> BinarySearchable<T> for [T] {
     fn binary_search_leq(&self, x: &T) -> usize {
         self.binary_search_by(|p| {
@@ -127,68 +122,149 @@ impl<T: Ord> BinarySearchable<T> for [T] {
     }
 }
 
-#[allow(dead_code)]
+fn log2_ceil(x: usize) -> u32 {
+    if x == 0 {
+        0
+    } else {
+        usize::BITS - (x - 1).leading_zeros()
+    }
+}
+fn pow2_ceil(x: usize) -> usize {
+    let n = log2_ceil(x);
+    2usize.pow(n)
+}
+
+struct IndexedVec<E, F> {
+    combine: F,
+    inner: Vec<E>,
+    tree: Vec<E>,
+    inner_cap: usize,
+    zero: E,
+}
+impl<E, F> Deref for IndexedVec<E, F> {
+    type Target = Vec<E>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+impl<E: Clone, F: Fn(&E, &E) -> E> IndexedVec<E, F> {
+    fn parent(i: usize) -> usize {
+        i / 2
+    }
+    fn left(i: usize) -> usize {
+        2 * i
+    }
+    fn right(i: usize) -> usize {
+        2 * i + 1
+    }
+
+    fn new(zero: E, combine: F) -> IndexedVec<E, F> {
+        IndexedVec {
+            combine,
+            inner: Vec::new(),
+            tree: Vec::new(),
+            inner_cap: 0,
+            zero,
+        }
+    }
+    fn with_capacity(capacity: usize, zero: E, combine: F) -> IndexedVec<E, F> {
+        IndexedVec {
+            combine,
+            inner: Vec::with_capacity(capacity),
+            tree: Vec::with_capacity(pow2_ceil(capacity) * 2),
+            inner_cap: 0,
+            zero,
+        }
+    }
+    fn from_vec(vec: Vec<E>, zero: E, combine: F) -> IndexedVec<E, F> {
+        let inner_cap = pow2_ceil(vec.len());
+        let mut tree = vec![zero.clone(); inner_cap * 2];
+        tree[inner_cap..(inner_cap + vec.len())].clone_from_slice(&vec[..]);
+        let mut n = inner_cap;
+        while n > 1 {
+            n /= 2;
+            for i in n..(n * 2) {
+                tree[i] = combine(&tree[Self::left(i)], &tree[Self::right(i)]);
+            }
+        }
+        IndexedVec {
+            combine,
+            inner: vec,
+            tree,
+            inner_cap,
+            zero,
+        }
+    }
+
+    fn query(&self, rng: impl RangeBounds<usize>) -> E {
+        let start = match rng.start_bound() {
+            Excluded(x) => x + 1,
+            Included(x) => *x,
+            Unbounded => 0,
+        };
+        let end = match rng.end_bound() {
+            Excluded(x) => x - 1,
+            Included(x) => *x,
+            Unbounded => self.inner.len() - 1,
+        };
+        let mut start = start + self.inner_cap;
+        let mut end = end + self.inner_cap;
+        let mut result = self.zero.clone();
+        while start <= end {
+            if start % 2 == 1 {
+                result = (self.combine)(&result, &self.tree[start]);
+                start += 1;
+            }
+            if end % 2 == 0 {
+                result = (self.combine)(&result, &self.tree[end]);
+                end -= 1;
+            }
+            start = Self::parent(start);
+            end = Self::parent(end);
+        }
+        result
+    }
+
+    fn update(&mut self, index: usize) {
+        self.tree[index + self.inner_cap] = self.inner[index].clone();
+        let mut index = index + self.inner_cap;
+        while index > 1 {
+            index = Self::parent(index);
+            self.tree[index] = (self.combine)(
+                &self.tree[Self::left(index)],
+                &self.tree[Self::right(index)],
+            );
+        }
+    }
+    fn push(&mut self, e: E) {
+        self.inner.push(e);
+        if self.inner.len() > self.inner_cap {
+            self.inner_cap *= 2;
+            self.tree.resize(self.inner_cap * 2, self.zero.clone());
+        }
+        self.update(self.inner.len() - 1);
+    }
+    fn set(&mut self, i: usize, e: E) {
+        self.inner[i] = e;
+        self.update(i);
+    }
+}
+
 type I = i128;
-#[allow(dead_code)]
 type U = usize;
 
 fn main() {
-    let mut sc = Scanner::new();
-    let x1 = sc.next::<I>();
-    let y1 = sc.next::<I>();
-    let x2 = sc.next::<I>();
-    let y2 = sc.next::<I>();
-    let x3 = sc.next::<I>();
-    let y3 = sc.next::<I>();
-    let x4 = sc.next::<I>();
-    let y4 = sc.next::<I>();
-    let x5 = sc.next::<I>();
-    let y5 = sc.next::<I>();
-    let x6 = sc.next::<I>();
-    let y6 = sc.next::<I>();
-    let blacks = vec![(x3, y3, x4, y4), (x5, y5, x6, y6)];
-
-    // one of the black entirely cover the white
-    for &(x1b, y1b, x2b, y2b) in &blacks {
-        if x1 >= x1b && y1 >= y1b && x2 <= x2b && y2 <= y2b {
-            println!("NO");
-            return;
+    let mut iv = IndexedVec::from_vec(vec![1, 3, 4, 8, 6, 1, 4, 2], i32::MAX, |a, b| {
+        if a < b {
+            *a
+        } else {
+            *b
         }
-    }
-
-    // one of the corner isn't covered
-    let points = vec![(x1, y1), (x2, y1), (x1, y2), (x2, y2)];
-    for &(x, y) in &points {
-        let mut covered = false;
-        for &(x1b, y1b, x2b, y2b) in &blacks {
-            if x1b <= x && y1b <= y && x2b >= x && y2b >= y {
-                covered = true;
-            }
-        }
-        if !covered {
-            println!("YES");
-            return;
-        }
-    }
-
-    // At this point the two black square must both cover 2 of the white square's corner.
-    // If they touch, then the white square is covered, otherwise the white square isn't.
-    for (i, &(x1, y1, x2, y2)) in blacks.iter().enumerate() {
-        let other_i = (i + 1) % 2;
-        let other_points = &blacks[other_i];
-        let other_points = vec![
-            (other_points.0, other_points.1),
-            (other_points.2, other_points.3),
-            (other_points.0, other_points.3),
-            (other_points.2, other_points.1),
-        ];
-        for &(x, y) in &other_points {
-            // if x, y is in the other square then it covers
-            if x >= x1 && y >= y1 && x <= x2 && y <= y2 {
-                println!("NO");
-                return;
-            }
-        }
-    }
-    println!("YES");
+    });
+    assert_eq!(iv.query(1..7), 1);
+    iv.set(5, 100);
+    assert_eq!(iv.query(1..7), 3);
+    iv.push(-2);
+    assert_eq!(iv.query(..), -2);
 }

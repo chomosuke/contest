@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-
 type I = i128;
 type U = usize;
 
@@ -101,7 +100,7 @@ use multi_set::*;
 mod binary_searchable {
     use std::cmp::*;
 
-    trait BinarySearchable<T> {
+    pub trait BinarySearchable<T> {
         fn binary_search_leq(&self, x: &T) -> usize;
         fn binary_search_geq(&self, x: &T) -> usize;
     }
@@ -320,3 +319,97 @@ mod indexed_vec {
 }
 #[allow(unused_imports)]
 use indexed_vec::*;
+
+mod graph {
+    use std::{cmp::Reverse, collections::BinaryHeap};
+
+    pub struct Graph {
+        adjacent_nodes: Vec<Vec<(usize, i128)>>,
+        negative_weight: bool,
+    }
+    impl Graph {
+        pub fn new() -> Graph {
+            Graph {
+                adjacent_nodes: Vec::new(),
+                negative_weight: false,
+            }
+        }
+        pub fn with_capacity(capacity: usize) -> Graph {
+            Graph {
+                adjacent_nodes: Vec::with_capacity(capacity),
+                negative_weight: false,
+            }
+        }
+        pub fn from_edges(edges: Vec<(usize, usize, i128)>, node_count: usize) -> Graph {
+            let mut g = Graph {
+                adjacent_nodes: vec![Vec::new(); node_count],
+                negative_weight: false,
+            };
+            for edge in edges {
+                g.add_edge(edge);
+            }
+            g
+        }
+
+        pub fn add_node(&mut self) -> usize {
+            self.adjacent_nodes.push(Vec::new());
+            self.adjacent_nodes.len() - 1
+        }
+        pub fn add_edge(&mut self, edge: (usize, usize, i128)) {
+            self.adjacent_nodes[edge.0].push((edge.1, edge.2));
+            if edge.2 < 0 {
+                self.negative_weight = true;
+            }
+        }
+
+        pub fn shortest_path_len(&self, start: usize) -> Vec<i128> {
+            if !self.negative_weight {
+                self.dijkstra(start)
+            } else {
+                todo!()
+            }
+        }
+        fn dijkstra(&self, start: usize) -> Vec<i128> {
+            let mut shortest_path_len = vec![i128::MAX; self.adjacent_nodes.len()];
+            let mut queue = BinaryHeap::new();
+            queue.push(Reverse((0, start)));
+            while let Some(Reverse((distance, node))) = queue.pop() {
+                if shortest_path_len[node] != i128::MAX {
+                    continue;
+                }
+                shortest_path_len[node] = distance;
+                for (adj_node, weight) in &self.adjacent_nodes[node] {
+                    queue.push(Reverse((distance + *weight, *adj_node)));
+                }
+            }
+            shortest_path_len
+        }
+    }
+
+    #[cfg(test)]
+    mod test {
+        use crate::graph::Graph;
+
+        #[test]
+        fn dijkstra() {
+            let g = Graph::from_edges(
+                vec![
+                    (1, 2, 5),
+                    (1, 4, 9),
+                    (1, 5, 1),
+                    (2, 1, 5),
+                    (2, 3, 2),
+                    (3, 2, 2),
+                    (3, 4, 6),
+                    (4, 1, 9),
+                    (4, 3, 6),
+                    (4, 5, 2),
+                    (5, 1, 1),
+                    (5, 4, 2),
+                ],
+                6,
+            );
+            assert_eq!(g.shortest_path_len(1), vec![i128::MAX, 0, 5, 7, 3, 1]);
+        }
+    }
+}

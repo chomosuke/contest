@@ -321,29 +321,117 @@ mod indexed_vec {
 use indexed_vec::*;
 
 mod graph {
-    use std::{cmp::Reverse, collections::BinaryHeap};
+    use std::{
+        cmp::Reverse,
+        collections::{BinaryHeap, VecDeque},
+    };
+
+    pub struct DepthFirstIter<'a> {
+        graph: &'a Graph,
+        pushed: Vec<bool>,
+        stack: VecDeque<usize>,
+    }
+    impl DepthFirstIter<'_> {
+        fn new(graph: &Graph, start: usize) -> DepthFirstIter {
+            let capacity = graph.get_adjacent_nodes().len();
+            let mut pushed = vec![false; capacity];
+            let mut stack = VecDeque::with_capacity(capacity);
+            stack.push_back(start);
+            pushed[start] = true;
+            DepthFirstIter {
+                graph,
+                pushed,
+                stack,
+            }
+        }
+    }
+    impl Iterator for DepthFirstIter<'_> {
+        type Item = usize;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            let DepthFirstIter {
+                graph,
+                pushed,
+                stack,
+            } = self;
+            if let Some(node) = stack.pop_back() {
+                let adjacent_nodes = graph.get_adjacent_nodes();
+                for &(node, _) in adjacent_nodes[node].iter().rev() {
+                    if !pushed[node] {
+                        stack.push_back(node);
+                        pushed[node] = true;
+                    }
+                }
+                Some(node)
+            } else {
+                None
+            }
+        }
+    }
+    pub struct BreathFirstIter<'a> {
+        graph: &'a Graph,
+        pushed: Vec<bool>,
+        queue: VecDeque<usize>,
+    }
+    impl BreathFirstIter<'_> {
+        fn new(graph: &Graph, start: usize) -> BreathFirstIter {
+            let capacity = graph.get_adjacent_nodes().len();
+            let mut pushed = vec![false; capacity];
+            let mut queue = VecDeque::with_capacity(capacity);
+            queue.push_back(start);
+            pushed[start] = true;
+            BreathFirstIter {
+                graph,
+                pushed,
+                queue,
+            }
+        }
+    }
+    impl Iterator for BreathFirstIter<'_> {
+        type Item = usize;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            let BreathFirstIter {
+                graph,
+                pushed,
+                queue,
+            } = self;
+            if let Some(node) = queue.pop_front() {
+                let adjacent_nodes = graph.get_adjacent_nodes();
+                for &(node, _) in adjacent_nodes[node].iter() {
+                    if !pushed[node] {
+                        queue.push_back(node);
+                        pushed[node] = true;
+                    }
+                }
+                Some(node)
+            } else {
+                None
+            }
+        }
+    }
 
     pub struct Graph {
         adjacent_nodes: Vec<Vec<(usize, i128)>>,
-        negative_weight: bool,
+        negative_weight_count: usize,
     }
     impl Graph {
         pub fn new() -> Graph {
             Graph {
                 adjacent_nodes: Vec::new(),
-                negative_weight: false,
+                negative_weight_count: 0,
             }
         }
         pub fn with_capacity(capacity: usize) -> Graph {
             Graph {
                 adjacent_nodes: Vec::with_capacity(capacity),
-                negative_weight: false,
+                negative_weight_count: 0,
             }
         }
         pub fn from_edges(edges: Vec<(usize, usize, i128)>, node_count: usize) -> Graph {
             let mut g = Graph {
                 adjacent_nodes: vec![Vec::new(); node_count],
-                negative_weight: false,
+                negative_weight_count: 0,
             };
             for edge in edges {
                 g.add_edge(edge);
@@ -358,18 +446,22 @@ mod graph {
         pub fn add_edge(&mut self, edge: (usize, usize, i128)) {
             self.adjacent_nodes[edge.0].push((edge.1, edge.2));
             if edge.2 < 0 {
-                self.negative_weight = true;
+                self.negative_weight_count += 1;
             }
         }
 
-        pub fn shortest_path_len(&self, start: usize) -> Vec<i128> {
-            if !self.negative_weight {
-                self.dijkstra(start)
+        pub fn shortest_path_len<F: Fn(usize) -> bool>(
+            &self,
+            start: usize,
+            stop_when: F,
+        ) -> Vec<i128> {
+            if self.negative_weight_count == 0 {
+                self.dijkstra(start, stop_when)
             } else {
-                todo!()
+                self.bellman_ford(start, stop_when)
             }
         }
-        fn dijkstra(&self, start: usize) -> Vec<i128> {
+        fn dijkstra<F: Fn(usize) -> bool>(&self, start: usize, stop_when: F) -> Vec<i128> {
             let mut shortest_path_len = vec![i128::MAX; self.adjacent_nodes.len()];
             let mut queue = BinaryHeap::new();
             queue.push(Reverse((0, start)));
@@ -378,17 +470,52 @@ mod graph {
                     continue;
                 }
                 shortest_path_len[node] = distance;
+                if stop_when(node) {
+                    break;
+                }
                 for (adj_node, weight) in &self.adjacent_nodes[node] {
                     queue.push(Reverse((distance + *weight, *adj_node)));
                 }
             }
             shortest_path_len
         }
+        fn bellman_ford<F: Fn(usize) -> bool>(&self, start: usize, _stop_when: F) -> Vec<i128> {
+            let mut shortest_path_len = vec![i128::MAX; self.adjacent_nodes.len()];
+            shortest_path_len[start] = 0;
+            let mut queue = VecDeque::new();
+            queue.push_back(start);
+            while let Some(node) = queue.pop_front() {
+                for &(adj_node, weight) in &self.adjacent_nodes[node] {
+                    if shortest_path_len[node] + weight < shortest_path_len[adj_node] {
+                        shortest_path_len[adj_node] = shortest_path_len[node] + weight;
+                        queue.push_back(adj_node);
+                    }
+                }
+            }
+            shortest_path_len
+        }
+
+        pub fn get_adjacent_nodes(&self) -> &Vec<Vec<(usize, i128)>> {
+            &self.adjacent_nodes
+        }
+
+        pub fn depth_first_iter(
+            &self,
+            start: usize,
+        ) -> DepthFirstIter {
+            DepthFirstIter::new(self, start)
+        }
+        pub fn breath_first_iter(
+            &self,
+            start: usize,
+        ) -> BreathFirstIter {
+            BreathFirstIter::new(self, start)
+        }
     }
 
     #[cfg(test)]
     mod test {
-        use crate::graph::Graph;
+        use super::*;
 
         #[test]
         fn dijkstra() {
@@ -409,7 +536,86 @@ mod graph {
                 ],
                 6,
             );
-            assert_eq!(g.shortest_path_len(1), vec![i128::MAX, 0, 5, 7, 3, 1]);
+            assert_eq!(
+                g.shortest_path_len(1, |_| false),
+                vec![i128::MAX, 0, 5, 7, 3, 1],
+            );
+        }
+
+        #[test]
+        fn bellman_ford() {
+            let g = Graph::from_edges(
+                vec![
+                    (1, 2, 5),
+                    (1, 3, 3),
+                    (1, 4, 7),
+                    (2, 1, 5),
+                    (2, 4, 3),
+                    (2, 5, 2),
+                    (3, 1, 3),
+                    (3, 4, 1),
+                    (3, 5, -1),
+                    (4, 1, 7),
+                    (4, 2, 3),
+                    (4, 3, 1),
+                    (4, 5, 2),
+                    (5, 2, 2),
+                    (5, 4, 2),
+                ],
+                6,
+            );
+            assert_eq!(
+                g.shortest_path_len(1, |_| false),
+                vec![i128::MAX, 0, 4, 3, 4, 2],
+            );
+        }
+
+        #[test]
+        fn dfs() {
+            let g = Graph::from_edges(
+                vec![
+                    (1, 2, 1),
+                    (1, 4, 1),
+                    (2, 1, 1),
+                    (2, 3, 1),
+                    (2, 5, 1),
+                    (3, 2, 1),
+                    (3, 5, 1),
+                    (4, 1, 1),
+                    (5, 2, 1),
+                    (5, 3, 1),
+                ],
+                6,
+            );
+
+            assert_eq!(
+                g.depth_first_iter(1).collect::<Vec<_>>(),
+                vec![1, 2, 3, 5, 4]
+            );
+        }
+
+        #[test]
+        fn bfs() {
+            let g = Graph::from_edges(
+                vec![
+                    (1, 2, 1),
+                    (1, 4, 1),
+                    (2, 1, 1),
+                    (2, 3, 1),
+                    (2, 5, 1),
+                    (3, 2, 1),
+                    (3, 6, 1),
+                    (4, 1, 1),
+                    (5, 2, 1),
+                    (5, 6, 1),
+                ],
+                7,
+            );
+
+            assert_eq!(
+                g.breath_first_iter(1).collect::<Vec<_>>(),
+                vec![1, 2, 4, 3, 5, 6]
+            );
         }
     }
 }

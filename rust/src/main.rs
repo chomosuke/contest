@@ -178,9 +178,24 @@ impl<E: Clone, F: Fn(&E, &E) -> E> IndexedVec<E, F> {
         }
     }
     fn from_vec(vec: Vec<E>, zero: E, combine: F) -> IndexedVec<E, F> {
-        let inner_cap = pow2_ceil(vec.len());
+        let mut iv = IndexedVec {
+            combine,
+            inner: vec,
+            zero,
+            tree: Vec::new(),
+            inner_cap: 0,
+        };
+        iv.rebuild();
+        iv
+    }
+
+    fn rebuild(&mut self) {
+        let inner = &mut self.inner;
+        let combine = &self.combine;
+        let zero = &self.zero;
+        let inner_cap = pow2_ceil(inner.len());
         let mut tree = vec![zero.clone(); inner_cap * 2];
-        tree[inner_cap..(inner_cap + vec.len())].clone_from_slice(&vec[..]);
+        tree[inner_cap..(inner_cap + inner.len())].clone_from_slice(&inner[..]);
         let mut n = inner_cap;
         while n > 1 {
             n /= 2;
@@ -188,13 +203,8 @@ impl<E: Clone, F: Fn(&E, &E) -> E> IndexedVec<E, F> {
                 tree[i] = combine(&tree[Self::left(i)], &tree[Self::right(i)]);
             }
         }
-        IndexedVec {
-            combine,
-            inner: vec,
-            tree,
-            inner_cap,
-            zero,
-        }
+        self.tree = tree;
+        self.inner_cap = inner_cap;
     }
 
     fn query(&self, rng: impl RangeBounds<usize>) -> E {
@@ -227,7 +237,11 @@ impl<E: Clone, F: Fn(&E, &E) -> E> IndexedVec<E, F> {
     }
 
     fn update(&mut self, index: usize) {
-        self.tree[index + self.inner_cap] = self.inner[index].clone();
+        self.tree[index + self.inner_cap] = if index < self.inner.len() {
+            self.inner[index].clone()
+        } else {
+            self.zero.clone()
+        };
         let mut index = index + self.inner_cap;
         while index > 1 {
             index = Self::parent(index);
@@ -240,31 +254,53 @@ impl<E: Clone, F: Fn(&E, &E) -> E> IndexedVec<E, F> {
     fn push(&mut self, e: E) {
         self.inner.push(e);
         if self.inner.len() > self.inner_cap {
-            self.inner_cap *= 2;
-            self.tree.resize(self.inner_cap * 2, self.zero.clone());
+            self.rebuild();
+        } else {
+            self.update(self.inner.len() - 1);
         }
-        self.update(self.inner.len() - 1);
+    }
+    fn pop(&mut self) -> Option<E> {
+        let e = self.inner.pop();
+        if self.inner.len() * 2 <= self.inner_cap {
+            self.rebuild();
+        } else {
+            self.update(self.inner.len());
+        }
+        e
     }
     fn set(&mut self, i: usize, e: E) {
         self.inner[i] = e;
         self.update(i);
     }
 }
+#[cfg(test)]
+mod test_indexed_vec {
+    use crate::IndexedVec;
+
+    #[test]
+    fn test() {
+        let mut iv = IndexedVec::from_vec(vec![1, 3, 4, 8, 6, 1, 4, 2], i32::MAX, |a, b| {
+            if a < b {
+                *a
+            } else {
+                *b
+            }
+        });
+        assert_eq!(iv.query(1..7), 1);
+        iv.set(5, 100);
+        assert_eq!(iv.query(1..7), 3);
+        iv.push(-2);
+        assert_eq!(iv.query(..), -2);
+        iv.set(8, 100);
+        assert_eq!(iv.query(7..=8), 2);
+        iv.set(8, -2);
+        assert_eq!(iv.query(7..=8), -2);
+        assert_eq!(iv.pop(), Some(-2));
+        assert_eq!(iv.query(..), 1);
+    }
+}
 
 type I = i128;
 type U = usize;
 
-fn main() {
-    let mut iv = IndexedVec::from_vec(vec![1, 3, 4, 8, 6, 1, 4, 2], i32::MAX, |a, b| {
-        if a < b {
-            *a
-        } else {
-            *b
-        }
-    });
-    assert_eq!(iv.query(1..7), 1);
-    iv.set(5, 100);
-    assert_eq!(iv.query(1..7), 3);
-    iv.push(-2);
-    assert_eq!(iv.query(..), -2);
-}
+fn main() {}

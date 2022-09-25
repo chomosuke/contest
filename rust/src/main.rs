@@ -415,30 +415,34 @@ mod graph {
 
     pub struct Graph {
         adjacent_nodes: Vec<Vec<(usize, i128)>>,
-        negative_weight_count: usize,
+        negative_edge_count: u128,
     }
     impl Graph {
         pub fn new() -> Self {
             Graph {
                 adjacent_nodes: Vec::new(),
-                negative_weight_count: 0,
+                negative_edge_count: 0,
             }
         }
         pub fn with_capacity(capacity: usize) -> Self {
             Graph {
                 adjacent_nodes: Vec::with_capacity(capacity),
-                negative_weight_count: 0,
+                negative_edge_count: 0,
             }
         }
         pub fn from_edges(edges: Vec<(usize, usize, i128)>, node_count: usize) -> Self {
             let mut g = Graph {
                 adjacent_nodes: vec![Vec::new(); node_count],
-                negative_weight_count: 0,
+                negative_edge_count: 0,
             };
             for edge in edges {
                 g.add_edge(edge);
             }
             g
+        }
+
+        pub fn get_adjacent_nodes(&self) -> &Vec<Vec<(usize, i128)>> {
+            &self.adjacent_nodes
         }
 
         pub fn add_node(&mut self) -> usize {
@@ -448,22 +452,29 @@ mod graph {
         pub fn add_edge(&mut self, edge: (usize, usize, i128)) {
             self.adjacent_nodes[edge.0].push((edge.1, edge.2));
             if edge.2 < 0 {
-                self.negative_weight_count += 1;
+                self.negative_edge_count += 1;
             }
+        }
+
+        pub fn depth_first_iter(&self, start: usize) -> DepthFirstIter {
+            DepthFirstIter::new(self, start)
+        }
+        pub fn breath_first_iter(&self, start: usize) -> BreathFirstIter {
+            BreathFirstIter::new(self, start)
         }
 
         pub fn shortest_path_len<F: Fn(usize) -> bool>(
             &self,
             start: usize,
             stop_when: F,
-        ) -> Vec<i128> {
-            if self.negative_weight_count == 0 {
+        ) -> Option<Vec<i128>> {
+            if self.negative_edge_count == 0 {
                 self.dijkstra(start, stop_when)
             } else {
-                self.bellman_ford(start, stop_when)
+                self.spfa(start, stop_when)
             }
         }
-        fn dijkstra<F: Fn(usize) -> bool>(&self, start: usize, stop_when: F) -> Vec<i128> {
+        fn dijkstra<F: Fn(usize) -> bool>(&self, start: usize, stop_when: F) -> Option<Vec<i128>> {
             let mut shortest_path_len = vec![i128::MAX; self.adjacent_nodes.len()];
             let mut queue = BinaryHeap::new();
             queue.push(Reverse((0, start)));
@@ -479,10 +490,15 @@ mod graph {
                     queue.push(Reverse((distance + *weight, *adj_node)));
                 }
             }
-            shortest_path_len
+            Some(shortest_path_len)
         }
-        fn bellman_ford<F: Fn(usize) -> bool>(&self, start: usize, _stop_when: F) -> Vec<i128> {
+        fn spfa<F: Fn(usize) -> bool>(
+            &self,
+            start: usize,
+            _stop_when: F,
+        ) -> Option<Vec<i128>> {
             let mut shortest_path_len = vec![i128::MAX; self.adjacent_nodes.len()];
+            let mut shortest_path_edge_len = vec![0; self.adjacent_nodes.len()];
             shortest_path_len[start] = 0;
             let mut queue = VecDeque::new();
             queue.push_back(start);
@@ -490,22 +506,16 @@ mod graph {
                 for &(adj_node, weight) in &self.adjacent_nodes[node] {
                     if shortest_path_len[node] + weight < shortest_path_len[adj_node] {
                         shortest_path_len[adj_node] = shortest_path_len[node] + weight;
+                        shortest_path_edge_len[adj_node] = shortest_path_edge_len[node] + 1;
+                        if shortest_path_edge_len[adj_node] >= self.adjacent_nodes.len() {
+                            // negative cycle
+                            return None;
+                        }
                         queue.push_back(adj_node);
                     }
                 }
             }
-            shortest_path_len
-        }
-
-        pub fn get_adjacent_nodes(&self) -> &Vec<Vec<(usize, i128)>> {
-            &self.adjacent_nodes
-        }
-
-        pub fn depth_first_iter(&self, start: usize) -> DepthFirstIter {
-            DepthFirstIter::new(self, start)
-        }
-        pub fn breath_first_iter(&self, start: usize) -> BreathFirstIter {
-            BreathFirstIter::new(self, start)
+            Some(shortest_path_len)
         }
     }
 
@@ -534,12 +544,12 @@ mod graph {
             );
             assert_eq!(
                 g.shortest_path_len(1, |_| false),
-                vec![i128::MAX, 0, 5, 7, 3, 1],
+                Some(vec![i128::MAX, 0, 5, 7, 3, 1]),
             );
         }
 
         #[test]
-        fn bellman_ford() {
+        fn spfa() {
             let g = Graph::from_edges(
                 vec![
                     (1, 2, 5),
@@ -562,8 +572,49 @@ mod graph {
             );
             assert_eq!(
                 g.shortest_path_len(1, |_| false),
-                vec![i128::MAX, 0, 4, 3, 4, 2],
+                Some(vec![i128::MAX, 0, 4, 3, 4, 2]),
             );
+        }
+
+        #[test]
+        fn spfa_negative_cycle() {
+            let g = Graph::from_edges(
+                vec![
+                    (1, 2, 5),
+                    (1, 3, 3),
+                    (1, 4, 7),
+                    (2, 1, 5),
+                    (2, 4, 3),
+                    (2, 5, 2),
+                    (3, 1, 3),
+                    (3, 4, 1),
+                    (3, 5, -4),
+                    (4, 1, 7),
+                    (4, 2, 3),
+                    (4, 3, 1),
+                    (4, 5, 2),
+                    (5, 2, 2),
+                    (5, 4, 2),
+                ],
+                6,
+            );
+            assert_eq!(g.shortest_path_len(1, |_| false), None,);
+        }
+
+        #[test]
+        fn spfa_negative_cycle_no_false_positive() {
+            let g = Graph::from_edges(
+                vec![
+                    (0, 1, 0),
+                    (1, 2, 0),
+                    (2, 3, -1),
+                    (3, 4, 0),
+                    (4, 5, 0),
+                    (5, 1, 1),
+                ],
+                6,
+            );
+            assert_eq!(g.shortest_path_len(0, |_| false), Some(vec![0, 0, 0, -1, -1, -1]));
         }
 
         #[test]

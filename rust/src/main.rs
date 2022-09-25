@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, clippy::needless_range_loop)]
 type I = i128;
 type U = usize;
 
@@ -492,11 +492,7 @@ mod graph {
             }
             Some(shortest_path_len)
         }
-        fn spfa<F: Fn(usize) -> bool>(
-            &self,
-            start: usize,
-            _stop_when: F,
-        ) -> Option<Vec<i128>> {
+        fn spfa<F: Fn(usize) -> bool>(&self, start: usize, _stop_when: F) -> Option<Vec<i128>> {
             let mut shortest_path_len = vec![i128::MAX; self.adjacent_nodes.len()];
             let mut shortest_path_edge_len = vec![0; self.adjacent_nodes.len()];
             shortest_path_len[start] = 0;
@@ -516,6 +512,40 @@ mod graph {
                 }
             }
             Some(shortest_path_len)
+        }
+
+        pub fn index_shortest_paths(&self) -> Option<Vec<Vec<i128>>> {
+            let n = self.adjacent_nodes.len();
+            let mut shortest_paths_len = vec![vec![i128::MAX; n]; n];
+            for (node, adj_nodes) in self.adjacent_nodes.iter().enumerate() {
+                for &(adj_node, weight) in adj_nodes {
+                    shortest_paths_len[node][adj_node] = weight;
+                }
+            }
+            for node in 0..n {
+                shortest_paths_len[node][node] = 0;
+            }
+            for nodei in 0..n {
+                for node1 in 0..n {
+                    for node2 in 0..n {
+                        if shortest_paths_len[node1][nodei] != i128::MAX
+                            && shortest_paths_len[nodei][node2] != i128::MAX
+                        {
+                            shortest_paths_len[node1][node2] = shortest_paths_len[node1][node2]
+                                .min(
+                                    shortest_paths_len[node1][nodei]
+                                        + shortest_paths_len[nodei][node2],
+                                );
+                        }
+                    }
+                }
+            }
+            for node in 0..n {
+                if shortest_paths_len[node][node] < 0 {
+                    return None;
+                }
+            }
+            Some(shortest_paths_len)
         }
     }
 
@@ -614,7 +644,92 @@ mod graph {
                 ],
                 6,
             );
-            assert_eq!(g.shortest_path_len(0, |_| false), Some(vec![0, 0, 0, -1, -1, -1]));
+            assert_eq!(
+                g.shortest_path_len(0, |_| false),
+                Some(vec![0, 0, 0, -1, -1, -1])
+            );
+        }
+
+        #[test]
+        fn floyd_warshall() {
+            let g = Graph::from_edges(
+                vec![
+                    (0, 1, 5),
+                    (0, 3, 9),
+                    (0, 4, 1),
+                    (1, 0, 5),
+                    (1, 2, 2),
+                    (2, 1, 2),
+                    (2, 3, 6),
+                    (3, 0, 9),
+                    (3, 2, 6),
+                    (3, 4, 2),
+                    (4, 0, 1),
+                    (4, 3, 2),
+                ],
+                5,
+            );
+            assert_eq!(
+                g.index_shortest_paths(),
+                Some(vec![
+                    vec![0, 5, 7, 3, 1],
+                    vec![5, 0, 2, 8, 6],
+                    vec![7, 2, 0, 6, 8],
+                    vec![3, 8, 6, 0, 2],
+                    vec![1, 6, 8, 2, 0],
+                ]),
+            );
+        }
+
+        #[test]
+        fn floyd_warshall_negative_cycle() {
+            let g = Graph::from_edges(
+                vec![
+                    (1, 2, 5),
+                    (1, 3, 3),
+                    (1, 4, 7),
+                    (2, 1, 5),
+                    (2, 4, 3),
+                    (2, 5, 2),
+                    (3, 1, 3),
+                    (3, 4, 1),
+                    (3, 5, -4),
+                    (4, 1, 7),
+                    (4, 2, 3),
+                    (4, 3, 1),
+                    (4, 5, 2),
+                    (5, 2, 2),
+                    (5, 4, 2),
+                ],
+                6,
+            );
+            assert_eq!(g.index_shortest_paths(), None);
+        }
+
+        #[test]
+        fn floyd_warshall_negative_cycle_no_false_positive() {
+            let g = Graph::from_edges(
+                vec![
+                    (0, 1, 0),
+                    (1, 2, 0),
+                    (2, 3, -1),
+                    (3, 4, 0),
+                    (4, 5, 0),
+                    (5, 1, 1),
+                ],
+                6,
+            );
+            assert_eq!(
+                g.index_shortest_paths(),
+                Some(vec![
+                    vec![0, 0, 0, -1, -1, -1],
+                    vec![170141183460469231731687303715884105727, 0, 0, -1, -1, -1],
+                    vec![170141183460469231731687303715884105727, 0, 0, -1, -1, -1],
+                    vec![170141183460469231731687303715884105727, 1, 1, 0, 0, 0],
+                    vec![170141183460469231731687303715884105727, 1, 1, 0, 0, 0],
+                    vec![170141183460469231731687303715884105727, 1, 1, 0, 0, 0],
+                ]),
+            );
         }
 
         #[test]

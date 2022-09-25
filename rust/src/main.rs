@@ -335,7 +335,7 @@ mod graph {
     }
     impl<'a> DepthFirstIter<'a> {
         fn new(graph: &'a Graph, start: usize) -> Self {
-            let capacity = graph.get_adj_nodes().len();
+            let capacity = graph.get_adj_nodess().len();
             let mut pushed = vec![false; capacity];
             let mut stack = VecDeque::with_capacity(capacity);
             stack.push_back(start);
@@ -357,7 +357,7 @@ mod graph {
                 stack,
             } = self;
             if let Some(node) = stack.pop_back() {
-                let adjacent_nodes = graph.get_adj_nodes();
+                let adjacent_nodes = graph.get_adj_nodess();
                 for &(node, _) in adjacent_nodes[node].iter().rev() {
                     if !pushed[node] {
                         stack.push_back(node);
@@ -377,7 +377,7 @@ mod graph {
     }
     impl<'a> BreathFirstIter<'a> {
         fn new(graph: &'a Graph, start: usize) -> Self {
-            let capacity = graph.get_adj_nodes().len();
+            let capacity = graph.get_adj_nodess().len();
             let mut pushed = vec![false; capacity];
             let mut queue = VecDeque::with_capacity(capacity);
             queue.push_back(start);
@@ -399,7 +399,7 @@ mod graph {
                 queue,
             } = self;
             if let Some(node) = queue.pop_front() {
-                let adjacent_nodes = graph.get_adj_nodes();
+                let adjacent_nodes = graph.get_adj_nodess();
                 for &(node, _) in adjacent_nodes[node].iter() {
                     if !pushed[node] {
                         queue.push_back(node);
@@ -417,27 +417,35 @@ mod graph {
         adj_nodess: Vec<Vec<(usize, i128)>>,
         rev_adj_nodess: Option<Vec<Vec<(usize, i128)>>>,
         neg_edge_count: u128,
+        directed: bool,
     }
     impl Graph {
-        pub fn new() -> Self {
+        pub fn new(directed: bool) -> Self {
             Graph {
                 adj_nodess: Vec::new(),
                 rev_adj_nodess: None,
                 neg_edge_count: 0,
+                directed,
             }
         }
-        pub fn with_capacity(capacity: usize) -> Self {
+        pub fn with_capacity(capacity: usize, directed: bool) -> Self {
             Graph {
                 adj_nodess: Vec::with_capacity(capacity),
                 rev_adj_nodess: None,
                 neg_edge_count: 0,
+                directed,
             }
         }
-        pub fn from_edges(edges: Vec<(usize, usize, i128)>, node_count: usize) -> Self {
+        pub fn from_edges(
+            edges: Vec<(usize, usize, i128)>,
+            node_count: usize,
+            directed: bool,
+        ) -> Self {
             let mut g = Graph {
                 adj_nodess: vec![Vec::new(); node_count],
                 rev_adj_nodess: None,
                 neg_edge_count: 0,
+                directed,
             };
             for edge in edges {
                 g.add_edge(edge);
@@ -446,6 +454,9 @@ mod graph {
         }
 
         pub fn enable_rev_adj_nodes(&mut self) {
+            if self.rev_adj_nodess.is_some() || !self.directed {
+                return;
+            }
             let mut rev_adj_nodess = vec![Vec::new(); self.adj_nodess.len()];
             for (node, adj_nodes) in self.adj_nodess.iter().enumerate() {
                 for &(adj_node, weight) in adj_nodes {
@@ -455,11 +466,15 @@ mod graph {
             self.rev_adj_nodess = Some(rev_adj_nodess);
         }
 
-        pub fn get_adj_nodes(&self) -> &Vec<Vec<(usize, i128)>> {
+        pub fn get_adj_nodess(&self) -> &Vec<Vec<(usize, i128)>> {
             &self.adj_nodess
         }
-        pub fn get_rev_adj_nodes(&self) -> &Option<Vec<Vec<(usize, i128)>>> {
-            &self.rev_adj_nodess
+        pub fn get_rev_adj_nodess(&self) -> Option<&Vec<Vec<(usize, i128)>>> {
+            if self.directed {
+                self.rev_adj_nodess.as_ref()
+            } else {
+                Some(&self.adj_nodess)
+            }
         }
 
         pub fn add_node(&mut self) -> usize {
@@ -471,6 +486,9 @@ mod graph {
         }
         pub fn add_edge(&mut self, edge: (usize, usize, i128)) {
             self.adj_nodess[edge.0].push((edge.1, edge.2));
+            if !self.directed {
+                self.adj_nodess[edge.1].push((edge.0, edge.2));
+            }
             if edge.2 < 0 {
                 self.neg_edge_count += 1;
             }
@@ -582,8 +600,7 @@ mod graph {
         ) -> Option<Vec<usize>> {
             let dists_to_start = shortest_path_lens;
             let rev_adj_nodess = self
-                .rev_adj_nodess
-                .as_ref()
+                .get_rev_adj_nodess()
                 .expect("need to enable_rev_adj_nodes before calling find_shortest_path");
             if dists_to_start[start] != 0 {
                 panic!("expected shortest_path_lens[start] to be zero, looks like you got the one start node");
@@ -597,7 +614,9 @@ mod graph {
                 shortest_path.push(node);
                 node = rev_adj_nodess[node]
                     .iter()
-                    .filter(|next_node| dists_to_start[next_node.0] == dists_to_start[node] - next_node.1)
+                    .filter(|next_node| {
+                        dists_to_start[next_node.0] == dists_to_start[node] - next_node.1
+                    })
                     .min_by_key(|next_node| dists_to_start[next_node.0])
                     .expect("shortest_path_lens corruption")
                     .0;
@@ -629,7 +648,7 @@ mod graph {
         ];
         #[test]
         fn dfs() {
-            let g = Graph::from_edges(EDGES.to_vec(), 5);
+            let g = Graph::from_edges(EDGES.to_vec(), 5, true);
             assert_eq!(
                 g.depth_first_iter(0).collect::<Vec<_>>(),
                 vec![0, 1, 4, 2, 3]
@@ -638,7 +657,7 @@ mod graph {
 
         #[test]
         fn bfs() {
-            let g = Graph::from_edges(EDGES.to_vec(), 5);
+            let g = Graph::from_edges(EDGES.to_vec(), 5, true);
             assert_eq!(
                 g.breath_first_iter(0).collect::<Vec<_>>(),
                 vec![0, 1, 2, 3, 4]
@@ -647,7 +666,7 @@ mod graph {
 
         #[test]
         fn dijkstra() {
-            let g = Graph::from_edges(EDGES.to_vec(), 5);
+            let g = Graph::from_edges(EDGES.to_vec(), 5, true);
             assert_eq!(g.get_shortest_path_lens(0), Some(vec![0, 5, 3, 4, 6]),);
         }
 
@@ -655,7 +674,7 @@ mod graph {
         fn spfa() {
             let mut edges = EDGES.to_vec();
             edges.push((2, 4, -1));
-            let g = Graph::from_edges(edges, 5);
+            let g = Graph::from_edges(edges, 5, true);
             assert_eq!(g.get_shortest_path_lens(0), Some(vec![0, 4, 3, 4, 2]),);
         }
 
@@ -663,7 +682,7 @@ mod graph {
         fn spfa_negative_cycle() {
             let mut edges = EDGES.to_vec();
             edges.push((2, 4, -4));
-            let g = Graph::from_edges(edges, 5);
+            let g = Graph::from_edges(edges, 5, true);
             assert_eq!(g.get_shortest_path_lens(1), None);
         }
 
@@ -679,13 +698,41 @@ mod graph {
                     (5, 0, 1),
                 ],
                 6,
+                true,
             );
             assert_eq!(g.get_shortest_path_lens(0), Some(vec![0, 0, 0, -1, -1, -1]));
         }
 
         #[test]
         fn floyd_warshall() {
-            let g = Graph::from_edges(EDGES.to_vec(), 5);
+            let g = Graph::from_edges(EDGES.to_vec(), 5, true);
+            assert_eq!(
+                g.get_all_shortest_path_lens(),
+                Some(vec![
+                    vec![0, 5, 3, 4, 6],
+                    vec![5, 0, 4, 3, 2],
+                    vec![3, 4, 0, 1, 3],
+                    vec![4, 3, 1, 0, 2],
+                    vec![6, 2, 3, 2, 0],
+                ]),
+            );
+        }
+
+        #[test]
+        fn undirected_floyd_warshall() {
+            let g = Graph::from_edges(
+                vec![
+                    (0, 1, 5),
+                    (0, 2, 3),
+                    (0, 3, 7),
+                    (1, 3, 3),
+                    (1, 4, 2),
+                    (2, 3, 1),
+                    (3, 4, 2),
+                ],
+                5,
+                false,
+            );
             assert_eq!(
                 g.get_all_shortest_path_lens(),
                 Some(vec![
@@ -702,7 +749,7 @@ mod graph {
         fn floyd_warshall_negative_cycle() {
             let mut edges = EDGES.to_vec();
             edges.push((2, 4, -4));
-            let g = Graph::from_edges(edges, 5);
+            let g = Graph::from_edges(edges, 5, false);
             assert_eq!(g.get_all_shortest_path_lens(), None);
         }
 
@@ -718,6 +765,7 @@ mod graph {
                     (5, 0, 1),
                 ],
                 6,
+                true,
             );
             assert_eq!(
                 g.get_all_shortest_path_lens(),
@@ -734,7 +782,7 @@ mod graph {
 
         #[test]
         fn reconstruct_shortest_path() {
-            let mut g = Graph::from_edges(EDGES.to_vec(), 6);
+            let mut g = Graph::from_edges(EDGES.to_vec(), 6, true);
             let shortest_path_lens = g.get_shortest_path_lens(0).unwrap();
             g.enable_rev_adj_nodes();
             assert_eq!(

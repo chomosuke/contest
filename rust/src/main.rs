@@ -132,6 +132,8 @@ mod binary_searchable {
         }
     }
 }
+#[allow(unused_imports)]
+use binary_searchable::*;
 
 fn log2_ceil(x: usize) -> u32 {
     if x == 0 {
@@ -619,3 +621,5 @@ mod graph {
         }
     }
 }
+#[allow(unused_imports)]
+use graph::*;

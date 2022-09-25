@@ -335,7 +335,7 @@ mod graph {
     }
     impl<'a> DepthFirstIter<'a> {
         fn new(graph: &'a Graph, start: usize) -> Self {
-            let capacity = graph.get_adjacent_nodes().len();
+            let capacity = graph.get_adj_nodes().len();
             let mut pushed = vec![false; capacity];
             let mut stack = VecDeque::with_capacity(capacity);
             stack.push_back(start);
@@ -357,7 +357,7 @@ mod graph {
                 stack,
             } = self;
             if let Some(node) = stack.pop_back() {
-                let adjacent_nodes = graph.get_adjacent_nodes();
+                let adjacent_nodes = graph.get_adj_nodes();
                 for &(node, _) in adjacent_nodes[node].iter().rev() {
                     if !pushed[node] {
                         stack.push_back(node);
@@ -377,7 +377,7 @@ mod graph {
     }
     impl<'a> BreathFirstIter<'a> {
         fn new(graph: &'a Graph, start: usize) -> Self {
-            let capacity = graph.get_adjacent_nodes().len();
+            let capacity = graph.get_adj_nodes().len();
             let mut pushed = vec![false; capacity];
             let mut queue = VecDeque::with_capacity(capacity);
             queue.push_back(start);
@@ -399,7 +399,7 @@ mod graph {
                 queue,
             } = self;
             if let Some(node) = queue.pop_front() {
-                let adjacent_nodes = graph.get_adjacent_nodes();
+                let adjacent_nodes = graph.get_adj_nodes();
                 for &(node, _) in adjacent_nodes[node].iter() {
                     if !pushed[node] {
                         queue.push_back(node);
@@ -414,26 +414,30 @@ mod graph {
     }
 
     pub struct Graph {
-        adjacent_nodes: Vec<Vec<(usize, i128)>>,
-        negative_edge_count: u128,
+        adj_nodess: Vec<Vec<(usize, i128)>>,
+        rev_adj_nodess: Option<Vec<Vec<(usize, i128)>>>,
+        neg_edge_count: u128,
     }
     impl Graph {
         pub fn new() -> Self {
             Graph {
-                adjacent_nodes: Vec::new(),
-                negative_edge_count: 0,
+                adj_nodess: Vec::new(),
+                rev_adj_nodess: None,
+                neg_edge_count: 0,
             }
         }
         pub fn with_capacity(capacity: usize) -> Self {
             Graph {
-                adjacent_nodes: Vec::with_capacity(capacity),
-                negative_edge_count: 0,
+                adj_nodess: Vec::with_capacity(capacity),
+                rev_adj_nodess: None,
+                neg_edge_count: 0,
             }
         }
         pub fn from_edges(edges: Vec<(usize, usize, i128)>, node_count: usize) -> Self {
             let mut g = Graph {
-                adjacent_nodes: vec![Vec::new(); node_count],
-                negative_edge_count: 0,
+                adj_nodess: vec![Vec::new(); node_count],
+                rev_adj_nodess: None,
+                neg_edge_count: 0,
             };
             for edge in edges {
                 g.add_edge(edge);
@@ -441,18 +445,37 @@ mod graph {
             g
         }
 
-        pub fn get_adjacent_nodes(&self) -> &Vec<Vec<(usize, i128)>> {
-            &self.adjacent_nodes
+        pub fn enable_rev_adj_nodes(&mut self) {
+            let mut rev_adj_nodess = vec![Vec::new(); self.adj_nodess.len()];
+            for (node, adj_nodes) in self.adj_nodess.iter().enumerate() {
+                for &(adj_node, weight) in adj_nodes {
+                    rev_adj_nodess[adj_node].push((node, weight));
+                }
+            }
+            self.rev_adj_nodess = Some(rev_adj_nodess);
+        }
+
+        pub fn get_adj_nodes(&self) -> &Vec<Vec<(usize, i128)>> {
+            &self.adj_nodess
+        }
+        pub fn get_rev_adj_nodes(&self) -> &Option<Vec<Vec<(usize, i128)>>> {
+            &self.rev_adj_nodess
         }
 
         pub fn add_node(&mut self) -> usize {
-            self.adjacent_nodes.push(Vec::new());
-            self.adjacent_nodes.len() - 1
+            self.adj_nodess.push(Vec::new());
+            if let Some(rev_adj_nodes) = &mut self.rev_adj_nodess {
+                rev_adj_nodes.push(Vec::new());
+            }
+            self.adj_nodess.len() - 1
         }
         pub fn add_edge(&mut self, edge: (usize, usize, i128)) {
-            self.adjacent_nodes[edge.0].push((edge.1, edge.2));
+            self.adj_nodess[edge.0].push((edge.1, edge.2));
             if edge.2 < 0 {
-                self.negative_edge_count += 1;
+                self.neg_edge_count += 1;
+            }
+            if let Some(rev_adj_nodes) = &mut self.rev_adj_nodess {
+                rev_adj_nodes[edge.1].push((edge.0, edge.2));
             }
         }
 
@@ -463,19 +486,22 @@ mod graph {
             BreathFirstIter::new(self, start)
         }
 
-        pub fn shortest_path_len<F: Fn(usize) -> bool>(
+        pub fn get_shortest_path_lens(&self, start: usize) -> Option<Vec<i128>> {
+            self.get_shortest_path_lens_till_stop(start, |_| false)
+        }
+        pub fn get_shortest_path_lens_till_stop<F: Fn(usize) -> bool>(
             &self,
             start: usize,
             stop_when: F,
         ) -> Option<Vec<i128>> {
-            if self.negative_edge_count == 0 {
+            if self.neg_edge_count == 0 {
                 self.dijkstra(start, stop_when)
             } else {
                 self.spfa(start, stop_when)
             }
         }
         fn dijkstra<F: Fn(usize) -> bool>(&self, start: usize, stop_when: F) -> Option<Vec<i128>> {
-            let mut shortest_path_len = vec![i128::MAX; self.adjacent_nodes.len()];
+            let mut shortest_path_len = vec![i128::MAX; self.adj_nodess.len()];
             let mut queue = BinaryHeap::new();
             queue.push(Reverse((0, start)));
             while let Some(Reverse((distance, node))) = queue.pop() {
@@ -486,24 +512,24 @@ mod graph {
                 if stop_when(node) {
                     break;
                 }
-                for (adj_node, weight) in &self.adjacent_nodes[node] {
+                for (adj_node, weight) in &self.adj_nodess[node] {
                     queue.push(Reverse((distance + *weight, *adj_node)));
                 }
             }
             Some(shortest_path_len)
         }
         fn spfa<F: Fn(usize) -> bool>(&self, start: usize, _stop_when: F) -> Option<Vec<i128>> {
-            let mut shortest_path_len = vec![i128::MAX; self.adjacent_nodes.len()];
-            let mut shortest_path_edge_len = vec![0; self.adjacent_nodes.len()];
+            let mut shortest_path_len = vec![i128::MAX; self.adj_nodess.len()];
+            let mut shortest_path_edge_len = vec![0; self.adj_nodess.len()];
             shortest_path_len[start] = 0;
             let mut queue = VecDeque::new();
             queue.push_back(start);
             while let Some(node) = queue.pop_front() {
-                for &(adj_node, weight) in &self.adjacent_nodes[node] {
+                for &(adj_node, weight) in &self.adj_nodess[node] {
                     if shortest_path_len[node] + weight < shortest_path_len[adj_node] {
                         shortest_path_len[adj_node] = shortest_path_len[node] + weight;
                         shortest_path_edge_len[adj_node] = shortest_path_edge_len[node] + 1;
-                        if shortest_path_edge_len[adj_node] >= self.adjacent_nodes.len() {
+                        if shortest_path_edge_len[adj_node] >= self.adj_nodess.len() {
                             // negative cycle
                             return None;
                         }
@@ -514,38 +540,70 @@ mod graph {
             Some(shortest_path_len)
         }
 
-        pub fn index_shortest_paths(&self) -> Option<Vec<Vec<i128>>> {
-            let n = self.adjacent_nodes.len();
-            let mut shortest_paths_len = vec![vec![i128::MAX; n]; n];
-            for (node, adj_nodes) in self.adjacent_nodes.iter().enumerate() {
+        pub fn get_all_shortest_path_lens(&self) -> Option<Vec<Vec<i128>>> {
+            let n = self.adj_nodess.len();
+            let mut shortest_path_lens = vec![vec![i128::MAX; n]; n];
+            for (node, adj_nodes) in self.adj_nodess.iter().enumerate() {
                 for &(adj_node, weight) in adj_nodes {
-                    shortest_paths_len[node][adj_node] = weight;
+                    shortest_path_lens[node][adj_node] = weight;
                 }
             }
             for node in 0..n {
-                shortest_paths_len[node][node] = 0;
+                shortest_path_lens[node][node] = 0;
             }
             for nodei in 0..n {
                 for node1 in 0..n {
                     for node2 in 0..n {
-                        if shortest_paths_len[node1][nodei] != i128::MAX
-                            && shortest_paths_len[nodei][node2] != i128::MAX
+                        if shortest_path_lens[node1][nodei] != i128::MAX
+                            && shortest_path_lens[nodei][node2] != i128::MAX
                         {
-                            shortest_paths_len[node1][node2] = shortest_paths_len[node1][node2]
+                            shortest_path_lens[node1][node2] = shortest_path_lens[node1][node2]
                                 .min(
-                                    shortest_paths_len[node1][nodei]
-                                        + shortest_paths_len[nodei][node2],
+                                    shortest_path_lens[node1][nodei]
+                                        + shortest_path_lens[nodei][node2],
                                 );
                         }
                     }
                 }
             }
             for node in 0..n {
-                if shortest_paths_len[node][node] < 0 {
+                if shortest_path_lens[node][node] < 0 {
                     return None;
                 }
             }
-            Some(shortest_paths_len)
+            Some(shortest_path_lens)
+        }
+
+        pub fn reconstruct_shortest_path(
+            &self,
+            shortest_path_lens: &[i128],
+            start: usize,
+            end: usize,
+        ) -> Option<Vec<usize>> {
+            let dists_to_start = shortest_path_lens;
+            let rev_adj_nodess = self
+                .rev_adj_nodess
+                .as_ref()
+                .expect("need to enable_rev_adj_nodes before calling find_shortest_path");
+            if dists_to_start[start] != 0 {
+                panic!("expected shortest_path_lens[start] to be zero, looks like you got the one start node");
+            }
+            if dists_to_start[end] == i128::MAX {
+                return None;
+            }
+            let mut shortest_path = Vec::new();
+            let mut node = end;
+            while node != start {
+                shortest_path.push(node);
+                node = rev_adj_nodess[node]
+                    .iter()
+                    .filter(|next_node| dists_to_start[next_node.0] == dists_to_start[node] - next_node.1)
+                    .min_by_key(|next_node| dists_to_start[next_node.0])
+                    .expect("shortest_path_lens corruption")
+                    .0;
+            }
+            shortest_path.push(node);
+            Some(shortest_path.into_iter().rev().collect())
         }
     }
 
@@ -553,82 +611,60 @@ mod graph {
     mod test {
         use super::*;
 
+        const EDGES: &[(usize, usize, i128)] = &[
+            (0, 1, 5),
+            (0, 2, 3),
+            (0, 3, 7),
+            (1, 0, 5),
+            (1, 3, 3),
+            (1, 4, 2),
+            (2, 0, 3),
+            (2, 3, 1),
+            (3, 0, 7),
+            (3, 1, 3),
+            (3, 2, 1),
+            (3, 4, 2),
+            (4, 1, 2),
+            (4, 3, 2),
+        ];
+        #[test]
+        fn dfs() {
+            let g = Graph::from_edges(EDGES.to_vec(), 5);
+            assert_eq!(
+                g.depth_first_iter(0).collect::<Vec<_>>(),
+                vec![0, 1, 4, 2, 3]
+            );
+        }
+
+        #[test]
+        fn bfs() {
+            let g = Graph::from_edges(EDGES.to_vec(), 5);
+            assert_eq!(
+                g.breath_first_iter(0).collect::<Vec<_>>(),
+                vec![0, 1, 2, 3, 4]
+            );
+        }
+
         #[test]
         fn dijkstra() {
-            let g = Graph::from_edges(
-                vec![
-                    (1, 2, 5),
-                    (1, 4, 9),
-                    (1, 5, 1),
-                    (2, 1, 5),
-                    (2, 3, 2),
-                    (3, 2, 2),
-                    (3, 4, 6),
-                    (4, 1, 9),
-                    (4, 3, 6),
-                    (4, 5, 2),
-                    (5, 1, 1),
-                    (5, 4, 2),
-                ],
-                6,
-            );
-            assert_eq!(
-                g.shortest_path_len(1, |_| false),
-                Some(vec![i128::MAX, 0, 5, 7, 3, 1]),
-            );
+            let g = Graph::from_edges(EDGES.to_vec(), 5);
+            assert_eq!(g.get_shortest_path_lens(0), Some(vec![0, 5, 3, 4, 6]),);
         }
 
         #[test]
         fn spfa() {
-            let g = Graph::from_edges(
-                vec![
-                    (1, 2, 5),
-                    (1, 3, 3),
-                    (1, 4, 7),
-                    (2, 1, 5),
-                    (2, 4, 3),
-                    (2, 5, 2),
-                    (3, 1, 3),
-                    (3, 4, 1),
-                    (3, 5, -1),
-                    (4, 1, 7),
-                    (4, 2, 3),
-                    (4, 3, 1),
-                    (4, 5, 2),
-                    (5, 2, 2),
-                    (5, 4, 2),
-                ],
-                6,
-            );
-            assert_eq!(
-                g.shortest_path_len(1, |_| false),
-                Some(vec![i128::MAX, 0, 4, 3, 4, 2]),
-            );
+            let mut edges = EDGES.to_vec();
+            edges.push((2, 4, -1));
+            let g = Graph::from_edges(edges, 5);
+            assert_eq!(g.get_shortest_path_lens(0), Some(vec![0, 4, 3, 4, 2]),);
         }
 
         #[test]
         fn spfa_negative_cycle() {
-            let g = Graph::from_edges(
-                vec![
-                    (1, 2, 5),
-                    (1, 3, 3),
-                    (1, 4, 7),
-                    (2, 1, 5),
-                    (2, 4, 3),
-                    (2, 5, 2),
-                    (3, 1, 3),
-                    (3, 4, 1),
-                    (3, 5, -4),
-                    (4, 1, 7),
-                    (4, 2, 3),
-                    (4, 3, 1),
-                    (4, 5, 2),
-                    (5, 2, 2),
-                    (5, 4, 2),
-                ],
-                6,
-            );
-            assert_eq!(g.shortest_path_len(1, |_| false), None,);
+            let mut edges = EDGES.to_vec();
+            edges.push((2, 4, -4));
+            let g = Graph::from_edges(edges, 5);
+            assert_eq!(g.get_shortest_path_lens(1), None);
         }
 
         #[test]
@@ -644,66 +680,30 @@ mod graph {
                 ],
                 6,
             );
-            assert_eq!(
-                g.shortest_path_len(0, |_| false),
-                Some(vec![0, 0, 0, -1, -1, -1])
-            );
+            assert_eq!(g.get_shortest_path_lens(0), Some(vec![0, 0, 0, -1, -1, -1]));
         }
 
         #[test]
         fn floyd_warshall() {
-            let g = Graph::from_edges(
-                vec![
-                    (0, 1, 5),
-                    (0, 3, 9),
-                    (0, 4, 1),
-                    (1, 0, 5),
-                    (1, 2, 2),
-                    (2, 1, 2),
-                    (2, 3, 6),
-                    (3, 0, 9),
-                    (3, 2, 6),
-                    (3, 4, 2),
-                    (4, 0, 1),
-                    (4, 3, 2),
-                ],
-                5,
-            );
+            let g = Graph::from_edges(EDGES.to_vec(), 5);
             assert_eq!(
-                g.index_shortest_paths(),
+                g.get_all_shortest_path_lens(),
                 Some(vec![
-                    vec![0, 5, 7, 3, 1],
-                    vec![5, 0, 2, 8, 6],
-                    vec![7, 2, 0, 6, 8],
-                    vec![3, 8, 6, 0, 2],
-                    vec![1, 6, 8, 2, 0],
+                    vec![0, 5, 3, 4, 6],
+                    vec![5, 0, 4, 3, 2],
+                    vec![3, 4, 0, 1, 3],
+                    vec![4, 3, 1, 0, 2],
+                    vec![6, 2, 3, 2, 0],
                 ]),
             );
         }
 
         #[test]
         fn floyd_warshall_negative_cycle() {
-            let g = Graph::from_edges(
-                vec![
-                    (1, 2, 5),
-                    (1, 3, 3),
-                    (1, 4, 7),
-                    (2, 1, 5),
-                    (2, 4, 3),
-                    (2, 5, 2),
-                    (3, 1, 3),
-                    (3, 4, 1),
-                    (3, 5, -4),
-                    (4, 1, 7),
-                    (4, 2, 3),
-                    (4, 3, 1),
-                    (4, 5, 2),
-                    (5, 2, 2),
-                    (5, 4, 2),
-                ],
-                6,
-            );
-            assert_eq!(g.index_shortest_paths(), None);
+            let mut edges = EDGES.to_vec();
+            edges.push((2, 4, -4));
+            let g = Graph::from_edges(edges, 5);
+            assert_eq!(g.get_all_shortest_path_lens(), None);
         }
 
         #[test]
@@ -720,7 +720,7 @@ mod graph {
                 6,
             );
             assert_eq!(
-                g.index_shortest_paths(),
+                g.get_all_shortest_path_lens(),
                 Some(vec![
                     vec![0, 0, 0, -1, -1, -1],
                     vec![0, 0, 0, -1, -1, -1],
@@ -733,50 +733,13 @@ mod graph {
         }
 
         #[test]
-        fn dfs() {
-            let g = Graph::from_edges(
-                vec![
-                    (1, 2, 1),
-                    (1, 4, 1),
-                    (2, 1, 1),
-                    (2, 3, 1),
-                    (2, 5, 1),
-                    (3, 2, 1),
-                    (3, 5, 1),
-                    (4, 1, 1),
-                    (5, 2, 1),
-                    (5, 3, 1),
-                ],
-                6,
-            );
-
+        fn reconstruct_shortest_path() {
+            let mut g = Graph::from_edges(EDGES.to_vec(), 6);
+            let shortest_path_lens = g.get_shortest_path_lens(0).unwrap();
+            g.enable_rev_adj_nodes();
             assert_eq!(
-                g.depth_first_iter(1).collect::<Vec<_>>(),
-                vec![1, 2, 3, 5, 4]
-            );
-        }
-
-        #[test]
-        fn bfs() {
-            let g = Graph::from_edges(
-                vec![
-                    (1, 2, 1),
-                    (1, 4, 1),
-                    (2, 1, 1),
-                    (2, 3, 1),
-                    (2, 5, 1),
-                    (3, 2, 1),
-                    (3, 6, 1),
-                    (4, 1, 1),
-                    (5, 2, 1),
-                    (5, 6, 1),
-                ],
-                7,
-            );
-
-            assert_eq!(
-                g.breath_first_iter(1).collect::<Vec<_>>(),
-                vec![1, 2, 4, 3, 5, 6]
+                g.reconstruct_shortest_path(&shortest_path_lens, 0, 4),
+                Some(vec![0, 2, 3, 4])
             );
         }
     }

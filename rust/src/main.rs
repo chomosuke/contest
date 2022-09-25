@@ -4,60 +4,6 @@ type U = usize;
 
 fn main() {}
 
-mod memoize {
-    use core::hash::Hash;
-    use std::{cell::RefCell, collections::HashMap};
-
-    pub struct Memoize<I, O, F> {
-        mem: RefCell<HashMap<I, O>>,
-        f: F,
-    }
-    impl<I: Hash + Eq + Clone, O: Clone, F: Fn(I, &Self) -> O> Memoize<I, O, F> {
-        pub fn new(f: F) -> Self {
-            Memoize {
-                mem: RefCell::new(HashMap::new()),
-                f,
-            }
-        }
-
-        pub fn rec(&self, i: I) -> O {
-            if let Some(o) = self.mem.borrow().get(&i) {
-                o.clone()
-            } else {
-                let r = (self.f)(i.clone(), self);
-                self.mem.borrow_mut().insert(i, r.clone());
-                r
-            }
-        }
-    }
-
-    #[cfg(test)]
-    mod test {
-        use super::*;
-
-        #[test]
-        fn coins() {
-            let coins = vec![1, 3, 4];
-            let t = 6;
-            let count = Memoize::<i128, i128, _>::new(|t: i128, f| -> i128 {
-                if t == 0 {
-                    return 1;
-                }
-                if t < 0 {
-                    return 0;
-                }
-                let mut sum = 0;
-                for coin in coins {
-                    sum += f.rec(t - coin);
-                }
-                sum
-            });
-        }
-    }
-}
-#[allow(unused_imports)]
-use memoize::*;
-
 mod scanner {
     use std::collections::{HashSet, VecDeque};
     use std::{any::type_name, io::stdin, str::FromStr};
@@ -67,14 +13,14 @@ mod scanner {
         delimiters: Option<HashSet<char>>,
     }
     impl Scanner {
-        pub fn new() -> Scanner {
+        pub fn new() -> Self {
             Scanner {
                 tokens: VecDeque::new(),
                 delimiters: None,
             }
         }
 
-        pub fn with_delimiters(delimiters: &[char]) -> Scanner {
+        pub fn with_delimiters(delimiters: &[char]) -> Self {
             Scanner {
                 tokens: VecDeque::new(),
                 delimiters: Some(delimiters.iter().copied().collect()),
@@ -132,7 +78,7 @@ mod multi_set {
         hash_map: HashMap<E, U>,
     }
     impl<E: Eq + Hash> MultiSet<E> {
-        pub fn new() -> MultiSet<E> {
+        pub fn new() -> Self {
             MultiSet {
                 hash_map: HashMap::<E, U>::new(),
             }
@@ -232,7 +178,7 @@ mod indexed_vec {
             2 * i + 1
         }
 
-        pub fn new(zero: E, combine: F) -> IndexedVec<E, F> {
+        pub fn new(zero: E, combine: F) -> Self {
             IndexedVec {
                 combine,
                 inner: Vec::new(),
@@ -241,7 +187,7 @@ mod indexed_vec {
                 zero,
             }
         }
-        pub fn with_capacity(capacity: usize, zero: E, combine: F) -> IndexedVec<E, F> {
+        pub fn with_capacity(capacity: usize, zero: E, combine: F) -> Self {
             IndexedVec {
                 combine,
                 inner: Vec::with_capacity(capacity),
@@ -250,7 +196,7 @@ mod indexed_vec {
                 zero,
             }
         }
-        pub fn from_vec(vec: Vec<E>, zero: E, combine: F) -> IndexedVec<E, F> {
+        pub fn from_vec(vec: Vec<E>, zero: E, combine: F) -> Self {
             let mut iv = IndexedVec {
                 combine,
                 inner: vec,
@@ -387,8 +333,8 @@ mod graph {
         pushed: Vec<bool>,
         stack: VecDeque<usize>,
     }
-    impl DepthFirstIter<'_> {
-        fn new(graph: &Graph, start: usize) -> DepthFirstIter {
+    impl<'a> DepthFirstIter<'a> {
+        fn new(graph: &'a Graph, start: usize) -> Self {
             let capacity = graph.get_adjacent_nodes().len();
             let mut pushed = vec![false; capacity];
             let mut stack = VecDeque::with_capacity(capacity);
@@ -429,8 +375,8 @@ mod graph {
         pushed: Vec<bool>,
         queue: VecDeque<usize>,
     }
-    impl BreathFirstIter<'_> {
-        fn new(graph: &Graph, start: usize) -> BreathFirstIter {
+    impl<'a> BreathFirstIter<'a> {
+        fn new(graph: &'a Graph, start: usize) -> Self {
             let capacity = graph.get_adjacent_nodes().len();
             let mut pushed = vec![false; capacity];
             let mut queue = VecDeque::with_capacity(capacity);
@@ -472,19 +418,19 @@ mod graph {
         negative_weight_count: usize,
     }
     impl Graph {
-        pub fn new() -> Graph {
+        pub fn new() -> Self {
             Graph {
                 adjacent_nodes: Vec::new(),
                 negative_weight_count: 0,
             }
         }
-        pub fn with_capacity(capacity: usize) -> Graph {
+        pub fn with_capacity(capacity: usize) -> Self {
             Graph {
                 adjacent_nodes: Vec::with_capacity(capacity),
                 negative_weight_count: 0,
             }
         }
-        pub fn from_edges(edges: Vec<(usize, usize, i128)>, node_count: usize) -> Graph {
+        pub fn from_edges(edges: Vec<(usize, usize, i128)>, node_count: usize) -> Self {
             let mut g = Graph {
                 adjacent_nodes: vec![Vec::new(); node_count],
                 negative_weight_count: 0,
@@ -555,16 +501,10 @@ mod graph {
             &self.adjacent_nodes
         }
 
-        pub fn depth_first_iter(
-            &self,
-            start: usize,
-        ) -> DepthFirstIter {
+        pub fn depth_first_iter(&self, start: usize) -> DepthFirstIter {
             DepthFirstIter::new(self, start)
         }
-        pub fn breath_first_iter(
-            &self,
-            start: usize,
-        ) -> BreathFirstIter {
+        pub fn breath_first_iter(&self, start: usize) -> BreathFirstIter {
             BreathFirstIter::new(self, start)
         }
     }

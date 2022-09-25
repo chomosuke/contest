@@ -4,6 +4,60 @@ type U = usize;
 
 fn main() {}
 
+mod memoize {
+    use core::hash::Hash;
+    use std::{cell::RefCell, collections::HashMap};
+
+    pub struct Memoize<I, O, F> {
+        mem: RefCell<HashMap<I, O>>,
+        f: F,
+    }
+    impl<I: Hash + Eq + Clone, O: Clone, F: Fn(I, &Self) -> O> Memoize<I, O, F> {
+        pub fn new(f: F) -> Self {
+            Memoize {
+                mem: RefCell::new(HashMap::new()),
+                f,
+            }
+        }
+
+        pub fn rec(&self, i: I) -> O {
+            if let Some(o) = self.mem.borrow().get(&i) {
+                o.clone()
+            } else {
+                let r = (self.f)(i.clone(), self);
+                self.mem.borrow_mut().insert(i, r.clone());
+                r
+            }
+        }
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+
+        #[test]
+        fn coins() {
+            let coins = vec![1, 3, 4];
+            let t = 6;
+            let count = Memoize::<i128, i128, _>::new(|t: i128, f| -> i128 {
+                if t == 0 {
+                    return 1;
+                }
+                if t < 0 {
+                    return 0;
+                }
+                let mut sum = 0;
+                for coin in coins {
+                    sum += f.rec(t - coin);
+                }
+                sum
+            });
+        }
+    }
+}
+#[allow(unused_imports)]
+use memoize::*;
+
 mod scanner {
     use std::collections::{HashSet, VecDeque};
     use std::{any::type_name, io::stdin, str::FromStr};

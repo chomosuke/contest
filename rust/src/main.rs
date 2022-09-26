@@ -450,7 +450,7 @@ mod search_iter {
 use search_iter::*;
 
 mod graph {
-    use crate::{BreathFirstIter, DepthFirstIter};
+    use crate::{tree::Tree, BreathFirstIter, DepthFirstIter};
     use std::{
         cmp::Reverse,
         collections::{BinaryHeap, VecDeque},
@@ -668,12 +668,56 @@ mod graph {
             shortest_path.push(node);
             Some(shortest_path.into_iter().rev().collect())
         }
+
+        pub fn get_min_spanning_tree(&self) -> Tree {
+            assert!(!self.directed, "graph must be undirected");
+            let node_count = self.adj_nodess.len();
+            if node_count == 0 {
+                return Tree::new();
+            }
+            let mut added = vec![false; node_count];
+            added[0] = true;
+            let mut edges = Vec::with_capacity(node_count);
+            let mut queue = BinaryHeap::from_iter(self.adj_nodess[0].iter().filter_map(
+                |&(adj_node, weight)| {
+                    if 0 == adj_node {
+                        None
+                    } else {
+                        Some(Reverse((weight, 0, adj_node)))
+                    }
+                },
+            ));
+            while let Some(Reverse((weight, added_node, new_node))) = queue.pop() {
+                if !added[new_node] {
+                    added[new_node] = true;
+                    edges.push((added_node, new_node, weight));
+                    let new_edges =
+                        self.adj_nodess[new_node]
+                            .iter()
+                            .filter_map(|&(adj_node, weight)| {
+                                if added[adj_node] {
+                                    None
+                                } else {
+                                    Some(Reverse((weight, new_node, adj_node)))
+                                }
+                            });
+
+                    for new_edge in new_edges {
+                        queue.push(new_edge);
+                    }
+                }
+            }
+            Tree::from_edges(edges, node_count)
+        }
     }
 
     #[cfg(test)]
     mod test {
+        use std::collections::HashSet;
+
         use super::*;
 
+        // cphb p.g. 124
         const EDGES: &[(usize, usize, i128)] = &[
             (0, 1, 5),
             (0, 2, 3),
@@ -815,6 +859,37 @@ mod graph {
             assert_eq!(
                 g.reconstruct_shortest_path(&shortest_path_lens, 0, 4),
                 Some(vec![0, 2, 3, 4])
+            );
+        }
+
+        #[test]
+        fn min_spanning_tree() {
+            let g = Graph::from_edges(
+                vec![
+                    (0, 1, 5),
+                    (0, 2, 3),
+                    (0, 3, 7),
+                    (1, 3, 3),
+                    (1, 4, 2),
+                    (2, 3, 1),
+                    (3, 4, 2),
+                ],
+                5,
+                false,
+            ); // (0, 2, 3), (1, 4, 2), (2, 3, 1), (3, 4, 2)
+            assert_eq!(
+                g.get_min_spanning_tree()
+                    .get_adj_nodess()
+                    .iter()
+                    .map(|adj_nodes| { HashSet::from_iter(adj_nodes) })
+                    .collect::<Vec<HashSet<&(usize, i128)>>>(),
+                vec![
+                    HashSet::from_iter(&[(2, 3)]),
+                    HashSet::from_iter(&[(4, 2)]),
+                    HashSet::from_iter(&[(0, 3), (3, 1)]),
+                    HashSet::from_iter(&[(2, 1), (4, 2)]),
+                    HashSet::from_iter(&[(1, 2), (3, 2)]),
+                ],
             );
         }
     }

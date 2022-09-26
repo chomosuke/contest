@@ -41,9 +41,7 @@ mod scanner {
         }
 
         pub fn next_line(&mut self) -> String {
-            if !self.tokens.is_empty() {
-                panic!("You have unprocessed token");
-            }
+            assert!(self.tokens.is_empty(), "You have unprocessed token");
             let mut line = String::new();
             stdin().read_line(&mut line).expect("Failed to read.");
             line
@@ -322,26 +320,23 @@ mod indexed_vec {
 #[allow(unused_imports)]
 use indexed_vec::*;
 
-mod graph {
-    use std::{
-        cmp::Reverse,
-        collections::{BinaryHeap, VecDeque},
-    };
+mod search_iter {
+    use std::collections::VecDeque;
 
     pub struct DepthFirstIter<'a> {
-        graph: &'a Graph,
+        adj_nodess: &'a Vec<Vec<(usize, i128)>>,
         pushed: Vec<bool>,
         stack: VecDeque<usize>,
     }
     impl<'a> DepthFirstIter<'a> {
-        fn new(graph: &'a Graph, start: usize) -> Self {
-            let capacity = graph.get_adj_nodess().len();
+        pub fn new(adj_nodess: &'a Vec<Vec<(usize, i128)>>, start: usize) -> Self {
+            let capacity = adj_nodess.len();
             let mut pushed = vec![false; capacity];
             let mut stack = VecDeque::with_capacity(capacity);
             stack.push_back(start);
             pushed[start] = true;
             DepthFirstIter {
-                graph,
+                adj_nodess,
                 pushed,
                 stack,
             }
@@ -352,13 +347,12 @@ mod graph {
 
         fn next(&mut self) -> Option<Self::Item> {
             let DepthFirstIter {
-                graph,
+                adj_nodess,
                 pushed,
                 stack,
             } = self;
             if let Some(node) = stack.pop_back() {
-                let adjacent_nodes = graph.get_adj_nodess();
-                for &(node, _) in adjacent_nodes[node].iter().rev() {
+                for &(node, _) in adj_nodess[node].iter().rev() {
                     if !pushed[node] {
                         stack.push_back(node);
                         pushed[node] = true;
@@ -371,19 +365,19 @@ mod graph {
         }
     }
     pub struct BreathFirstIter<'a> {
-        graph: &'a Graph,
+        adj_nodess: &'a Vec<Vec<(usize, i128)>>,
         pushed: Vec<bool>,
         queue: VecDeque<usize>,
     }
     impl<'a> BreathFirstIter<'a> {
-        fn new(graph: &'a Graph, start: usize) -> Self {
-            let capacity = graph.get_adj_nodess().len();
+        pub fn new(adj_nodess: &'a Vec<Vec<(usize, i128)>>, start: usize) -> Self {
+            let capacity = adj_nodess.len();
             let mut pushed = vec![false; capacity];
             let mut queue = VecDeque::with_capacity(capacity);
             queue.push_back(start);
             pushed[start] = true;
             BreathFirstIter {
-                graph,
+                adj_nodess,
                 pushed,
                 queue,
             }
@@ -394,13 +388,12 @@ mod graph {
 
         fn next(&mut self) -> Option<Self::Item> {
             let BreathFirstIter {
-                graph,
+                adj_nodess,
                 pushed,
                 queue,
             } = self;
             if let Some(node) = queue.pop_front() {
-                let adjacent_nodes = graph.get_adj_nodess();
-                for &(node, _) in adjacent_nodes[node].iter() {
+                for &(node, _) in adj_nodess[node].iter() {
                     if !pushed[node] {
                         queue.push_back(node);
                         pushed[node] = true;
@@ -412,6 +405,56 @@ mod graph {
             }
         }
     }
+
+    #[cfg(test)]
+    mod test {
+        use crate::graph::Graph;
+
+        const EDGES: &[(usize, usize, i128)] = &[
+            (0, 1, 5),
+            (0, 2, 3),
+            (0, 3, 7),
+            (1, 0, 5),
+            (1, 3, 3),
+            (1, 4, 2),
+            (2, 0, 3),
+            (2, 3, 1),
+            (3, 0, 7),
+            (3, 1, 3),
+            (3, 2, 1),
+            (3, 4, 2),
+            (4, 1, 2),
+            (4, 3, 2),
+        ];
+
+        #[test]
+        fn dfs() {
+            let g = Graph::from_edges(EDGES.to_vec(), 5, true);
+            assert_eq!(
+                g.depth_first_iter(0).collect::<Vec<_>>(),
+                vec![0, 1, 4, 2, 3]
+            );
+        }
+
+        #[test]
+        fn bfs() {
+            let g = Graph::from_edges(EDGES.to_vec(), 5, true);
+            assert_eq!(
+                g.breath_first_iter(0).collect::<Vec<_>>(),
+                vec![0, 1, 2, 3, 4]
+            );
+        }
+    }
+}
+#[allow(unused_imports)]
+use search_iter::*;
+
+mod graph {
+    use crate::{BreathFirstIter, DepthFirstIter};
+    use std::{
+        cmp::Reverse,
+        collections::{BinaryHeap, VecDeque},
+    };
 
     pub struct Graph {
         adj_nodess: Vec<Vec<(usize, i128)>>,
@@ -498,10 +541,10 @@ mod graph {
         }
 
         pub fn depth_first_iter(&self, start: usize) -> DepthFirstIter {
-            DepthFirstIter::new(self, start)
+            DepthFirstIter::new(&self.adj_nodess, start)
         }
         pub fn breath_first_iter(&self, start: usize) -> BreathFirstIter {
-            BreathFirstIter::new(self, start)
+            BreathFirstIter::new(&self.adj_nodess, start)
         }
 
         pub fn get_shortest_path_lens(&self, start: usize) -> Option<Vec<i128>> {
@@ -602,9 +645,10 @@ mod graph {
             let rev_adj_nodess = self
                 .get_rev_adj_nodess()
                 .expect("need to enable_rev_adj_nodes before calling find_shortest_path");
-            if dists_to_start[start] != 0 {
-                panic!("expected shortest_path_lens[start] to be zero, looks like you got the one start node");
-            }
+            assert!(
+                dists_to_start[start] == 0,
+                "expected shortest_path_lens[start] to be zero, looks like you got the wrong start node",
+            );
             if dists_to_start[end] == i128::MAX {
                 return None;
             }
@@ -646,23 +690,6 @@ mod graph {
             (4, 1, 2),
             (4, 3, 2),
         ];
-        #[test]
-        fn dfs() {
-            let g = Graph::from_edges(EDGES.to_vec(), 5, true);
-            assert_eq!(
-                g.depth_first_iter(0).collect::<Vec<_>>(),
-                vec![0, 1, 4, 2, 3]
-            );
-        }
-
-        #[test]
-        fn bfs() {
-            let g = Graph::from_edges(EDGES.to_vec(), 5, true);
-            assert_eq!(
-                g.breath_first_iter(0).collect::<Vec<_>>(),
-                vec![0, 1, 2, 3, 4]
-            );
-        }
 
         #[test]
         fn dijkstra() {
@@ -794,3 +821,177 @@ mod graph {
 }
 #[allow(unused_imports)]
 use graph::*;
+
+mod tree {
+    use std::collections::HashMap;
+
+    use crate::{BreathFirstIter, DepthFirstIter};
+
+    pub struct Tree {
+        adj_nodess: Vec<Vec<(usize, i128)>>,
+    }
+    impl Tree {
+        pub fn new() -> Self {
+            Tree {
+                adj_nodess: Vec::new(),
+            }
+        }
+        pub fn with_capacity(capacity: usize) -> Self {
+            Tree {
+                adj_nodess: Vec::with_capacity(capacity),
+            }
+        }
+        pub fn from_edges(edges: Vec<(usize, usize, i128)>, node_count: usize) -> Self {
+            assert!(
+                edges.len() == node_count - 1,
+                "Incorrect amonut of edges for a tree",
+            );
+            let mut added = vec![false; node_count];
+            let mut adj_nodess = vec![Vec::new(); node_count];
+            for (node1, node2, weight) in edges {
+                assert!(
+                    !(added[node1] && added[node2]),
+                    "There's a cycle in your tree",
+                );
+                added[node1] = true;
+                added[node2] = true;
+                adj_nodess[node1].push((node2, weight));
+                adj_nodess[node2].push((node1, weight));
+            }
+            Tree { adj_nodess }
+        }
+
+        pub fn get_adj_nodess(&self) -> &Vec<Vec<(usize, i128)>> {
+            &self.adj_nodess
+        }
+
+        pub fn depth_first_iter(&self, start: usize) -> DepthFirstIter {
+            DepthFirstIter::new(&self.adj_nodess, start)
+        }
+        pub fn breath_first_iter(&self, start: usize) -> BreathFirstIter {
+            BreathFirstIter::new(&self.adj_nodess, start)
+        }
+
+        pub fn add_node(&mut self, (connected_node, weight): (usize, i128)) -> usize {
+            let new_node = self.adj_nodess.len();
+            self.adj_nodess[connected_node].push((new_node, weight));
+            self.adj_nodess.push(vec![(connected_node, weight)]);
+            new_node
+        }
+
+        pub fn get_diameter(&self) -> i128 {
+            if self.adj_nodess.is_empty() {
+                return 0;
+            }
+            let mut dist_to_zero = vec![i128::MAX; self.adj_nodess.len()];
+            dist_to_zero[0] = 0;
+            for node in self.depth_first_iter(0).skip(1) {
+                dist_to_zero[node] = self.adj_nodess[node]
+                    .iter()
+                    .find_map(|&(adj_node, weight)| {
+                        if dist_to_zero[adj_node] < i128::MAX {
+                            Some(dist_to_zero[adj_node] + weight)
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap();
+            }
+            let start = dist_to_zero
+                .into_iter()
+                .enumerate()
+                .max_by_key(|&(_, dist)| dist)
+                .unwrap()
+                .0;
+            let mut dist_to_start = vec![i128::MAX; self.adj_nodess.len()];
+            dist_to_start[start] = 0;
+            for node in self.depth_first_iter(start).skip(1) {
+                dist_to_start[node] = self.adj_nodess[node]
+                    .iter()
+                    .find_map(|&(adj_node, weight)| {
+                        if dist_to_start[adj_node] < i128::MAX {
+                            Some(dist_to_start[adj_node] + weight)
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap();
+            }
+            dist_to_start
+                .into_iter()
+                .enumerate()
+                .max_by_key(|&(_, dist)| dist)
+                .unwrap()
+                .1
+        }
+
+        pub fn get_longest_path_lens(&self) -> Vec<i128> {
+            if self.adj_nodess.is_empty() {
+                return Vec::new();
+            }
+            let mut mem = HashMap::with_capacity(self.adj_nodess.len());
+            fn longest_path_len_in_dir(
+                this: &Tree,
+                fst: usize,
+                snd: usize,
+                weight: i128,
+                memoize: &mut HashMap<(usize, usize), i128>,
+            ) -> i128 {
+                if let Some(path_len) = memoize.get(&(fst, snd)) {
+                    return *path_len;
+                }
+                let path_len = this.adj_nodess[snd]
+                    .iter()
+                    .filter_map(|&(trd, weight2)| {
+                        if trd == fst {
+                            None
+                        } else {
+                            Some(longest_path_len_in_dir(this, snd, trd, weight2, memoize) + weight)
+                        }
+                    })
+                    .max()
+                    .unwrap_or(weight);
+                memoize.insert((fst, snd), path_len);
+                path_len
+            }
+            let mut f =
+                |fst, snd, weight| longest_path_len_in_dir(self, fst, snd, weight, &mut mem);
+            let mut longest_path_lens = Vec::with_capacity(self.adj_nodess.len());
+            for (node, adj_nodes) in self.adj_nodess.iter().enumerate() {
+                let mut longest_path_len = 0;
+                for &(adj_node, weight) in adj_nodes {
+                    longest_path_len = longest_path_len.max(f(node, adj_node, weight));
+                }
+                longest_path_lens.push(longest_path_len);
+            }
+            longest_path_lens
+        }
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+
+        const EDGES: &[(usize, usize, i128)] = &[
+            (1, 2, 1),
+            (1, 3, 1),
+            (1, 4, 1),
+            (2, 5, 1),
+            (2, 6, 1),
+            (6, 0, 3),
+            (4, 7, 1),
+        ];
+
+        #[test]
+        fn diameter() {
+            let t = Tree::from_edges(EDGES.to_vec(), 8);
+            assert_eq!(t.get_diameter(), 7);
+        }
+
+        #[test]
+        fn all_longest_path_len() {
+            let t = Tree::from_edges(EDGES.to_vec(), 8);
+            assert_eq!(t.get_longest_path_lens(), vec![7, 5, 4, 6, 6, 5, 4, 7]);
+        }
+    }
+}

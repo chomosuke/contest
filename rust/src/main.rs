@@ -670,7 +670,7 @@ mod graph {
         }
 
         pub fn get_min_spanning_tree(&self) -> Tree {
-            assert!(!self.directed, "graph must be undirected");
+            assert!(!self.directed, "Graph must be undirected for spanning tree");
             let node_count = self.adj_nodess.len();
             if node_count == 0 {
                 return Tree::new();
@@ -708,6 +708,43 @@ mod graph {
                 }
             }
             Tree::from_edges(edges, node_count)
+        }
+
+        pub fn get_topological_sort(&self) -> Option<Vec<usize>> {
+            assert!(self.directed, "Graph must be directed for topological sort");
+            let mut rev_sort = Vec::with_capacity(self.adj_nodess.len());
+            let mut states = vec![0; self.adj_nodess.len()];
+            fn have_cycle(
+                current: usize,
+                rev_sort: &mut Vec<usize>,
+                states: &mut [u8],
+                adj_nodess: &Vec<Vec<(usize, i128)>>,
+            ) -> bool {
+                states[current] = 1;
+                for &(adj_node, _) in &adj_nodess[current] {
+                    if states[adj_node] == 2 {
+                        continue;
+                    }
+                    if states[adj_node] == 1 {
+                        return true;
+                    }
+                    if have_cycle(adj_node, rev_sort, states, adj_nodess) {
+                        return true;
+                    }
+                }
+                states[current] = 2;
+                rev_sort.push(current);
+                false
+            }
+            for node in 0..states.len() {
+                if states[node] == 0 {
+                    let cycle = have_cycle(node, &mut rev_sort, &mut states, &self.adj_nodess);
+                    if cycle {
+                        return None;
+                    }
+                }
+            }
+            Some(rev_sort.into_iter().rev().collect())
         }
     }
 
@@ -891,6 +928,35 @@ mod graph {
                     HashSet::from_iter(&[(1, 2), (3, 2)]),
                 ],
             );
+        }
+
+        #[test]
+        fn topological_sort() {
+            let g = Graph::from_edges(vec![
+                (0, 1, 1),
+                (1, 2, 1),
+                (2, 5, 1),
+                (3, 0, 1),
+                (3, 4, 1),
+                (4, 1, 1),
+                (4, 2, 1),
+            ], 6, true);
+            assert_eq!(g.get_topological_sort(), Some(vec![3, 4, 0, 1, 2, 5]));
+        }
+
+        #[test]
+        fn cycle_detection() {
+            let g = Graph::from_edges(vec![
+                (0, 1, 1),
+                (1, 2, 1),
+                (2, 5, 1),
+                (3, 0, 1),
+                (3, 4, 1),
+                (4, 1, 1),
+                (4, 2, 1),
+                (5, 4, 1),
+            ], 6, true);
+            assert_eq!(g.get_topological_sort(), None);
         }
     }
 }

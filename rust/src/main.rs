@@ -644,7 +644,7 @@ mod graph {
             let dists_to_start = shortest_path_lens;
             let rev_adj_nodess = self
                 .get_rev_adj_nodess()
-                .expect("need to enable_rev_adj_nodes before calling find_shortest_path");
+                .expect("need to enable_rev_adj_nodes before calling reconstruct_shortest_path");
             assert!(
                 dists_to_start[start] == 0,
                 "expected shortest_path_lens[start] to be zero, looks like you got the wrong start node",
@@ -667,6 +667,35 @@ mod graph {
             }
             shortest_path.push(node);
             Some(shortest_path.into_iter().rev().collect())
+        }
+
+        pub fn reconstruct_all_shortest_path(
+            &self,
+            shortest_path_lens: &[i128],
+            start: usize,
+        ) -> Graph {
+            let dists_to_start = shortest_path_lens;
+            assert!(
+                dists_to_start[start] == 0,
+                "expected shortest_path_lens[start] to be zero, looks like you got the wrong start node",
+            );
+            let mut edges = Vec::new();
+            let mut visited = vec![false; self.adj_nodess.len()];
+            fn dfs(node: usize, adj_nodess: &[Vec<(usize, i128)>], dists_to_start: &[i128], edges: &mut Vec<(usize, usize, i128)>, visited: &mut [bool]) {
+                if visited[node] {
+                    return;
+                }
+                visited[node] = true;
+                for &(adj_node, weight) in &adj_nodess[node] {
+                    if dists_to_start[adj_node] == dists_to_start[node] + weight {
+                        // some shortest path go through this edge
+                        edges.push((node, adj_node, weight));
+                        dfs(adj_node, adj_nodess, dists_to_start, edges, visited);
+                    }
+                }
+            }
+            dfs(start, &self.adj_nodess, dists_to_start, &mut edges, &mut visited);
+            Graph::from_edges(edges, self.adj_nodess.len(), true)
         }
 
         pub fn get_min_spanning_tree(&self) -> Tree {
@@ -894,12 +923,44 @@ mod graph {
 
         #[test]
         fn reconstruct_shortest_path() {
-            let mut g = Graph::from_edges(EDGES.to_vec(), 6, true);
+            let mut g = Graph::from_edges(EDGES.to_vec(), 5, true);
             let shortest_path_lens = g.get_shortest_path_lens(0).unwrap();
             g.enable_rev_adj_nodes();
             assert_eq!(
                 g.reconstruct_shortest_path(&shortest_path_lens, 0, 4),
                 Some(vec![0, 2, 3, 4])
+            );
+        }
+
+        #[test]
+        fn reconstruct_shortest_path_negative_edge() {
+            let mut edges = EDGES.to_vec();
+            edges.push((2, 4, -1));
+            let mut g = Graph::from_edges(edges, 5, true);
+            let shortest_path_lens = g.get_shortest_path_lens(0).unwrap();
+            g.enable_rev_adj_nodes();
+            assert_eq!(
+                g.reconstruct_shortest_path(&shortest_path_lens, 0, 4),
+                Some(vec![0, 2, 4])
+            );
+        }
+
+        #[test]
+        fn reconstruct_all_shortest_path() {
+            let mut edges = EDGES.to_vec();
+            edges.push((2, 4, -1));
+            let mut g = Graph::from_edges(edges, 5, true);
+            let shortest_path_lens = g.get_shortest_path_lens(0).unwrap();
+            g.enable_rev_adj_nodes();
+            assert_eq!(
+                g.reconstruct_all_shortest_path(&shortest_path_lens, 0).get_adj_nodess(),
+                &vec![
+                    vec![(2, 3)],
+                    vec![],
+                    vec![(3, 1), (4, -1)],
+                    vec![],
+                    vec![(1, 2), (3, 2)],
+                ],
             );
         }
 

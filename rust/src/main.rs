@@ -710,7 +710,7 @@ mod graph {
             Tree::from_edges(edges, node_count)
         }
 
-        pub fn get_topological_sort(&self) -> Option<Vec<usize>> {
+        pub fn get_topological_sort(&self) -> Result<Vec<usize>, Vec<usize>> {
             assert!(self.directed, "Graph must be directed for topological sort");
             let mut rev_sort = Vec::with_capacity(self.adj_nodess.len());
             let mut states = vec![0; self.adj_nodess.len()];
@@ -719,32 +719,36 @@ mod graph {
                 rev_sort: &mut Vec<usize>,
                 states: &mut [u8],
                 adj_nodess: &Vec<Vec<(usize, i128)>>,
-            ) -> bool {
+            ) -> Option<Vec<usize>> {
                 states[current] = 1;
                 for &(adj_node, _) in &adj_nodess[current] {
                     if states[adj_node] == 2 {
                         continue;
                     }
                     if states[adj_node] == 1 {
-                        return true;
+                        return Some(vec![adj_node, current]);
                     }
-                    if have_cycle(adj_node, rev_sort, states, adj_nodess) {
-                        return true;
+                    if let Some(mut cycle) = have_cycle(adj_node, rev_sort, states, adj_nodess) {
+                        if cycle[0] != *cycle.last().unwrap() {
+                            // cycle isn't complete yet
+                            cycle.push(current);
+                        }
+                        return Some(cycle);
                     }
                 }
                 states[current] = 2;
                 rev_sort.push(current);
-                false
+                None
             }
             for node in 0..states.len() {
                 if states[node] == 0 {
                     let cycle = have_cycle(node, &mut rev_sort, &mut states, &self.adj_nodess);
-                    if cycle {
-                        return None;
+                    if let Some(cycle) = cycle {
+                        return Err(cycle.into_iter().skip(1).rev().collect());
                     }
                 }
             }
-            Some(rev_sort.into_iter().rev().collect())
+            Ok(rev_sort.into_iter().rev().collect())
         }
     }
 
@@ -932,31 +936,39 @@ mod graph {
 
         #[test]
         fn topological_sort() {
-            let g = Graph::from_edges(vec![
-                (0, 1, 1),
-                (1, 2, 1),
-                (2, 5, 1),
-                (3, 0, 1),
-                (3, 4, 1),
-                (4, 1, 1),
-                (4, 2, 1),
-            ], 6, true);
-            assert_eq!(g.get_topological_sort(), Some(vec![3, 4, 0, 1, 2, 5]));
+            let g = Graph::from_edges(
+                vec![
+                    (0, 1, 1),
+                    (1, 2, 1),
+                    (2, 5, 1),
+                    (3, 0, 1),
+                    (3, 4, 1),
+                    (4, 1, 1),
+                    (4, 2, 1),
+                ],
+                6,
+                true,
+            );
+            assert_eq!(g.get_topological_sort(), Ok(vec![3, 4, 0, 1, 2, 5]));
         }
 
         #[test]
         fn cycle_detection() {
-            let g = Graph::from_edges(vec![
-                (0, 1, 1),
-                (1, 2, 1),
-                (2, 5, 1),
-                (3, 0, 1),
-                (3, 4, 1),
-                (4, 1, 1),
-                (4, 2, 1),
-                (5, 4, 1),
-            ], 6, true);
-            assert_eq!(g.get_topological_sort(), None);
+            let g = Graph::from_edges(
+                vec![
+                    (0, 1, 1),
+                    (1, 2, 1),
+                    (2, 5, 1),
+                    (3, 0, 1),
+                    (3, 4, 1),
+                    (4, 1, 1),
+                    (4, 2, 1),
+                    (5, 4, 1),
+                ],
+                6,
+                true,
+            );
+            assert_eq!(g.get_topological_sort(), Err(vec![1, 2, 5, 4]));
         }
     }
 }

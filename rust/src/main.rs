@@ -1246,3 +1246,95 @@ mod tree {
         }
     }
 }
+#[allow(unused_imports)]
+use tree::*;
+
+mod successor_graph {
+pub 
+    struct SuccessorGraph {
+        // kth successors of node x will be logkth_successors[log(k)][x]
+        logkth_successors: Vec<Vec<usize>>,
+    }
+    impl SuccessorGraph {
+        pub fn new(successors: Vec<usize>) -> Self {
+            SuccessorGraph {
+                logkth_successors: vec![successors],
+            }
+        }
+
+        pub fn get_kth_successor(&mut self, node: usize, k: usize) -> usize {
+            let logkth_successors = &mut self.logkth_successors;
+            while
+                logkth_successors.len()
+                <
+                (usize::BITS - k.leading_zeros()) as usize // highest one
+            {
+                let n = logkth_successors.len();
+                let lognth_successors = &logkth_successors[n - 1];
+                let mut lognp1th_successors = Vec::with_capacity(lognth_successors.len());
+                for i in 0..lognth_successors.len() {
+                    let s = lognth_successors[i];
+                    let ss = lognth_successors[s];
+                    lognp1th_successors.push(ss);
+                }
+                logkth_successors.push(lognp1th_successors);
+            }
+            let mut node = node;
+            let mut k = k;
+            let mut logk = 0;
+            while k > 0 {
+                if k % 2 == 1 {
+                    node = logkth_successors[logk][node];
+                }
+                k /= 2;
+                logk += 1;
+            }
+            node
+        }
+
+        pub fn get_successor(&self, node: usize) -> usize {
+            self.logkth_successors[0][node]
+        }
+
+        pub fn get_cycle(&self, start: usize) -> Vec<usize> {
+            let mut a = self.get_successor(start);
+            let mut b = self.get_successor(self.get_successor(start));
+            while a != b {
+                a = self.get_successor(a);
+                b = self.get_successor(b);
+                b = self.get_successor(b);
+            }
+            // at this point, b is s away from f.
+            a = start;
+            while a != b {
+                a = self.get_successor(a);
+                b = self.get_successor(b);
+            }
+            let first = a;
+            let mut node = self.get_successor(first);
+            let mut cycle = vec![first];
+            while node != first {
+                cycle.push(node);
+                node = self.get_successor(node);
+            }
+            cycle
+        }
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+
+        #[test]
+        fn get_k_step_node_fn() {
+            let mut g = SuccessorGraph::new(vec![2, 4, 6, 5, 1, 1, 0, 5, 2]);
+            assert_eq!(g.get_kth_successor(3, 6), 1);
+        }
+
+        #[test]
+        fn get_cycle() {
+            let g = SuccessorGraph::new(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 6]);
+            assert_eq!(g.get_cycle(0), vec![6, 7, 8, 9]);
+        }
+    }
+}

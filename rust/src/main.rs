@@ -453,7 +453,7 @@ mod graph {
     use crate::{tree::Tree, BreathFirstIter, DepthFirstIter};
     use std::{
         cmp::Reverse,
-        collections::{BinaryHeap, VecDeque},
+        collections::{BinaryHeap, HashSet, VecDeque},
     };
 
     pub struct Graph {
@@ -796,6 +796,57 @@ mod graph {
             }
             Ok(rev_sort.into_iter().rev().collect())
         }
+
+        pub fn get_strongly_connected_components(&self) -> Vec<HashSet<usize>> {
+            let rev_adj_nodess = self.get_rev_adj_nodess().expect(
+                "need to enable_rev_adj_nodes before calling get_strongly_connected_components",
+            );
+            let adj_nodess = &self.adj_nodess;
+
+            // first phase
+            fn dfs(
+                node: usize,
+                adj_nodess: &[Vec<(usize, i128)>],
+                seen: &mut [bool],
+                processed_order: &mut Vec<usize>,
+            ) {
+                seen[node] = true;
+                for &(adj_node, _weight) in &adj_nodess[node] {
+                    if !seen[adj_node] {
+                        dfs(adj_node, adj_nodess, seen, processed_order);
+                    }
+                }
+                processed_order.push(node);
+            }
+            let mut seen = vec![false; adj_nodess.len()];
+            let mut processed_order = Vec::with_capacity(adj_nodess.len());
+            for node in 0..adj_nodess.len() {
+                if !seen[node] {
+                    dfs(node, adj_nodess, &mut seen, &mut processed_order);
+                }
+            }
+
+            // second phase
+            fn dfs2(node: usize, rev_adj_nodess: &[Vec<(usize, i128)>], added: &mut [bool], members: &mut HashSet<usize>) {
+                members.insert(node);
+                added[node] = true;
+                for &(adj_node, _weight) in &rev_adj_nodess[node] {
+                    if !added[adj_node] {
+                        dfs2(adj_node, rev_adj_nodess, added, members);
+                    }
+                }
+            }
+            let mut added = vec![false; adj_nodess.len()];
+            let mut strongly_connected_components = Vec::new();
+            for &node in processed_order.iter().rev() {
+                if !added[node] {
+                    let mut members = HashSet::new();
+                    dfs2(node, rev_adj_nodess, &mut added, &mut members);
+                    strongly_connected_components.push(members);
+                }
+            }
+            strongly_connected_components
+        }
     }
 
     #[cfg(test)]
@@ -1068,6 +1119,36 @@ mod graph {
             );
             assert_eq!(g.get_topological_sort(None), Err(vec![1, 2, 5, 4]));
         }
+
+        #[test]
+        fn get_strongly_connected_components() {
+            let mut g = Graph::from_edges(
+                vec![
+                    (0, 1, 1),
+                    (0, 3, 1),
+                    (1, 0, 1),
+                    (1, 4, 1),
+                    (2, 1, 1),
+                    (2, 6, 1),
+                    (4, 3, 1),
+                    (5, 4, 1),
+                    (5, 2, 1),
+                    (6, 5, 1),
+                ],
+                7,
+                true,
+            );
+            g.enable_rev_adj_nodes();
+            assert_eq!(
+                g.get_strongly_connected_components(),
+                vec![
+                    HashSet::from_iter([6, 5, 2].into_iter()),
+                    HashSet::from_iter([0, 1].into_iter()),
+                    HashSet::from_iter([4].into_iter()),
+                    HashSet::from_iter([3].into_iter()),
+                ],
+            );
+        }
     }
 }
 #[allow(unused_imports)]
@@ -1250,8 +1331,7 @@ mod tree {
 use tree::*;
 
 mod successor_graph {
-pub 
-    struct SuccessorGraph {
+    pub struct SuccessorGraph {
         // kth successors of node x will be logkth_successors[log(k)][x]
         logkth_successors: Vec<Vec<usize>>,
     }
@@ -1264,10 +1344,8 @@ pub
 
         pub fn get_kth_successor(&mut self, node: usize, k: usize) -> usize {
             let logkth_successors = &mut self.logkth_successors;
-            while
-                logkth_successors.len()
-                <
-                (usize::BITS - k.leading_zeros()) as usize // highest one
+            while logkth_successors.len() < (usize::BITS - k.leading_zeros()) as usize
+            // highest one
             {
                 let n = logkth_successors.len();
                 let lognth_successors = &logkth_successors[n - 1];

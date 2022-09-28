@@ -1022,13 +1022,16 @@ mod graph {
             g.enable_rev_adj_nodes();
             assert_eq!(
                 g.reconstruct_all_shortest_path(&shortest_path_lens, 0)
-                    .get_adj_nodess(),
-                &vec![
-                    vec![(2, 3)],
-                    vec![],
-                    vec![(3, 1), (4, -1)],
-                    vec![],
-                    vec![(1, 2), (3, 2)],
+                    .get_adj_nodess()
+                    .iter()
+                    .map(|adj_nodes| { HashSet::from_iter(adj_nodes) })
+                    .collect::<Vec<HashSet<&(usize, i128)>>>(),
+                vec![
+                    HashSet::from_iter(&[(2, 3)]),
+                    HashSet::from_iter(&[]),
+                    HashSet::from_iter(&[(3, 1), (4, -1)]),
+                    HashSet::from_iter(&[]),
+                    HashSet::from_iter(&[(1, 2), (3, 2)]),
                 ],
             );
         }
@@ -1139,13 +1142,15 @@ mod graph {
                 true,
             );
             g.enable_rev_adj_nodes();
+            let mut components = g.get_strongly_connected_components();
+            components.sort_by_key(|c| c.iter().min().unwrap().to_owned());
             assert_eq!(
-                g.get_strongly_connected_components(),
+                components,
                 vec![
-                    HashSet::from_iter([6, 5, 2].into_iter()),
                     HashSet::from_iter([0, 1].into_iter()),
-                    HashSet::from_iter([4].into_iter()),
+                    HashSet::from_iter([2, 5, 6].into_iter()),
                     HashSet::from_iter([3].into_iter()),
+                    HashSet::from_iter([4].into_iter()),
                 ],
             );
         }

@@ -1267,7 +1267,7 @@ use graph::*;
 mod tree {
     use std::collections::HashMap;
 
-    use crate::{successor_graph::SuccessorGraph, BreathFirstIter, DepthFirstIter};
+    use crate::{successor_graph::SuccessorGraph, BreathFirstIter, DepthFirstIter, pow2_ceil};
 
     pub struct Tree {
         adj_nodess: Vec<Vec<(usize, i128)>>,
@@ -1440,14 +1440,9 @@ mod tree {
 
     pub struct RootedTree {
         root: usize,
-        children: Vec<Vec<usize>>,
+        children: Vec<Vec<(usize, i128)>>,
         parents: SuccessorGraph,
-        nodes_data: Vec<NodeData>, // distance_to_parent, depth
-    }
-    #[derive(Clone)]
-    struct NodeData {
-        dist_to_parent: i128,
-        depth: usize,
+        depths: Vec<usize>, // distance_to_parent, depth
     }
     impl RootedTree {
         pub fn new() -> Self {
@@ -1455,34 +1450,28 @@ mod tree {
                 root: 0,
                 children: vec![Vec::new()],
                 parents: SuccessorGraph::from_successors(vec![0]),
-                nodes_data: vec![NodeData { dist_to_parent: 0, depth: 0}],
+                depths: vec![0],
             }
         }
         pub fn with_capacity(capacity: usize) -> Self {
             let mut children = Vec::with_capacity(capacity);
             children.push(Vec::new());
-            let mut nodes_data = Vec::with_capacity(capacity);
-            nodes_data.push(NodeData { dist_to_parent: 0, depth: 0 });
+            let mut depths = Vec::with_capacity(capacity);
+            depths.push(0);
             let mut parents = SuccessorGraph::with_capacity(capacity);
             parents.add_node(0);
             Self {
                 root: 0,
                 children,
                 parents,
-                nodes_data,
+                depths,
             }
         }
         pub fn from_tree(tree: &Tree, root: usize) -> Self {
             let adj_nodess = tree.get_adj_nodess();
             let mut children = vec![Vec::new(); adj_nodess.len()];
             let mut parents = vec![0; adj_nodess.len()];
-            let mut nodes_data = vec![
-                NodeData {
-                    dist_to_parent: 0,
-                    depth: 0
-                };
-                adj_nodess.len()
-            ];
+            let mut depths = vec![0; adj_nodess.len()];
 
             #[allow(clippy::too_many_arguments)]
             fn dfs(
@@ -1492,15 +1481,12 @@ mod tree {
                 depth: usize,
                 adj_nodess: &[Vec<(usize, i128)>],
                 parents: &mut [usize],
-                children: &mut [Vec<usize>],
-                nodes_data: &mut [NodeData],
+                children: &mut [Vec<(usize, i128)>],
+                depths: &mut [usize],
             ) {
                 parents[node] = parent;
-                children[parent].push(node);
-                nodes_data[node] = NodeData {
-                    dist_to_parent,
-                    depth,
-                };
+                children[parent].push((node, dist_to_parent));
+                depths[node] = depth;
                 for &(child, weight) in &adj_nodess[node] {
                     if child != parent {
                         dfs(
@@ -1511,7 +1497,7 @@ mod tree {
                             adj_nodess,
                             parents,
                             children,
-                            nodes_data,
+                            depths,
                         );
                     }
                 }
@@ -1524,38 +1510,35 @@ mod tree {
                 adj_nodess,
                 &mut parents,
                 &mut children,
-                &mut nodes_data,
+                &mut depths,
             );
 
             let mut parents = SuccessorGraph::from_successors(parents);
-            parents.index_upto_kth_successor(nodes_data.iter().map(|n| n.depth).max().unwrap());
+            parents.index_upto_kth_successor(*depths.iter().max().unwrap());
 
             Self {
                 children,
                 parents,
-                nodes_data,
+                depths,
                 root,
             }
         }
 
         pub fn add_leaf(&mut self, parent: usize, dist_to_parent: i128) -> usize {
             let node = self.children.len();
-            self.children[parent].push(node);
+            self.children[parent].push((node, dist_to_parent));
             self.parents.add_node(parent);
-            let depth = self.nodes_data[parent].depth + 1;
-            self.nodes_data.push(NodeData {
-                dist_to_parent,
-                depth,
-            });
+            let depth = self.depths[parent] + 1;
+            self.depths.push(depth);
             self.parents.index_upto_kth_successor(depth);
             node
         }
 
-        pub fn child(&self, node: usize) -> &Vec<usize> {
+        pub fn child(&self, node: usize) -> &Vec<(usize, i128)> {
             &self.children[node]
         }
         pub fn parent(&self, node: usize) -> Option<usize> {
-            if self.nodes_data[node].depth == 0 {
+            if self.depths[node] == 0 {
                 None
             } else {
                 Some(self.parents.get_successor(node))
@@ -1563,11 +1546,15 @@ mod tree {
         }
 
         pub fn lowest_common_ancestor(&self, node1: usize, node2: usize) -> usize {
-            let Self { nodes_data, parents, .. } = self;
-            let depth = nodes_data[node1].depth.min(nodes_data[node2].depth);
-            let mut node1 = parents.get_kth_successor(node1, nodes_data[node1].depth - depth);
-            let mut node2 = parents.get_kth_successor(node2, nodes_data[node2].depth - depth);
-            let mut jump = depth;
+            let Self {
+                depths,
+                parents,
+                ..
+            } = self;
+            let depth = depths[node1].min(depths[node2]);
+            let mut node1 = parents.get_kth_successor(node1, depths[node1] - depth);
+            let mut node2 = parents.get_kth_successor(node2, depths[node2] - depth);
+            let mut jump = pow2_ceil(depth);
             while jump > 0 {
                 let p1 = parents.get_kth_successor(node1, jump);
                 let p2 = parents.get_kth_successor(node2, jump);
@@ -1579,6 +1566,13 @@ mod tree {
                 }
             }
             self.parent(node1).unwrap_or(node1)
+        }
+
+        pub fn depth_first_iter(&self) -> DepthFirstIter {
+            DepthFirstIter::new(&self.children, self.root)
+        }
+        pub fn breath_first_iter(&self) -> BreathFirstIter {
+            BreathFirstIter::new(&self.children, self.root)
         }
     }
 
@@ -1600,7 +1594,7 @@ mod tree {
         #[test]
         fn from_tree() {
             let t = RootedTree::from_tree(&Tree::from_edges(EDGES.to_vec(), 8), 1);
-            assert_eq!(t.child(2), &vec![5, 6]);
+            assert_eq!(t.child(2), &vec![(5, 1), (6, 1)]);
             assert_eq!(t.parent(0), Some(6));
             assert_eq!(t.parent(2), Some(1));
             assert_eq!(t.parent(1), None);
@@ -1610,13 +1604,13 @@ mod tree {
         fn modify() {
             let mut t = RootedTree::new();
             t.add_leaf(0, 1);
-            assert_eq!(t.child(0), &vec![1]);
+            assert_eq!(t.child(0), &vec![(1, 1)]);
             assert_eq!(t.parent(1), Some(0));
             assert_eq!(t.parent(0), None);
             assert_eq!(t.lowest_common_ancestor(0, 1), 0);
             let mut t = RootedTree::with_capacity(10);
             t.add_leaf(0, 1);
-            assert_eq!(t.child(0), &vec![1]);
+            assert_eq!(t.child(0), &vec![(1, 1)]);
             assert_eq!(t.parent(1), Some(0));
             assert_eq!(t.parent(0), None);
             assert_eq!(t.lowest_common_ancestor(0, 1), 0);

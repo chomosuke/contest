@@ -14,14 +14,14 @@ mod scanner {
     }
     impl Scanner {
         pub fn new() -> Self {
-            Scanner {
+            Self {
                 tokens: VecDeque::new(),
                 delimiters: None,
             }
         }
 
         pub fn with_delimiters(delimiters: &[char]) -> Self {
-            Scanner {
+            Self {
                 tokens: VecDeque::new(),
                 delimiters: Some(delimiters.iter().copied().collect()),
             }
@@ -77,7 +77,7 @@ mod multi_set {
     }
     impl<E: Eq + Hash> MultiSet<E> {
         pub fn new() -> Self {
-            MultiSet {
+            Self {
                 hash_map: HashMap::<E, U>::new(),
             }
         }
@@ -181,7 +181,7 @@ mod indexed_vec {
         }
 
         pub fn new(zero: E, combine: F) -> Self {
-            IndexedVec {
+            Self {
                 combine,
                 inner: Vec::new(),
                 tree: Vec::new(),
@@ -190,7 +190,7 @@ mod indexed_vec {
             }
         }
         pub fn with_capacity(capacity: usize, zero: E, combine: F) -> Self {
-            IndexedVec {
+            Self {
                 combine,
                 inner: Vec::with_capacity(capacity),
                 tree: Vec::with_capacity(pow2_ceil(capacity) * 2),
@@ -199,7 +199,7 @@ mod indexed_vec {
             }
         }
         pub fn from_vec(vec: Vec<E>, zero: E, combine: F) -> Self {
-            let mut iv = IndexedVec {
+            let mut iv = Self {
                 combine,
                 inner: vec,
                 zero,
@@ -340,7 +340,7 @@ mod search_iter {
             let mut stack = VecDeque::with_capacity(capacity);
             stack.push_back(start);
             pushed[start] = true;
-            DepthFirstIter {
+            Self {
                 adj_nodess,
                 pushed,
                 stack,
@@ -381,7 +381,7 @@ mod search_iter {
             let mut queue = VecDeque::with_capacity(capacity);
             queue.push_back(start);
             pushed[start] = true;
-            BreathFirstIter {
+            Self {
                 adj_nodess,
                 pushed,
                 queue,
@@ -608,21 +608,21 @@ mod graph {
     }
     impl DirectedGraph {
         pub fn new() -> Self {
-            DirectedGraph {
+            Self {
                 adj_nodess: Vec::new(),
                 rev_adj_nodess: Vec::new(),
                 neg_edge_count: 0,
             }
         }
         pub fn with_capacity(capacity: usize) -> Self {
-            DirectedGraph {
+            Self {
                 adj_nodess: Vec::with_capacity(capacity),
                 rev_adj_nodess: Vec::with_capacity(capacity),
                 neg_edge_count: 0,
             }
         }
         pub fn from_edges(edges: Vec<(usize, usize, i128)>, node_count: usize) -> Self {
-            let mut g = DirectedGraph {
+            let mut g = Self {
                 adj_nodess: vec![Vec::new(); node_count],
                 rev_adj_nodess: vec![Vec::new(); node_count],
                 neg_edge_count: 0,
@@ -1041,19 +1041,19 @@ mod graph {
     }
     impl UndirectedGraph {
         pub fn new() -> Self {
-            UndirectedGraph {
+            Self {
                 adj_nodess: Vec::new(),
                 neg_edge_count: 0,
             }
         }
         pub fn with_capacity(capacity: usize) -> Self {
-            UndirectedGraph {
+            Self {
                 adj_nodess: Vec::with_capacity(capacity),
                 neg_edge_count: 0,
             }
         }
         pub fn from_edges(edges: Vec<(usize, usize, i128)>, node_count: usize) -> Self {
-            let mut g = UndirectedGraph {
+            let mut g = Self {
                 adj_nodess: vec![Vec::new(); node_count],
                 neg_edge_count: 0,
             };
@@ -1274,12 +1274,12 @@ mod tree {
     }
     impl Tree {
         pub fn new() -> Self {
-            Tree {
+            Self {
                 adj_nodess: Vec::new(),
             }
         }
         pub fn with_capacity(capacity: usize) -> Self {
-            Tree {
+            Self {
                 adj_nodess: Vec::with_capacity(capacity),
             }
         }
@@ -1439,6 +1439,7 @@ mod tree {
     }
 
     pub struct RootedTree {
+        root: usize,
         children: Vec<Vec<usize>>,
         parents: SuccessorGraph,
         nodes_data: Vec<NodeData>, // distance_to_parent, depth
@@ -1450,17 +1451,25 @@ mod tree {
     }
     impl RootedTree {
         pub fn new() -> Self {
-            RootedTree {
-                children: Vec::new(),
-                parents: SuccessorGraph::new(),
-                nodes_data: Vec::new(),
+            Self {
+                root: 0,
+                children: vec![Vec::new()],
+                parents: SuccessorGraph::from_successors(vec![0]),
+                nodes_data: vec![NodeData { dist_to_parent: 0, depth: 0}],
             }
         }
         pub fn with_capacity(capacity: usize) -> Self {
-            RootedTree {
-                children: Vec::with_capacity(capacity),
-                parents: SuccessorGraph::with_capacity(capacity),
-                nodes_data: Vec::with_capacity(capacity),
+            let mut children = Vec::with_capacity(capacity);
+            children.push(Vec::new());
+            let mut nodes_data = Vec::with_capacity(capacity);
+            nodes_data.push(NodeData { dist_to_parent: 0, depth: 0 });
+            let mut parents = SuccessorGraph::with_capacity(capacity);
+            parents.add_node(0);
+            Self {
+                root: 0,
+                children,
+                parents,
+                nodes_data,
             }
         }
         pub fn from_tree(tree: &Tree, root: usize) -> Self {
@@ -1521,10 +1530,11 @@ mod tree {
             let mut parents = SuccessorGraph::from_successors(parents);
             parents.index_upto_kth_successor(nodes_data.iter().map(|n| n.depth).max().unwrap());
 
-            RootedTree {
+            Self {
                 children,
                 parents,
                 nodes_data,
+                root,
             }
         }
 
@@ -1551,6 +1561,25 @@ mod tree {
                 Some(self.parents.get_successor(node))
             }
         }
+
+        pub fn lowest_common_ancestor(&self, node1: usize, node2: usize) -> usize {
+            let Self { nodes_data, parents, .. } = self;
+            let depth = nodes_data[node1].depth.min(nodes_data[node2].depth);
+            let mut node1 = parents.get_kth_successor(node1, nodes_data[node1].depth - depth);
+            let mut node2 = parents.get_kth_successor(node2, nodes_data[node2].depth - depth);
+            let mut jump = depth;
+            while jump > 0 {
+                let p1 = parents.get_kth_successor(node1, jump);
+                let p2 = parents.get_kth_successor(node2, jump);
+                if p1 == p2 {
+                    jump /= 2;
+                } else {
+                    node1 = p1;
+                    node2 = p2;
+                }
+            }
+            self.parent(node1).unwrap_or(node1)
+        }
     }
 
     #[cfg(test)]
@@ -1570,12 +1599,34 @@ mod tree {
 
         #[test]
         fn from_tree() {
-            let t = Tree::from_edges(EDGES.to_vec(), 8);
-            let rt = RootedTree::from_tree(&t, 1);
-            assert_eq!(rt.child(2), &vec![5, 6]);
-            assert_eq!(rt.parent(0), Some(6));
-            assert_eq!(rt.parent(2), Some(1));
-            assert_eq!(rt.parent(1), None);
+            let t = RootedTree::from_tree(&Tree::from_edges(EDGES.to_vec(), 8), 1);
+            assert_eq!(t.child(2), &vec![5, 6]);
+            assert_eq!(t.parent(0), Some(6));
+            assert_eq!(t.parent(2), Some(1));
+            assert_eq!(t.parent(1), None);
+        }
+
+        #[test]
+        fn modify() {
+            let mut t = RootedTree::new();
+            t.add_leaf(0, 1);
+            assert_eq!(t.child(0), &vec![1]);
+            assert_eq!(t.parent(1), Some(0));
+            assert_eq!(t.parent(0), None);
+            assert_eq!(t.lowest_common_ancestor(0, 1), 0);
+            let mut t = RootedTree::with_capacity(10);
+            t.add_leaf(0, 1);
+            assert_eq!(t.child(0), &vec![1]);
+            assert_eq!(t.parent(1), Some(0));
+            assert_eq!(t.parent(0), None);
+            assert_eq!(t.lowest_common_ancestor(0, 1), 0);
+        }
+
+        #[test]
+        fn lowest_common_ancestor() {
+            let t = RootedTree::from_tree(&Tree::from_edges(EDGES.to_vec(), 8), 1);
+            assert_eq!(t.lowest_common_ancestor(0, 5), 2);
+            assert_eq!(t.lowest_common_ancestor(1, 1), 1);
         }
     }
 }
@@ -1591,17 +1642,17 @@ mod successor_graph {
     }
     impl SuccessorGraph {
         pub fn new() -> Self {
-            SuccessorGraph {
+            Self {
                 logkth_successors: vec![Vec::new()],
             }
         }
         pub fn with_capacity(capacity: usize) -> Self {
-            SuccessorGraph {
+            Self {
                 logkth_successors: vec![Vec::with_capacity(capacity)],
             }
         }
         pub fn from_successors(successors: Vec<usize>) -> Self {
-            SuccessorGraph {
+            Self {
                 logkth_successors: vec![successors],
             }
         }

@@ -145,6 +145,10 @@ fn pow2_ceil(x: usize) -> usize {
     2usize.pow(n)
 }
 
+fn highest_one_bit(x: usize) -> u32 {
+    usize::BITS - x.leading_zeros()
+}
+
 mod indexed_vec {
     use std::ops::Bound::*;
     use std::ops::{Deref, RangeBounds};
@@ -827,7 +831,12 @@ mod graph {
             }
 
             // second phase
-            fn dfs2(node: usize, rev_adj_nodess: &[Vec<(usize, i128)>], added: &mut [bool], members: &mut HashSet<usize>) {
+            fn dfs2(
+                node: usize,
+                rev_adj_nodess: &[Vec<(usize, i128)>],
+                added: &mut [bool],
+                members: &mut HashSet<usize>,
+            ) {
                 members.insert(node);
                 added[node] = true;
                 for &(adj_node, _weight) in &rev_adj_nodess[node] {
@@ -1336,6 +1345,8 @@ mod tree {
 use tree::*;
 
 mod successor_graph {
+    use crate::highest_one_bit;
+
     pub struct SuccessorGraph {
         // kth successors of node x will be logkth_successors[log(k)][x]
         logkth_successors: Vec<Vec<usize>>,
@@ -1347,11 +1358,9 @@ mod successor_graph {
             }
         }
 
-        pub fn get_kth_successor(&mut self, node: usize, k: usize) -> usize {
+        pub fn index_upto_kth_successor(&mut self, k: usize) {
             let logkth_successors = &mut self.logkth_successors;
-            while logkth_successors.len() < (usize::BITS - k.leading_zeros()) as usize
-            // highest one
-            {
+            while logkth_successors.len() < highest_one_bit(k) as usize {
                 let n = logkth_successors.len();
                 let lognth_successors = &logkth_successors[n - 1];
                 let mut lognp1th_successors = Vec::with_capacity(lognth_successors.len());
@@ -1362,6 +1371,11 @@ mod successor_graph {
                 }
                 logkth_successors.push(lognp1th_successors);
             }
+        }
+
+        pub fn get_kth_successor(&self, node: usize, k: usize) -> usize {
+            let logkth_successors = &self.logkth_successors;
+            assert!(logkth_successors.len() >= highest_one_bit(k) as usize, "Need to index upto kthsuccessor first");
             let mut node = node;
             let mut k = k;
             let mut logk = 0;
@@ -1411,6 +1425,7 @@ mod successor_graph {
         #[test]
         fn get_k_step_node_fn() {
             let mut g = SuccessorGraph::new(vec![2, 4, 6, 5, 1, 1, 0, 5, 2]);
+            g.index_upto_kth_successor(6);
             assert_eq!(g.get_kth_successor(3, 6), 1);
         }
 

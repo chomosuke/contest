@@ -65,7 +65,7 @@ mod scanner {
 #[allow(unused_imports)]
 use scanner::*;
 
-mod multi_set {
+mod set {
     use core::hash::Hash;
     use std::collections::HashMap;
 
@@ -93,7 +93,7 @@ mod multi_set {
     }
 }
 #[allow(unused_imports)]
-use multi_set::*;
+use set::*;
 
 mod binary_searchable {
     use std::cmp::*;
@@ -325,7 +325,7 @@ mod indexed_vec {
 #[allow(unused_imports)]
 use indexed_vec::*;
 
-mod search_iter {
+mod search_graph {
     use std::collections::VecDeque;
 
     pub struct DepthFirstIter<'a> {
@@ -415,6 +415,8 @@ mod search_iter {
     mod test {
         use crate::graph::DirectedGraph;
 
+        use super::*;
+
         const EDGES: &[(usize, usize, i128)] = &[
             (0, 1, 5),
             (0, 2, 3),
@@ -436,7 +438,7 @@ mod search_iter {
         fn dfs() {
             let g = DirectedGraph::from_edges(EDGES.to_vec(), 5);
             assert_eq!(
-                g.depth_first_iter(0).collect::<Vec<_>>(),
+                DepthFirstIter::new(g.get_adj_nodess(), 0).collect::<Vec<_>>(),
                 vec![0, 1, 4, 2, 3]
             );
         }
@@ -445,17 +447,17 @@ mod search_iter {
         fn bfs() {
             let g = DirectedGraph::from_edges(EDGES.to_vec(), 5);
             assert_eq!(
-                g.breath_first_iter(0).collect::<Vec<_>>(),
+                BreathFirstIter::new(g.get_adj_nodess(), 0).collect::<Vec<_>>(),
                 vec![0, 1, 2, 3, 4]
             );
         }
     }
 }
 #[allow(unused_imports)]
-use search_iter::*;
+use search_graph::*;
 
 mod graph {
-    use crate::{tree::Tree, BreathFirstIter, DepthFirstIter};
+    use crate::tree::Tree;
     use std::{
         cmp::Reverse,
         collections::{BinaryHeap, HashSet, VecDeque},
@@ -651,13 +653,6 @@ mod graph {
             if edge.2 < 0 {
                 self.neg_edge_count += 1;
             }
-        }
-
-        pub fn depth_first_iter(&self, start: usize) -> DepthFirstIter {
-            DepthFirstIter::new(&self.adj_nodess, start)
-        }
-        pub fn breath_first_iter(&self, start: usize) -> BreathFirstIter {
-            BreathFirstIter::new(&self.adj_nodess, start)
         }
 
         pub fn get_shortest_path_lens(&self, start: usize) -> Option<Vec<i128>> {
@@ -1079,13 +1074,6 @@ mod graph {
             }
         }
 
-        pub fn depth_first_iter(&self, start: usize) -> DepthFirstIter {
-            DepthFirstIter::new(&self.adj_nodess, start)
-        }
-        pub fn breath_first_iter(&self, start: usize) -> BreathFirstIter {
-            BreathFirstIter::new(&self.adj_nodess, start)
-        }
-
         pub fn get_shortest_path_lens(&self, start: usize) -> Option<Vec<i128>> {
             self.get_shortest_path_lens_till_stop(start, |_| false)
         }
@@ -1267,7 +1255,7 @@ use graph::*;
 mod tree {
     use std::collections::HashMap;
 
-    use crate::{successor_graph::SuccessorGraph, BreathFirstIter, DepthFirstIter, pow2_ceil};
+    use crate::{pow2_ceil, search_graph::DepthFirstIter, successor_graph::SuccessorGraph};
 
     pub struct Tree {
         adj_nodess: Vec<Vec<(usize, i128)>>,
@@ -1307,13 +1295,6 @@ mod tree {
             &self.adj_nodess
         }
 
-        pub fn depth_first_iter(&self, start: usize) -> DepthFirstIter {
-            DepthFirstIter::new(&self.adj_nodess, start)
-        }
-        pub fn breath_first_iter(&self, start: usize) -> BreathFirstIter {
-            BreathFirstIter::new(&self.adj_nodess, start)
-        }
-
         pub fn add_node(&mut self, (connected_node, weight): (usize, i128)) -> usize {
             let new_node = self.adj_nodess.len();
             self.adj_nodess[connected_node].push((new_node, weight));
@@ -1327,7 +1308,7 @@ mod tree {
             }
             let mut dist_to_zero = vec![i128::MAX; self.adj_nodess.len()];
             dist_to_zero[0] = 0;
-            for node in self.depth_first_iter(0).skip(1) {
+            for node in DepthFirstIter::new(self.get_adj_nodess(), 0).skip(1) {
                 dist_to_zero[node] = self.adj_nodess[node]
                     .iter()
                     .find_map(|&(adj_node, weight)| {
@@ -1347,7 +1328,7 @@ mod tree {
                 .0;
             let mut dist_to_start = vec![i128::MAX; self.adj_nodess.len()];
             dist_to_start[start] = 0;
-            for node in self.depth_first_iter(start).skip(1) {
+            for node in DepthFirstIter::new(self.get_adj_nodess(), start).skip(1) {
                 dist_to_start[node] = self.adj_nodess[node]
                     .iter()
                     .find_map(|&(adj_node, weight)| {
@@ -1545,11 +1526,13 @@ mod tree {
             }
         }
 
+        pub fn get_children(&self) -> &Vec<Vec<(usize, i128)>> {
+            &self.children
+        }
+
         pub fn lowest_common_ancestor(&self, node1: usize, node2: usize) -> usize {
             let Self {
-                depths,
-                parents,
-                ..
+                depths, parents, ..
             } = self;
             let depth = depths[node1].min(depths[node2]);
             let mut node1 = parents.get_kth_successor(node1, depths[node1] - depth);
@@ -1566,13 +1549,6 @@ mod tree {
                 }
             }
             self.parent(node1).unwrap_or(node1)
-        }
-
-        pub fn depth_first_iter(&self) -> DepthFirstIter {
-            DepthFirstIter::new(&self.children, self.root)
-        }
-        pub fn breath_first_iter(&self) -> BreathFirstIter {
-            BreathFirstIter::new(&self.children, self.root)
         }
     }
 
@@ -1752,3 +1728,5 @@ mod successor_graph {
         }
     }
 }
+#[allow(unused_imports)]
+use successor_graph::*;

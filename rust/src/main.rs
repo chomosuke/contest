@@ -1267,7 +1267,7 @@ use graph::*;
 mod tree {
     use std::collections::HashMap;
 
-    use crate::{BreathFirstIter, DepthFirstIter};
+    use crate::{successor_graph::SuccessorGraph, BreathFirstIter, DepthFirstIter};
 
     pub struct Tree {
         adj_nodess: Vec<Vec<(usize, i128)>>,
@@ -1410,12 +1410,11 @@ mod tree {
         }
     }
 
-    pub struct RootedTree {}
-
     #[cfg(test)]
     mod test {
         use super::*;
 
+        // cphb 163
         const EDGES: &[(usize, usize, i128)] = &[
             (1, 2, 1),
             (1, 3, 1),
@@ -1438,6 +1437,147 @@ mod tree {
             assert_eq!(t.get_longest_path_lens(), vec![7, 5, 4, 6, 6, 5, 4, 7]);
         }
     }
+
+    pub struct RootedTree {
+        children: Vec<Vec<usize>>,
+        parents: SuccessorGraph,
+        nodes_data: Vec<NodeData>, // distance_to_parent, depth
+    }
+    #[derive(Clone)]
+    struct NodeData {
+        dist_to_parent: i128,
+        depth: usize,
+    }
+    impl RootedTree {
+        pub fn new() -> Self {
+            RootedTree {
+                children: Vec::new(),
+                parents: SuccessorGraph::new(),
+                nodes_data: Vec::new(),
+            }
+        }
+        pub fn with_capacity(capacity: usize) -> Self {
+            RootedTree {
+                children: Vec::with_capacity(capacity),
+                parents: SuccessorGraph::with_capacity(capacity),
+                nodes_data: Vec::with_capacity(capacity),
+            }
+        }
+        pub fn from_tree(tree: &Tree, root: usize) -> Self {
+            let adj_nodess = tree.get_adj_nodess();
+            let mut children = vec![Vec::new(); adj_nodess.len()];
+            let mut parents = vec![0; adj_nodess.len()];
+            let mut nodes_data = vec![
+                NodeData {
+                    dist_to_parent: 0,
+                    depth: 0
+                };
+                adj_nodess.len()
+            ];
+
+            #[allow(clippy::too_many_arguments)]
+            fn dfs(
+                node: usize,
+                parent: usize,
+                dist_to_parent: i128,
+                depth: usize,
+                adj_nodess: &[Vec<(usize, i128)>],
+                parents: &mut [usize],
+                children: &mut [Vec<usize>],
+                nodes_data: &mut [NodeData],
+            ) {
+                parents[node] = parent;
+                children[parent].push(node);
+                nodes_data[node] = NodeData {
+                    dist_to_parent,
+                    depth,
+                };
+                for &(child, weight) in &adj_nodess[node] {
+                    if child != parent {
+                        dfs(
+                            child,
+                            node,
+                            weight,
+                            depth + 1,
+                            adj_nodess,
+                            parents,
+                            children,
+                            nodes_data,
+                        );
+                    }
+                }
+            }
+            dfs(
+                root,
+                root,
+                0,
+                0,
+                adj_nodess,
+                &mut parents,
+                &mut children,
+                &mut nodes_data,
+            );
+
+            let mut parents = SuccessorGraph::from_successors(parents);
+            parents.index_upto_kth_successor(nodes_data.iter().map(|n| n.depth).max().unwrap());
+
+            RootedTree {
+                children,
+                parents,
+                nodes_data,
+            }
+        }
+
+        pub fn add_leaf(&mut self, parent: usize, dist_to_parent: i128) -> usize {
+            let node = self.children.len();
+            self.children[parent].push(node);
+            self.parents.add_node(parent);
+            let depth = self.nodes_data[parent].depth + 1;
+            self.nodes_data.push(NodeData {
+                dist_to_parent,
+                depth,
+            });
+            self.parents.index_upto_kth_successor(depth);
+            node
+        }
+
+        pub fn child(&self, node: usize) -> &Vec<usize> {
+            &self.children[node]
+        }
+        pub fn parent(&self, node: usize) -> Option<usize> {
+            if self.nodes_data[node].depth == 0 {
+                None
+            } else {
+                Some(self.parents.get_successor(node))
+            }
+        }
+    }
+
+    #[cfg(test)]
+    mod test_rooted {
+        use super::*;
+
+        // cphb 163
+        const EDGES: &[(usize, usize, i128)] = &[
+            (1, 2, 1),
+            (1, 3, 1),
+            (1, 4, 1),
+            (2, 5, 1),
+            (2, 6, 1),
+            (6, 0, 3),
+            (4, 7, 1),
+        ];
+
+        #[test]
+        fn from_tree() {
+            let t = Tree::from_edges(EDGES.to_vec(), 8);
+            let rt = RootedTree::from_tree(&t, 1);
+            assert_eq!(rt.child(2), &vec![5, 6]);
+            assert_eq!(rt.parent(0), Some(6));
+            assert_eq!(rt.parent(2), Some(1));
+            assert_eq!(rt.parent(1), None);
+        }
+    }
 }
 #[allow(unused_imports)]
 use tree::*;
@@ -1450,10 +1590,31 @@ mod successor_graph {
         logkth_successors: Vec<Vec<usize>>,
     }
     impl SuccessorGraph {
-        pub fn new(successors: Vec<usize>) -> Self {
+        pub fn new() -> Self {
+            SuccessorGraph {
+                logkth_successors: vec![Vec::new()],
+            }
+        }
+        pub fn with_capacity(capacity: usize) -> Self {
+            SuccessorGraph {
+                logkth_successors: vec![Vec::with_capacity(capacity)],
+            }
+        }
+        pub fn from_successors(successors: Vec<usize>) -> Self {
             SuccessorGraph {
                 logkth_successors: vec![successors],
             }
+        }
+
+        pub fn add_node(&mut self, successor: usize) -> usize {
+            let node = self.logkth_successors[0].len();
+            self.logkth_successors[0].push(successor);
+            for logk in 1..self.logkth_successors.len() {
+                let s = self.logkth_successors[logk - 1][node];
+                let s2 = self.logkth_successors[logk - 1][s];
+                self.logkth_successors[logk].push(s2);
+            }
+            node
         }
 
         pub fn index_upto_kth_successor(&mut self, k: usize) {
@@ -1524,15 +1685,24 @@ mod successor_graph {
         use super::*;
 
         #[test]
+        fn add_node() {
+            let mut g = SuccessorGraph::from_successors(vec![2, 4, 6, 5, 1, 1, 0]);
+            g.index_upto_kth_successor(128);
+            g.add_node(5);
+            g.add_node(2);
+            assert_eq!(g.get_kth_successor(7, 128), 1);
+        }
+
+        #[test]
         fn get_k_step_node_fn() {
-            let mut g = SuccessorGraph::new(vec![2, 4, 6, 5, 1, 1, 0, 5, 2]);
+            let mut g = SuccessorGraph::from_successors(vec![2, 4, 6, 5, 1, 1, 0, 5, 2]);
             g.index_upto_kth_successor(6);
             assert_eq!(g.get_kth_successor(3, 6), 1);
         }
 
         #[test]
         fn get_cycle() {
-            let g = SuccessorGraph::new(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 6]);
+            let g = SuccessorGraph::from_successors(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 6]);
             assert_eq!(g.get_cycle(0), vec![6, 7, 8, 9]);
         }
     }

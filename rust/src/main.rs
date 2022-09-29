@@ -294,6 +294,7 @@ mod indexed_vec {
             self.update(i);
         }
     }
+
     #[cfg(test)]
     mod test {
         use super::IndexedVec;
@@ -412,7 +413,7 @@ mod search_iter {
 
     #[cfg(test)]
     mod test {
-        use crate::graph::Graph;
+        use crate::graph::DirectedGraph;
 
         const EDGES: &[(usize, usize, i128)] = &[
             (0, 1, 5),
@@ -433,7 +434,7 @@ mod search_iter {
 
         #[test]
         fn dfs() {
-            let g = Graph::from_edges(EDGES.to_vec(), 5, true);
+            let g = DirectedGraph::from_edges(EDGES.to_vec(), 5);
             assert_eq!(
                 g.depth_first_iter(0).collect::<Vec<_>>(),
                 vec![0, 1, 4, 2, 3]
@@ -442,7 +443,7 @@ mod search_iter {
 
         #[test]
         fn bfs() {
-            let g = Graph::from_edges(EDGES.to_vec(), 5, true);
+            let g = DirectedGraph::from_edges(EDGES.to_vec(), 5);
             assert_eq!(
                 g.breath_first_iter(0).collect::<Vec<_>>(),
                 vec![0, 1, 2, 3, 4]
@@ -460,39 +461,171 @@ mod graph {
         collections::{BinaryHeap, HashSet, VecDeque},
     };
 
-    pub struct Graph {
-        adj_nodess: Vec<Vec<(usize, i128)>>,
-        rev_adj_nodess: Option<Vec<Vec<(usize, i128)>>>,
-        neg_edge_count: u128,
-        directed: bool,
+    fn dijkstra<F: Fn(usize) -> bool>(
+        adj_nodess: &[Vec<(usize, i128)>],
+        start: usize,
+        stop_when: F,
+    ) -> Vec<i128> {
+        let mut shortest_path_len = vec![i128::MAX; adj_nodess.len()];
+        let mut queue = BinaryHeap::new();
+        queue.push(Reverse((0, start)));
+        while let Some(Reverse((distance, node))) = queue.pop() {
+            if shortest_path_len[node] != i128::MAX {
+                continue;
+            }
+            shortest_path_len[node] = distance;
+            if stop_when(node) {
+                break;
+            }
+            for &(adj_node, weight) in &adj_nodess[node] {
+                queue.push(Reverse((distance + weight, adj_node)));
+            }
+        }
+        shortest_path_len
     }
-    impl Graph {
-        pub fn new(directed: bool) -> Self {
-            Graph {
+    fn spfa(adj_nodess: &[Vec<(usize, i128)>], start: usize) -> Option<Vec<i128>> {
+        let mut shortest_path_len = vec![i128::MAX; adj_nodess.len()];
+        let mut shortest_path_edge_len = vec![0; adj_nodess.len()];
+        shortest_path_len[start] = 0;
+        let mut queue = VecDeque::new();
+        queue.push_back(start);
+        while let Some(node) = queue.pop_front() {
+            for &(adj_node, weight) in &adj_nodess[node] {
+                if shortest_path_len[node] + weight < shortest_path_len[adj_node] {
+                    shortest_path_len[adj_node] = shortest_path_len[node] + weight;
+                    shortest_path_edge_len[adj_node] = shortest_path_edge_len[node] + 1;
+                    if shortest_path_edge_len[adj_node] >= adj_nodess.len() {
+                        // negative cycle
+                        return None;
+                    }
+                    queue.push_back(adj_node);
+                }
+            }
+        }
+        Some(shortest_path_len)
+    }
+    fn floyd_warshall(adj_nodess: &[Vec<(usize, i128)>]) -> Option<Vec<Vec<i128>>> {
+        let n = adj_nodess.len();
+        let mut shortest_path_lens = vec![vec![i128::MAX; n]; n];
+        for (node, adj_nodes) in adj_nodess.iter().enumerate() {
+            for &(adj_node, weight) in adj_nodes {
+                shortest_path_lens[node][adj_node] = weight;
+            }
+        }
+        for node in 0..n {
+            shortest_path_lens[node][node] = 0;
+        }
+        for nodei in 0..n {
+            for node1 in 0..n {
+                for node2 in 0..n {
+                    if shortest_path_lens[node1][nodei] != i128::MAX
+                        && shortest_path_lens[nodei][node2] != i128::MAX
+                    {
+                        shortest_path_lens[node1][node2] = shortest_path_lens[node1][node2].min(
+                            shortest_path_lens[node1][nodei] + shortest_path_lens[nodei][node2],
+                        );
+                    }
+                }
+            }
+        }
+        for node in 0..n {
+            if shortest_path_lens[node][node] < 0 {
+                return None;
+            }
+        }
+        Some(shortest_path_lens)
+    }
+
+    fn reconstruct_shortest_path(
+        rev_adj_nodess: &[Vec<(usize, i128)>],
+        shortest_path_lens: &[i128],
+        start: usize,
+        end: usize,
+    ) -> Option<Vec<usize>> {
+        let dists_to_start = shortest_path_lens;
+        assert!(
+                dists_to_start[start] == 0,
+                "expected shortest_path_lens[start] to be zero, looks like you got the wrong start node",
+            );
+        if dists_to_start[end] == i128::MAX {
+            return None;
+        }
+        let mut shortest_path = Vec::new();
+        let mut node = end;
+        while node != start {
+            shortest_path.push(node);
+            node = rev_adj_nodess[node]
+                .iter()
+                .filter(|next_node| {
+                    dists_to_start[next_node.0] == dists_to_start[node] - next_node.1
+                })
+                .min_by_key(|next_node| dists_to_start[next_node.0])
+                .expect("shortest_path_lens corruption")
+                .0;
+        }
+        shortest_path.push(node);
+        Some(shortest_path.into_iter().rev().collect())
+    }
+    fn reconstruct_all_shortest_path(
+        adj_nodess: &Vec<Vec<(usize, i128)>>,
+        shortest_path_lens: &[i128],
+        start: usize,
+    ) -> DirectedGraph {
+        let dists_to_start = shortest_path_lens;
+        assert!(
+                dists_to_start[start] == 0,
+                "expected shortest_path_lens[start] to be zero, looks like you got the wrong start node",
+            );
+        let mut edges = Vec::new();
+        let mut visited = vec![false; adj_nodess.len()];
+        fn dfs(
+            node: usize,
+            adj_nodess: &[Vec<(usize, i128)>],
+            dists_to_start: &[i128],
+            edges: &mut Vec<(usize, usize, i128)>,
+            visited: &mut [bool],
+        ) {
+            if visited[node] {
+                return;
+            }
+            visited[node] = true;
+            for &(adj_node, weight) in &adj_nodess[node] {
+                if dists_to_start[adj_node] == dists_to_start[node] + weight {
+                    // some shortest path go through this edge
+                    edges.push((node, adj_node, weight));
+                    dfs(adj_node, adj_nodess, dists_to_start, edges, visited);
+                }
+            }
+        }
+        dfs(start, adj_nodess, dists_to_start, &mut edges, &mut visited);
+        DirectedGraph::from_edges(edges, adj_nodess.len())
+    }
+
+    pub struct DirectedGraph {
+        adj_nodess: Vec<Vec<(usize, i128)>>,
+        rev_adj_nodess: Vec<Vec<(usize, i128)>>,
+        neg_edge_count: usize,
+    }
+    impl DirectedGraph {
+        pub fn new() -> Self {
+            DirectedGraph {
                 adj_nodess: Vec::new(),
-                rev_adj_nodess: None,
+                rev_adj_nodess: Vec::new(),
                 neg_edge_count: 0,
-                directed,
             }
         }
-        pub fn with_capacity(capacity: usize, directed: bool) -> Self {
-            Graph {
+        pub fn with_capacity(capacity: usize) -> Self {
+            DirectedGraph {
                 adj_nodess: Vec::with_capacity(capacity),
-                rev_adj_nodess: None,
+                rev_adj_nodess: Vec::with_capacity(capacity),
                 neg_edge_count: 0,
-                directed,
             }
         }
-        pub fn from_edges(
-            edges: Vec<(usize, usize, i128)>,
-            node_count: usize,
-            directed: bool,
-        ) -> Self {
-            let mut g = Graph {
+        pub fn from_edges(edges: Vec<(usize, usize, i128)>, node_count: usize) -> Self {
+            let mut g = DirectedGraph {
                 adj_nodess: vec![Vec::new(); node_count],
-                rev_adj_nodess: None,
+                rev_adj_nodess: vec![Vec::new(); node_count],
                 neg_edge_count: 0,
-                directed,
             };
             for edge in edges {
                 g.add_edge(edge);
@@ -500,47 +633,23 @@ mod graph {
             g
         }
 
-        pub fn enable_rev_adj_nodes(&mut self) {
-            if self.rev_adj_nodess.is_some() || !self.directed {
-                return;
-            }
-            let mut rev_adj_nodess = vec![Vec::new(); self.adj_nodess.len()];
-            for (node, adj_nodes) in self.adj_nodess.iter().enumerate() {
-                for &(adj_node, weight) in adj_nodes {
-                    rev_adj_nodess[adj_node].push((node, weight));
-                }
-            }
-            self.rev_adj_nodess = Some(rev_adj_nodess);
-        }
-
         pub fn get_adj_nodess(&self) -> &Vec<Vec<(usize, i128)>> {
             &self.adj_nodess
         }
-        pub fn get_rev_adj_nodess(&self) -> Option<&Vec<Vec<(usize, i128)>>> {
-            if self.directed {
-                self.rev_adj_nodess.as_ref()
-            } else {
-                Some(&self.adj_nodess)
-            }
+        pub fn get_rev_adj_nodess(&self) -> &Vec<Vec<(usize, i128)>> {
+            &self.rev_adj_nodess
         }
 
         pub fn add_node(&mut self) -> usize {
             self.adj_nodess.push(Vec::new());
-            if let Some(rev_adj_nodes) = &mut self.rev_adj_nodess {
-                rev_adj_nodes.push(Vec::new());
-            }
+            self.rev_adj_nodess.push(Vec::new());
             self.adj_nodess.len() - 1
         }
         pub fn add_edge(&mut self, edge: (usize, usize, i128)) {
             self.adj_nodess[edge.0].push((edge.1, edge.2));
-            if !self.directed {
-                self.adj_nodess[edge.1].push((edge.0, edge.2));
-            }
+            self.rev_adj_nodess[edge.1].push((edge.0, edge.2));
             if edge.2 < 0 {
                 self.neg_edge_count += 1;
-            }
-            if let Some(rev_adj_nodes) = &mut self.rev_adj_nodess {
-                rev_adj_nodes[edge.1].push((edge.0, edge.2));
             }
         }
 
@@ -559,84 +668,15 @@ mod graph {
             start: usize,
             stop_when: F,
         ) -> Option<Vec<i128>> {
-            if self.neg_edge_count == 0 {
-                self.dijkstra(start, stop_when)
+            if self.neg_edge_count > 0 {
+                spfa(&self.adj_nodess, start)
             } else {
-                self.spfa(start, stop_when)
+                Some(dijkstra(&self.adj_nodess, start, stop_when))
             }
-        }
-        fn dijkstra<F: Fn(usize) -> bool>(&self, start: usize, stop_when: F) -> Option<Vec<i128>> {
-            let mut shortest_path_len = vec![i128::MAX; self.adj_nodess.len()];
-            let mut queue = BinaryHeap::new();
-            queue.push(Reverse((0, start)));
-            while let Some(Reverse((distance, node))) = queue.pop() {
-                if shortest_path_len[node] != i128::MAX {
-                    continue;
-                }
-                shortest_path_len[node] = distance;
-                if stop_when(node) {
-                    break;
-                }
-                for (adj_node, weight) in &self.adj_nodess[node] {
-                    queue.push(Reverse((distance + *weight, *adj_node)));
-                }
-            }
-            Some(shortest_path_len)
-        }
-        fn spfa<F: Fn(usize) -> bool>(&self, start: usize, _stop_when: F) -> Option<Vec<i128>> {
-            let mut shortest_path_len = vec![i128::MAX; self.adj_nodess.len()];
-            let mut shortest_path_edge_len = vec![0; self.adj_nodess.len()];
-            shortest_path_len[start] = 0;
-            let mut queue = VecDeque::new();
-            queue.push_back(start);
-            while let Some(node) = queue.pop_front() {
-                for &(adj_node, weight) in &self.adj_nodess[node] {
-                    if shortest_path_len[node] + weight < shortest_path_len[adj_node] {
-                        shortest_path_len[adj_node] = shortest_path_len[node] + weight;
-                        shortest_path_edge_len[adj_node] = shortest_path_edge_len[node] + 1;
-                        if shortest_path_edge_len[adj_node] >= self.adj_nodess.len() {
-                            // negative cycle
-                            return None;
-                        }
-                        queue.push_back(adj_node);
-                    }
-                }
-            }
-            Some(shortest_path_len)
         }
 
         pub fn get_all_shortest_path_lens(&self) -> Option<Vec<Vec<i128>>> {
-            let n = self.adj_nodess.len();
-            let mut shortest_path_lens = vec![vec![i128::MAX; n]; n];
-            for (node, adj_nodes) in self.adj_nodess.iter().enumerate() {
-                for &(adj_node, weight) in adj_nodes {
-                    shortest_path_lens[node][adj_node] = weight;
-                }
-            }
-            for node in 0..n {
-                shortest_path_lens[node][node] = 0;
-            }
-            for nodei in 0..n {
-                for node1 in 0..n {
-                    for node2 in 0..n {
-                        if shortest_path_lens[node1][nodei] != i128::MAX
-                            && shortest_path_lens[nodei][node2] != i128::MAX
-                        {
-                            shortest_path_lens[node1][node2] = shortest_path_lens[node1][node2]
-                                .min(
-                                    shortest_path_lens[node1][nodei]
-                                        + shortest_path_lens[nodei][node2],
-                                );
-                        }
-                    }
-                }
-            }
-            for node in 0..n {
-                if shortest_path_lens[node][node] < 0 {
-                    return None;
-                }
-            }
-            Some(shortest_path_lens)
+            floyd_warshall(&self.adj_nodess)
         }
 
         pub fn reconstruct_shortest_path(
@@ -645,118 +685,17 @@ mod graph {
             start: usize,
             end: usize,
         ) -> Option<Vec<usize>> {
-            let dists_to_start = shortest_path_lens;
-            let rev_adj_nodess = self
-                .get_rev_adj_nodess()
-                .expect("need to enable_rev_adj_nodes before calling reconstruct_shortest_path");
-            assert!(
-                dists_to_start[start] == 0,
-                "expected shortest_path_lens[start] to be zero, looks like you got the wrong start node",
-            );
-            if dists_to_start[end] == i128::MAX {
-                return None;
-            }
-            let mut shortest_path = Vec::new();
-            let mut node = end;
-            while node != start {
-                shortest_path.push(node);
-                node = rev_adj_nodess[node]
-                    .iter()
-                    .filter(|next_node| {
-                        dists_to_start[next_node.0] == dists_to_start[node] - next_node.1
-                    })
-                    .min_by_key(|next_node| dists_to_start[next_node.0])
-                    .expect("shortest_path_lens corruption")
-                    .0;
-            }
-            shortest_path.push(node);
-            Some(shortest_path.into_iter().rev().collect())
+            reconstruct_shortest_path(&self.rev_adj_nodess, shortest_path_lens, start, end)
         }
-
         pub fn reconstruct_all_shortest_path(
             &self,
             shortest_path_lens: &[i128],
             start: usize,
-        ) -> Graph {
-            let dists_to_start = shortest_path_lens;
-            assert!(
-                dists_to_start[start] == 0,
-                "expected shortest_path_lens[start] to be zero, looks like you got the wrong start node",
-            );
-            let mut edges = Vec::new();
-            let mut visited = vec![false; self.adj_nodess.len()];
-            fn dfs(
-                node: usize,
-                adj_nodess: &[Vec<(usize, i128)>],
-                dists_to_start: &[i128],
-                edges: &mut Vec<(usize, usize, i128)>,
-                visited: &mut [bool],
-            ) {
-                if visited[node] {
-                    return;
-                }
-                visited[node] = true;
-                for &(adj_node, weight) in &adj_nodess[node] {
-                    if dists_to_start[adj_node] == dists_to_start[node] + weight {
-                        // some shortest path go through this edge
-                        edges.push((node, adj_node, weight));
-                        dfs(adj_node, adj_nodess, dists_to_start, edges, visited);
-                    }
-                }
-            }
-            dfs(
-                start,
-                &self.adj_nodess,
-                dists_to_start,
-                &mut edges,
-                &mut visited,
-            );
-            Graph::from_edges(edges, self.adj_nodess.len(), true)
-        }
-
-        pub fn get_min_spanning_tree(&self) -> Tree {
-            assert!(!self.directed, "Graph must be undirected for spanning tree");
-            let node_count = self.adj_nodess.len();
-            if node_count == 0 {
-                return Tree::new();
-            }
-            let mut added = vec![false; node_count];
-            added[0] = true;
-            let mut edges = Vec::with_capacity(node_count);
-            let mut queue = BinaryHeap::from_iter(self.adj_nodess[0].iter().filter_map(
-                |&(adj_node, weight)| {
-                    if 0 == adj_node {
-                        None
-                    } else {
-                        Some(Reverse((weight, 0, adj_node)))
-                    }
-                },
-            ));
-            while let Some(Reverse((weight, added_node, new_node))) = queue.pop() {
-                if !added[new_node] {
-                    added[new_node] = true;
-                    edges.push((added_node, new_node, weight));
-                    let new_edges =
-                        self.adj_nodess[new_node]
-                            .iter()
-                            .filter_map(|&(adj_node, weight)| {
-                                if added[adj_node] {
-                                    None
-                                } else {
-                                    Some(Reverse((weight, new_node, adj_node)))
-                                }
-                            });
-
-                    for new_edge in new_edges {
-                        queue.push(new_edge);
-                    }
-                }
-            }
-            Tree::from_edges(edges, node_count)
+        ) -> DirectedGraph {
+            reconstruct_all_shortest_path(&self.adj_nodess, shortest_path_lens, start)
         }
 
         pub fn get_topological_sort(&self, from: Option<usize>) -> Result<Vec<usize>, Vec<usize>> {
-            assert!(self.directed, "Graph must be directed for topological sort");
             let mut rev_sort = Vec::with_capacity(self.adj_nodess.len());
             let mut states = vec![0; self.adj_nodess.len()];
             fn have_cycle(
@@ -802,9 +741,7 @@ mod graph {
         }
 
         pub fn get_strongly_connected_components(&self) -> Vec<HashSet<usize>> {
-            let rev_adj_nodess = self.get_rev_adj_nodess().expect(
-                "need to enable_rev_adj_nodes before calling get_strongly_connected_components",
-            );
+            let rev_adj_nodess = self.get_rev_adj_nodess();
             let adj_nodess = &self.adj_nodess;
 
             // first phase
@@ -859,10 +796,10 @@ mod graph {
     }
 
     #[cfg(test)]
-    mod test {
+    mod test_directed {
         use std::collections::HashSet;
 
-        use super::*;
+        use super::DirectedGraph;
 
         // cphb p.g. 124
         const EDGES: &[(usize, usize, i128)] = &[
@@ -884,7 +821,7 @@ mod graph {
 
         #[test]
         fn dijkstra() {
-            let g = Graph::from_edges(EDGES.to_vec(), 5, true);
+            let g = DirectedGraph::from_edges(EDGES.to_vec(), 5);
             assert_eq!(g.get_shortest_path_lens(0), Some(vec![0, 5, 3, 4, 6]),);
         }
 
@@ -892,7 +829,7 @@ mod graph {
         fn spfa() {
             let mut edges = EDGES.to_vec();
             edges.push((2, 4, -1));
-            let g = Graph::from_edges(edges, 5, true);
+            let g = DirectedGraph::from_edges(edges, 5);
             assert_eq!(g.get_shortest_path_lens(0), Some(vec![0, 4, 3, 4, 2]),);
         }
 
@@ -900,13 +837,13 @@ mod graph {
         fn spfa_negative_cycle() {
             let mut edges = EDGES.to_vec();
             edges.push((2, 4, -4));
-            let g = Graph::from_edges(edges, 5, true);
+            let g = DirectedGraph::from_edges(edges, 5);
             assert_eq!(g.get_shortest_path_lens(1), None);
         }
 
         #[test]
         fn spfa_negative_cycle_no_false_positive() {
-            let g = Graph::from_edges(
+            let g = DirectedGraph::from_edges(
                 vec![
                     (0, 1, 0),
                     (1, 2, 0),
@@ -916,41 +853,13 @@ mod graph {
                     (5, 0, 1),
                 ],
                 6,
-                true,
             );
             assert_eq!(g.get_shortest_path_lens(0), Some(vec![0, 0, 0, -1, -1, -1]));
         }
 
         #[test]
         fn floyd_warshall() {
-            let g = Graph::from_edges(EDGES.to_vec(), 5, true);
-            assert_eq!(
-                g.get_all_shortest_path_lens(),
-                Some(vec![
-                    vec![0, 5, 3, 4, 6],
-                    vec![5, 0, 4, 3, 2],
-                    vec![3, 4, 0, 1, 3],
-                    vec![4, 3, 1, 0, 2],
-                    vec![6, 2, 3, 2, 0],
-                ]),
-            );
-        }
-
-        #[test]
-        fn undirected_floyd_warshall() {
-            let g = Graph::from_edges(
-                vec![
-                    (0, 1, 5),
-                    (0, 2, 3),
-                    (0, 3, 7),
-                    (1, 3, 3),
-                    (1, 4, 2),
-                    (2, 3, 1),
-                    (3, 4, 2),
-                ],
-                5,
-                false,
-            );
+            let g = DirectedGraph::from_edges(EDGES.to_vec(), 5);
             assert_eq!(
                 g.get_all_shortest_path_lens(),
                 Some(vec![
@@ -967,13 +876,14 @@ mod graph {
         fn floyd_warshall_negative_cycle() {
             let mut edges = EDGES.to_vec();
             edges.push((2, 4, -4));
-            let g = Graph::from_edges(edges, 5, false);
+            edges.push((4, 2, -4));
+            let g = DirectedGraph::from_edges(edges, 5);
             assert_eq!(g.get_all_shortest_path_lens(), None);
         }
 
         #[test]
         fn floyd_warshall_negative_cycle_no_false_positive() {
-            let g = Graph::from_edges(
+            let g = DirectedGraph::from_edges(
                 vec![
                     (0, 1, 0),
                     (1, 2, 0),
@@ -983,7 +893,6 @@ mod graph {
                     (5, 0, 1),
                 ],
                 6,
-                true,
             );
             assert_eq!(
                 g.get_all_shortest_path_lens(),
@@ -1000,9 +909,8 @@ mod graph {
 
         #[test]
         fn reconstruct_shortest_path() {
-            let mut g = Graph::from_edges(EDGES.to_vec(), 5, true);
+            let g = DirectedGraph::from_edges(EDGES.to_vec(), 5);
             let shortest_path_lens = g.get_shortest_path_lens(0).unwrap();
-            g.enable_rev_adj_nodes();
             assert_eq!(
                 g.reconstruct_shortest_path(&shortest_path_lens, 0, 4),
                 Some(vec![0, 2, 3, 4])
@@ -1013,9 +921,8 @@ mod graph {
         fn reconstruct_shortest_path_negative_edge() {
             let mut edges = EDGES.to_vec();
             edges.push((2, 4, -1));
-            let mut g = Graph::from_edges(edges, 5, true);
+            let g = DirectedGraph::from_edges(edges, 5);
             let shortest_path_lens = g.get_shortest_path_lens(0).unwrap();
-            g.enable_rev_adj_nodes();
             assert_eq!(
                 g.reconstruct_shortest_path(&shortest_path_lens, 0, 4),
                 Some(vec![0, 2, 4])
@@ -1026,9 +933,8 @@ mod graph {
         fn reconstruct_all_shortest_path() {
             let mut edges = EDGES.to_vec();
             edges.push((2, 4, -1));
-            let mut g = Graph::from_edges(edges, 5, true);
+            let g = DirectedGraph::from_edges(edges, 5);
             let shortest_path_lens = g.get_shortest_path_lens(0).unwrap();
-            g.enable_rev_adj_nodes();
             assert_eq!(
                 g.reconstruct_all_shortest_path(&shortest_path_lens, 0)
                     .get_adj_nodess()
@@ -1046,20 +952,283 @@ mod graph {
         }
 
         #[test]
-        fn min_spanning_tree() {
-            let g = Graph::from_edges(
+        fn topological_sort() {
+            let g = DirectedGraph::from_edges(
                 vec![
-                    (0, 1, 5),
-                    (0, 2, 3),
-                    (0, 3, 7),
-                    (1, 3, 3),
-                    (1, 4, 2),
-                    (2, 3, 1),
-                    (3, 4, 2),
+                    (0, 1, 1),
+                    (1, 2, 1),
+                    (2, 5, 1),
+                    (3, 0, 1),
+                    (3, 4, 1),
+                    (4, 1, 1),
+                    (4, 2, 1),
                 ],
-                5,
-                false,
-            ); // (0, 2, 3), (1, 4, 2), (2, 3, 1), (3, 4, 2)
+                6,
+            );
+            assert_eq!(g.get_topological_sort(None), Ok(vec![3, 4, 0, 1, 2, 5]));
+        }
+
+        #[test]
+        fn topological_sort_with_start() {
+            let g = DirectedGraph::from_edges(
+                vec![
+                    (0, 1, 1),
+                    (1, 2, 1),
+                    (2, 5, 1),
+                    (3, 0, 1),
+                    (3, 4, 1),
+                    (4, 3, 1),
+                    (4, 1, 1),
+                    (4, 2, 1),
+                ],
+                6,
+            );
+            assert_eq!(g.get_topological_sort(Some(0)), Ok(vec![0, 1, 2, 5]));
+        }
+
+        #[test]
+        fn cycle_detection() {
+            let g = DirectedGraph::from_edges(
+                vec![
+                    (0, 1, 1),
+                    (1, 2, 1),
+                    (2, 5, 1),
+                    (3, 0, 1),
+                    (3, 4, 1),
+                    (4, 1, 1),
+                    (4, 2, 1),
+                    (5, 4, 1),
+                ],
+                6,
+            );
+            assert_eq!(g.get_topological_sort(None), Err(vec![1, 2, 5, 4]));
+        }
+
+        #[test]
+        fn get_strongly_connected_components() {
+            let g = DirectedGraph::from_edges(
+                vec![
+                    (0, 1, 1),
+                    (0, 3, 1),
+                    (1, 0, 1),
+                    (1, 4, 1),
+                    (2, 1, 1),
+                    (2, 6, 1),
+                    (4, 3, 1),
+                    (5, 4, 1),
+                    (5, 2, 1),
+                    (6, 5, 1),
+                ],
+                7,
+            );
+            let mut components = g.get_strongly_connected_components();
+            components.sort_by_key(|c| c.iter().min().unwrap().to_owned());
+            assert_eq!(
+                components,
+                vec![
+                    HashSet::from_iter([0, 1].into_iter()),
+                    HashSet::from_iter([2, 5, 6].into_iter()),
+                    HashSet::from_iter([3].into_iter()),
+                    HashSet::from_iter([4].into_iter()),
+                ],
+            );
+        }
+    }
+
+    pub struct UndirectedGraph {
+        adj_nodess: Vec<Vec<(usize, i128)>>,
+        neg_edge_count: usize,
+    }
+    impl UndirectedGraph {
+        pub fn new() -> Self {
+            UndirectedGraph {
+                adj_nodess: Vec::new(),
+                neg_edge_count: 0,
+            }
+        }
+        pub fn with_capacity(capacity: usize) -> Self {
+            UndirectedGraph {
+                adj_nodess: Vec::with_capacity(capacity),
+                neg_edge_count: 0,
+            }
+        }
+        pub fn from_edges(edges: Vec<(usize, usize, i128)>, node_count: usize) -> Self {
+            let mut g = UndirectedGraph {
+                adj_nodess: vec![Vec::new(); node_count],
+                neg_edge_count: 0,
+            };
+            for edge in edges {
+                g.add_edge(edge);
+            }
+            g
+        }
+
+        pub fn get_adj_nodess(&self) -> &Vec<Vec<(usize, i128)>> {
+            &self.adj_nodess
+        }
+
+        pub fn add_node(&mut self) -> usize {
+            self.adj_nodess.push(Vec::new());
+            self.adj_nodess.len() - 1
+        }
+        pub fn add_edge(&mut self, edge: (usize, usize, i128)) {
+            self.adj_nodess[edge.0].push((edge.1, edge.2));
+            self.adj_nodess[edge.1].push((edge.0, edge.2));
+            if edge.2 < 0 {
+                self.neg_edge_count += 1;
+            }
+        }
+
+        pub fn depth_first_iter(&self, start: usize) -> DepthFirstIter {
+            DepthFirstIter::new(&self.adj_nodess, start)
+        }
+        pub fn breath_first_iter(&self, start: usize) -> BreathFirstIter {
+            BreathFirstIter::new(&self.adj_nodess, start)
+        }
+
+        pub fn get_shortest_path_lens(&self, start: usize) -> Option<Vec<i128>> {
+            self.get_shortest_path_lens_till_stop(start, |_| false)
+        }
+        pub fn get_shortest_path_lens_till_stop<F: Fn(usize) -> bool>(
+            &self,
+            start: usize,
+            stop_when: F,
+        ) -> Option<Vec<i128>> {
+            if self.neg_edge_count == 0 {
+                Some(dijkstra(&self.adj_nodess, start, stop_when))
+            } else {
+                None
+            }
+        }
+
+        pub fn get_all_shortest_path_lens(&self) -> Option<Vec<Vec<i128>>> {
+            if self.neg_edge_count > 0 {
+                None
+            } else {
+                floyd_warshall(&self.adj_nodess)
+            }
+        }
+
+        pub fn reconstruct_shortest_path(
+            &self,
+            shortest_path_lens: &[i128],
+            start: usize,
+            end: usize,
+        ) -> Option<Vec<usize>> {
+            reconstruct_shortest_path(&self.adj_nodess, shortest_path_lens, start, end)
+        }
+        pub fn reconstruct_all_shortest_path(
+            &self,
+            shortest_path_lens: &[i128],
+            start: usize,
+        ) -> DirectedGraph {
+            reconstruct_all_shortest_path(&self.adj_nodess, shortest_path_lens, start)
+        }
+
+        pub fn get_min_spanning_tree(&self) -> Tree {
+            let node_count = self.adj_nodess.len();
+            if node_count == 0 {
+                return Tree::new();
+            }
+            let mut added = vec![false; node_count];
+            added[0] = true;
+            let mut edges = Vec::with_capacity(node_count);
+            let mut queue = BinaryHeap::from_iter(self.adj_nodess[0].iter().filter_map(
+                |&(adj_node, weight)| {
+                    if 0 == adj_node {
+                        None
+                    } else {
+                        Some(Reverse((weight, 0, adj_node)))
+                    }
+                },
+            ));
+            while let Some(Reverse((weight, added_node, new_node))) = queue.pop() {
+                if !added[new_node] {
+                    added[new_node] = true;
+                    edges.push((added_node, new_node, weight));
+                    let new_edges =
+                        self.adj_nodess[new_node]
+                            .iter()
+                            .filter_map(|&(adj_node, weight)| {
+                                if added[adj_node] {
+                                    None
+                                } else {
+                                    Some(Reverse((weight, new_node, adj_node)))
+                                }
+                            });
+
+                    for new_edge in new_edges {
+                        queue.push(new_edge);
+                    }
+                }
+            }
+            Tree::from_edges(edges, node_count)
+        }
+    }
+
+    #[cfg(test)]
+    mod test_undirected {
+        use std::collections::HashSet;
+
+        use super::UndirectedGraph;
+
+        // cphb p.g. 124
+        const EDGES: &[(usize, usize, i128)] = &[
+            (0, 1, 5),
+            (0, 2, 3),
+            (0, 3, 7),
+            (1, 3, 3),
+            (1, 4, 2),
+            (2, 3, 1),
+            (3, 4, 2),
+        ];
+
+        #[test]
+        fn dijkstra() {
+            let g = UndirectedGraph::from_edges(EDGES.to_vec(), 5);
+            assert_eq!(g.get_shortest_path_lens(0), Some(vec![0, 5, 3, 4, 6]),);
+        }
+
+        #[test]
+        fn shortest_path_with_neg_edge() {
+            let mut g = UndirectedGraph::from_edges(EDGES.to_vec(), 5);
+            g.add_edge((1, 2, -1));
+            assert_eq!(g.get_shortest_path_lens(0), None);
+        }
+
+        #[test]
+        fn reconstruct_shortest_path() {
+            let g = UndirectedGraph::from_edges(EDGES.to_vec(), 5);
+            let shortest_path_lens = g.get_shortest_path_lens(0).unwrap();
+            assert_eq!(
+                g.reconstruct_shortest_path(&shortest_path_lens, 0, 4),
+                Some(vec![0, 2, 3, 4])
+            );
+        }
+
+        #[test]
+        fn reconstruct_all_shortest_path() {
+            let g = UndirectedGraph::from_edges(EDGES.to_vec(), 5);
+            let shortest_path_lens = g.get_shortest_path_lens(0).unwrap();
+            assert_eq!(
+                g.reconstruct_all_shortest_path(&shortest_path_lens, 0)
+                    .get_adj_nodess()
+                    .iter()
+                    .map(|adj_nodes| { HashSet::from_iter(adj_nodes) })
+                    .collect::<Vec<HashSet<&(usize, i128)>>>(),
+                vec![
+                    HashSet::from_iter(&[(1, 5), (2, 3)]),
+                    HashSet::from_iter(&[]),
+                    HashSet::from_iter(&[(3, 1)]),
+                    HashSet::from_iter(&[(4, 2)]),
+                    HashSet::from_iter(&[]),
+                ],
+            );
+        }
+
+        #[test]
+        fn min_spanning_tree() {
+            let g = UndirectedGraph::from_edges(EDGES.to_vec(), 5); // (0, 2, 3), (1, 4, 2), (2, 3, 1), (3, 4, 2)
             assert_eq!(
                 g.get_min_spanning_tree()
                     .get_adj_nodess()
@@ -1077,90 +1246,17 @@ mod graph {
         }
 
         #[test]
-        fn topological_sort() {
-            let g = Graph::from_edges(
-                vec![
-                    (0, 1, 1),
-                    (1, 2, 1),
-                    (2, 5, 1),
-                    (3, 0, 1),
-                    (3, 4, 1),
-                    (4, 1, 1),
-                    (4, 2, 1),
-                ],
-                6,
-                true,
-            );
-            assert_eq!(g.get_topological_sort(None), Ok(vec![3, 4, 0, 1, 2, 5]));
-        }
-
-        #[test]
-        fn topological_sort_with_start() {
-            let g = Graph::from_edges(
-                vec![
-                    (0, 1, 1),
-                    (1, 2, 1),
-                    (2, 5, 1),
-                    (3, 0, 1),
-                    (3, 4, 1),
-                    (4, 3, 1),
-                    (4, 1, 1),
-                    (4, 2, 1),
-                ],
-                6,
-                true,
-            );
-            assert_eq!(g.get_topological_sort(Some(0)), Ok(vec![0, 1, 2, 5]));
-        }
-
-        #[test]
-        fn cycle_detection() {
-            let g = Graph::from_edges(
-                vec![
-                    (0, 1, 1),
-                    (1, 2, 1),
-                    (2, 5, 1),
-                    (3, 0, 1),
-                    (3, 4, 1),
-                    (4, 1, 1),
-                    (4, 2, 1),
-                    (5, 4, 1),
-                ],
-                6,
-                true,
-            );
-            assert_eq!(g.get_topological_sort(None), Err(vec![1, 2, 5, 4]));
-        }
-
-        #[test]
-        fn get_strongly_connected_components() {
-            let mut g = Graph::from_edges(
-                vec![
-                    (0, 1, 1),
-                    (0, 3, 1),
-                    (1, 0, 1),
-                    (1, 4, 1),
-                    (2, 1, 1),
-                    (2, 6, 1),
-                    (4, 3, 1),
-                    (5, 4, 1),
-                    (5, 2, 1),
-                    (6, 5, 1),
-                ],
-                7,
-                true,
-            );
-            g.enable_rev_adj_nodes();
-            let mut components = g.get_strongly_connected_components();
-            components.sort_by_key(|c| c.iter().min().unwrap().to_owned());
+        fn floyd_warshall() {
+            let g = UndirectedGraph::from_edges(EDGES.to_vec(), 5);
             assert_eq!(
-                components,
-                vec![
-                    HashSet::from_iter([0, 1].into_iter()),
-                    HashSet::from_iter([2, 5, 6].into_iter()),
-                    HashSet::from_iter([3].into_iter()),
-                    HashSet::from_iter([4].into_iter()),
-                ],
+                g.get_all_shortest_path_lens(),
+                Some(vec![
+                    vec![0, 5, 3, 4, 6],
+                    vec![5, 0, 4, 3, 2],
+                    vec![3, 4, 0, 1, 3],
+                    vec![4, 3, 1, 0, 2],
+                    vec![6, 2, 3, 2, 0],
+                ]),
             );
         }
     }
@@ -1314,6 +1410,8 @@ mod tree {
         }
     }
 
+    pub struct RootedTree {}
+
     #[cfg(test)]
     mod test {
         use super::*;
@@ -1375,7 +1473,10 @@ mod successor_graph {
 
         pub fn get_kth_successor(&self, node: usize, k: usize) -> usize {
             let logkth_successors = &self.logkth_successors;
-            assert!(logkth_successors.len() >= highest_one_bit(k) as usize, "Need to index upto kthsuccessor first");
+            assert!(
+                logkth_successors.len() >= highest_one_bit(k) as usize,
+                "Need to index upto kthsuccessor first"
+            );
             let mut node = node;
             let mut k = k;
             let mut logk = 0;

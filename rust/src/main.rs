@@ -823,7 +823,6 @@ mod graph {
                 None
             }
         }
-
         pub fn get_eulerian_path(&self) -> Option<Vec<usize>> {
             let (start, end) = if let Some((start, end)) = self.get_eulerian_start_end() {
                 (start, end)
@@ -863,7 +862,13 @@ mod graph {
                     build_path(node, node, adj_nodess, path, next_edge_to_walk);
                 }
             }
-            build_path(start, end, &self.adj_nodess, &mut path, &mut next_edge_to_walk);
+            build_path(
+                start,
+                end,
+                &self.adj_nodess,
+                &mut path,
+                &mut next_edge_to_walk,
+            );
             Some(path)
         }
     }
@@ -1180,7 +1185,6 @@ mod graph {
         pub fn get_adj_nodess(&self) -> &Vec<Vec<(usize, i128)>> {
             &self.adj_nodess
         }
-
         pub fn node_count(&self) -> usize {
             self.adj_nodess.len()
         }
@@ -1275,6 +1279,30 @@ mod graph {
             }
             Tree::from_edges(edges, node_count)
         }
+
+        pub fn get_eulerian_start_end(&self) -> Option<(usize, usize)> {
+            if self.adj_nodess.is_empty()
+                || DepthFirstIter::new(&self.adj_nodess, 0).count() != self.node_count()
+            {
+                return None;
+            }
+            let odd_degree_nodes = self
+                .adj_nodess
+                .iter()
+                .enumerate()
+                .filter_map(|(index, adj_nodes)| if adj_nodes.len() % 2 == 1 {Some(index)}  else {None})
+                .collect::<Vec<_>>();
+            if odd_degree_nodes.len() == 2 {
+                Some((odd_degree_nodes[0], odd_degree_nodes[1]))
+            } else if odd_degree_nodes.is_empty() {
+                Some((0, 0))
+            } else {
+                None
+            }
+        }
+        // pub fn get_eulerian_path(&self) -> Option<Vec<usize>> {
+        //
+        // }
     }
 
     #[cfg(test)]
@@ -1369,6 +1397,43 @@ mod graph {
                     vec![6, 2, 3, 2, 0],
                 ]),
             );
+        }
+
+        #[test]
+        fn get_eulerian_start_end() {
+            let g = UndirectedGraph::from_edges(
+                vec![
+                    (0, 1, 1),
+                    (1, 2, 1),
+                    (1, 4, 1),
+                    (2, 4, 1),
+                    (3, 0, 1),
+                    (4, 3, 1),
+                ],
+                5,
+            );
+            let eulerian_start_end = g.get_eulerian_start_end().unwrap();
+            assert_eq!(
+                HashSet::from_iter(&[eulerian_start_end.0, eulerian_start_end.1]),
+                HashSet::<&usize>::from_iter(&[1, 4]),
+            );
+        }
+
+        #[test]
+        fn no_eulerian_path() {
+            let g = UndirectedGraph::from_edges(
+                vec![
+                    (0, 1, 1),
+                    (1, 2, 1),
+                    (1, 4, 1),
+                    (2, 4, 1),
+                    (3, 0, 1),
+                    (4, 3, 1),
+                    (0, 2, 1),
+                ],
+                5,
+            );
+            assert_eq!(g.get_eulerian_start_end(), None);
         }
     }
 }

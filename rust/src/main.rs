@@ -697,7 +697,7 @@ mod graph {
                 current: usize,
                 rev_sort: &mut Vec<usize>,
                 states: &mut [u8],
-                adj_nodess: &Vec<Vec<(usize, i128)>>,
+                adj_nodess: &[Vec<(usize, i128)>],
             ) -> Option<Vec<usize>> {
                 states[current] = 1;
                 for &(adj_node, _) in &adj_nodess[current] {
@@ -787,6 +787,32 @@ mod graph {
                 }
             }
             strongly_connected_components
+        }
+
+        pub fn get_eulerian_start_end(&self) -> Option<(usize, usize)> {
+            let extra_out = self
+                .adj_nodess
+                .iter()
+                .enumerate()
+                .zip(self.rev_adj_nodess.iter())
+                .filter_map(|((node, adj_nodes), rev_adj_nodes)| {
+                    let extra_out = adj_nodes.len() as i128 - rev_adj_nodes.len() as i128;
+                    if extra_out != 0 {
+                        Some((node, extra_out))
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>();
+            if extra_out.is_empty() && !self.adj_nodess.is_empty() {
+                Some((0, 0))
+            } else if extra_out.len() == 2 && extra_out[0].1 == 1 && extra_out[1].1 == -1 {
+                Some((extra_out[0].0, extra_out[1].0))
+            } else if extra_out.len() == 2 && extra_out[0].1 == -1 && extra_out[1].1 == 1 {
+                Some((extra_out[1].0, extra_out[0].0))
+            } else {
+                None
+            }
         }
     }
 
@@ -1027,6 +1053,22 @@ mod graph {
                     HashSet::from_iter([4].into_iter()),
                 ],
             );
+        }
+
+        #[test]
+        fn get_eulerian_start_end() {
+            let g = DirectedGraph::from_edges(
+                vec![
+                    (0, 1, 1),
+                    (1, 2, 1),
+                    (1, 4, 1),
+                    (2, 4, 1),
+                    (3, 0, 1),
+                    (4, 3, 1),
+                ],
+                5,
+            );
+            assert_eq!(g.get_eulerian_start_end(), Some((1, 4)));
         }
     }
 

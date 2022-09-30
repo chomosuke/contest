@@ -65,7 +65,7 @@ mod scanner {
 #[allow(unused_imports)]
 use scanner::*;
 
-mod set {
+mod collections {
     use core::hash::Hash;
     use std::collections::HashMap;
 
@@ -93,7 +93,7 @@ mod set {
     }
 }
 #[allow(unused_imports)]
-use set::*;
+use collections::*;
 
 mod binary_searchable {
     use std::cmp::*;
@@ -457,7 +457,7 @@ mod search_graph {
 use search_graph::*;
 
 mod graph {
-    use crate::tree::Tree;
+    use crate::{search_graph::DepthFirstIter, tree::Tree};
     use std::{
         cmp::Reverse,
         collections::{BinaryHeap, HashSet, VecDeque},
@@ -642,6 +642,10 @@ mod graph {
             &self.rev_adj_nodess
         }
 
+        pub fn node_count(&self) -> usize {
+            self.adj_nodess.len()
+        }
+
         pub fn add_node(&mut self) -> usize {
             self.adj_nodess.push(Vec::new());
             self.rev_adj_nodess.push(Vec::new());
@@ -691,8 +695,8 @@ mod graph {
         }
 
         pub fn get_topological_sort(&self, from: Option<usize>) -> Result<Vec<usize>, Vec<usize>> {
-            let mut rev_sort = Vec::with_capacity(self.adj_nodess.len());
-            let mut states = vec![0; self.adj_nodess.len()];
+            let mut rev_sort = Vec::with_capacity(self.node_count());
+            let mut states = vec![0; self.node_count()];
             fn have_cycle(
                 current: usize,
                 rev_sort: &mut Vec<usize>,
@@ -790,6 +794,11 @@ mod graph {
         }
 
         pub fn get_eulerian_start_end(&self) -> Option<(usize, usize)> {
+            if self.adj_nodess.is_empty()
+                || DepthFirstIter::new(&self.adj_nodess, 0).count() != self.node_count()
+            {
+                return None;
+            }
             let extra_out = self
                 .adj_nodess
                 .iter()
@@ -804,7 +813,7 @@ mod graph {
                     }
                 })
                 .collect::<Vec<_>>();
-            if extra_out.is_empty() && !self.adj_nodess.is_empty() {
+            if extra_out.is_empty() {
                 Some((0, 0))
             } else if extra_out.len() == 2 && extra_out[0].1 == 1 && extra_out[1].1 == -1 {
                 Some((extra_out[0].0, extra_out[1].0))
@@ -813,6 +822,49 @@ mod graph {
             } else {
                 None
             }
+        }
+
+        pub fn get_eulerian_path(&self) -> Option<Vec<usize>> {
+            let (start, end) = if let Some((start, end)) = self.get_eulerian_start_end() {
+                (start, end)
+            } else {
+                return None;
+            };
+            let mut next_edge_to_walk = vec![0; self.node_count()];
+            let mut path = Vec::with_capacity(self.node_count());
+            fn build_path(
+                start: usize,
+                end: usize,
+                adj_nodess: &[Vec<(usize, i128)>],
+                path: &mut Vec<usize>,
+                next_edge_to_walk: &mut [usize],
+            ) {
+                // build sub_path / cycle
+                let mut sub_path = Vec::new();
+                let mut node = start;
+                if let Some(&(next_node, _)) = adj_nodess[node].get(next_edge_to_walk[node]) {
+                    sub_path.push(node);
+                    next_edge_to_walk[node] += 1;
+                    node = next_node;
+                } else {
+                    path.push(node);
+                    return;
+                }
+                while node != end {
+                    let (next_node, _) = adj_nodess[node][next_edge_to_walk[node]];
+                    sub_path.push(node);
+                    next_edge_to_walk[node] += 1;
+                    node = next_node;
+                }
+                sub_path.push(node);
+
+                // build path
+                for node in sub_path {
+                    build_path(node, node, adj_nodess, path, next_edge_to_walk);
+                }
+            }
+            build_path(start, end, &self.adj_nodess, &mut path, &mut next_edge_to_walk);
+            Some(path)
         }
     }
 
@@ -1070,6 +1122,31 @@ mod graph {
             );
             assert_eq!(g.get_eulerian_start_end(), Some((1, 4)));
         }
+
+        #[test]
+        fn no_eulerian_path() {
+            let g = DirectedGraph::from_edges(
+                vec![(0, 1, 1), (1, 2, 1), (1, 4, 1), (2, 4, 1), (3, 0, 1)],
+                5,
+            );
+            assert_eq!(g.get_eulerian_start_end(), None);
+        }
+
+        #[test]
+        fn get_eulerian_path() {
+            let g = DirectedGraph::from_edges(
+                vec![
+                    (0, 1, 1),
+                    (1, 2, 1),
+                    (1, 4, 1),
+                    (2, 4, 1),
+                    (3, 0, 1),
+                    (4, 3, 1),
+                ],
+                5,
+            );
+            assert_eq!(g.get_eulerian_path(), Some(vec![1, 4, 3, 0, 1, 2, 4]))
+        }
     }
 
     pub struct UndirectedGraph {
@@ -1102,6 +1179,10 @@ mod graph {
 
         pub fn get_adj_nodess(&self) -> &Vec<Vec<(usize, i128)>> {
             &self.adj_nodess
+        }
+
+        pub fn node_count(&self) -> usize {
+            self.adj_nodess.len()
         }
 
         pub fn add_node(&mut self) -> usize {
@@ -1156,7 +1237,7 @@ mod graph {
         }
 
         pub fn get_min_spanning_tree(&self) -> Tree {
-            let node_count = self.adj_nodess.len();
+            let node_count = self.node_count();
             if node_count == 0 {
                 return Tree::new();
             }
@@ -1337,6 +1418,10 @@ mod tree {
             &self.adj_nodess
         }
 
+        pub fn node_count(&self) -> usize {
+            self.adj_nodess.len()
+        }
+
         pub fn add_node(&mut self, (connected_node, weight): (usize, i128)) -> usize {
             let new_node = self.adj_nodess.len();
             self.adj_nodess[connected_node].push((new_node, weight));
@@ -1348,7 +1433,7 @@ mod tree {
             if self.adj_nodess.is_empty() {
                 return 0;
             }
-            let mut dist_to_zero = vec![i128::MAX; self.adj_nodess.len()];
+            let mut dist_to_zero = vec![i128::MAX; self.node_count()];
             dist_to_zero[0] = 0;
             for node in DepthFirstIter::new(self.get_adj_nodess(), 0).skip(1) {
                 dist_to_zero[node] = self.adj_nodess[node]
@@ -1368,7 +1453,7 @@ mod tree {
                 .max_by_key(|&(_, dist)| dist)
                 .unwrap()
                 .0;
-            let mut dist_to_start = vec![i128::MAX; self.adj_nodess.len()];
+            let mut dist_to_start = vec![i128::MAX; self.node_count()];
             dist_to_start[start] = 0;
             for node in DepthFirstIter::new(self.get_adj_nodess(), start).skip(1) {
                 dist_to_start[node] = self.adj_nodess[node]
@@ -1394,7 +1479,7 @@ mod tree {
             if self.adj_nodess.is_empty() {
                 return Vec::new();
             }
-            let mut mem = HashMap::with_capacity(self.adj_nodess.len());
+            let mut mem = HashMap::with_capacity(self.node_count());
             fn longest_path_len_in_dir(
                 this: &Tree,
                 fst: usize,
@@ -1421,7 +1506,7 @@ mod tree {
             }
             let mut f =
                 |fst, snd, weight| longest_path_len_in_dir(self, fst, snd, weight, &mut mem);
-            let mut longest_path_lens = Vec::with_capacity(self.adj_nodess.len());
+            let mut longest_path_lens = Vec::with_capacity(self.node_count());
             for (node, adj_nodes) in self.adj_nodess.iter().enumerate() {
                 let mut longest_path_len = 0;
                 for &(adj_node, weight) in adj_nodes {

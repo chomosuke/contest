@@ -152,7 +152,10 @@ mod collections {
             assert_eq!(s.count(&1), 2);
             assert_eq!(s.count(&2), 1);
             assert_eq!(s.count(&3), 0);
-            assert_eq!(s.iter().collect::<HashSet<_>>(), HashSet::from_iter(&[1, 1, 2]));
+            assert_eq!(
+                s.iter().collect::<HashSet<_>>(),
+                HashSet::from_iter(&[1, 1, 2])
+            );
             s.remove(&2);
             s.remove(&1);
             assert_eq!(s.count(&1), 1);
@@ -525,7 +528,7 @@ mod search_graph {
 use search_graph::*;
 
 mod graph {
-    use crate::{search_graph::DepthFirstIter, tree::Tree};
+    use crate::{collections::MultiSet, search_graph::DepthFirstIter, tree::Tree};
     use std::{
         cmp::Reverse,
         collections::{BinaryHeap, HashSet, VecDeque},
@@ -1220,6 +1223,23 @@ mod graph {
             );
             assert_eq!(g.get_eulerian_path(), Some(vec![1, 4, 3, 0, 1, 2, 4]))
         }
+
+        #[test]
+        fn get_eulerian_cycle() {
+            let g = DirectedGraph::from_edges(
+                vec![
+                    (0, 1, 1),
+                    (1, 2, 1),
+                    (1, 4, 1),
+                    (2, 4, 1),
+                    (3, 0, 1),
+                    (4, 1, 1),
+                    (4, 3, 1),
+                ],
+                5,
+            );
+            assert_eq!(g.get_eulerian_path(), Some(vec![0, 1, 2, 4, 1, 4, 3, 0]))
+        }
     }
 
     pub struct UndirectedGraph {
@@ -1358,7 +1378,13 @@ mod graph {
                 .adj_nodess
                 .iter()
                 .enumerate()
-                .filter_map(|(index, adj_nodes)| if adj_nodes.len() % 2 == 1 {Some(index)}  else {None})
+                .filter_map(|(index, adj_nodes)| {
+                    if adj_nodes.len() % 2 == 1 {
+                        Some(index)
+                    } else {
+                        None
+                    }
+                })
                 .collect::<Vec<_>>();
             if odd_degree_nodes.len() == 2 {
                 Some((odd_degree_nodes[0], odd_degree_nodes[1]))
@@ -1368,9 +1394,56 @@ mod graph {
                 None
             }
         }
-        // pub fn get_eulerian_path(&self) -> Option<Vec<usize>> {
-        //
-        // }
+        pub fn get_eulerian_path(&self) -> Option<Vec<usize>> {
+            let (start, end) = if let Some((start, end)) = self.get_eulerian_start_end() {
+                (start, end)
+            } else {
+                return None;
+            };
+            // index edges to avoid duplication
+            let mut remaining_edge = vec![MultiSet::new(); self.node_count()];
+            for (node, adj_nodes) in self.adj_nodess.iter().enumerate() {
+                for &(adj_node, _) in adj_nodes {
+                    remaining_edge[node].insert(adj_node);
+                }
+            }
+
+            let mut path = Vec::with_capacity(self.node_count());
+            fn build_path(
+                start: usize,
+                end: usize,
+                path: &mut Vec<usize>,
+                remaining_edge: &mut [MultiSet<usize>],
+            ) {
+                // build sub_path / cycle
+                let mut sub_path = Vec::new();
+                let mut node = start;
+                if let Some(&next_node) = remaining_edge[node].iter().next() {
+                    sub_path.push(node);
+                    remaining_edge[node].remove(&next_node);
+                    remaining_edge[next_node].remove(&node);
+                    node = next_node
+                } else {
+                    path.push(node);
+                    return;
+                }
+                while node != end {
+                    let &next_node = remaining_edge[node].iter().next().unwrap();
+                    sub_path.push(node);
+                    remaining_edge[node].remove(&next_node);
+                    remaining_edge[next_node].remove(&node);
+                    node = next_node;
+                }
+                sub_path.push(node);
+
+                // build path
+                for node in sub_path {
+                    build_path(node, node, path, remaining_edge);
+                }
+            }
+            build_path(start, end, &mut path, &mut remaining_edge);
+            Some(path)
+        }
     }
 
     #[cfg(test)]
@@ -1502,6 +1575,59 @@ mod graph {
                 5,
             );
             assert_eq!(g.get_eulerian_start_end(), None);
+        }
+
+        #[test]
+        fn get_eulerian_path() {
+            let mut edges = vec![
+                (0, 1, 1),
+                (1, 2, 1),
+                (1, 4, 1),
+                (2, 4, 1),
+                (3, 0, 1),
+                (4, 3, 1),
+            ];
+            let g = UndirectedGraph::from_edges(edges.clone(), 5);
+            let path = g.get_eulerian_path().unwrap();
+            for (node1, node2) in path.iter().zip(path.iter().skip(1)) {
+                let mut to_remove = edges.len();
+                for (i, (node_1, node_2, _)) in edges.iter().enumerate() {
+                    if (node1 == node_1 && node2 == node_2) || (node1 == node_2 && node2 == node_1)
+                    {
+                        to_remove = i;
+                        break;
+                    }
+                }
+                edges.remove(to_remove);
+            }
+            assert!(edges.is_empty());
+        }
+
+        #[test]
+        fn get_eulerian_cycle() {
+            let mut edges = vec![
+                (0, 1, 1),
+                (1, 2, 1),
+                (1, 4, 1),
+                (2, 4, 1),
+                (3, 0, 1),
+                (4, 1, 1),
+                (4, 3, 1),
+            ];
+            let g = UndirectedGraph::from_edges(edges.clone(), 5);
+            let path = g.get_eulerian_path().unwrap();
+            for (node1, node2) in path.iter().zip(path.iter().skip(1)) {
+                let mut to_remove = edges.len();
+                for (i, (node_1, node_2, _)) in edges.iter().enumerate() {
+                    if (node1 == node_1 && node2 == node_2) || (node1 == node_2 && node2 == node_1)
+                    {
+                        to_remove = i;
+                        break;
+                    }
+                }
+                edges.remove(to_remove);
+            }
+            assert!(edges.is_empty());
         }
     }
 }

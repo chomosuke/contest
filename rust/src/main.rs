@@ -531,7 +531,7 @@ mod graph {
     use crate::{collections::MultiSet, search_graph::DepthFirstIter, tree::Tree};
     use std::{
         cmp::Reverse,
-        collections::{BinaryHeap, HashSet, VecDeque},
+        collections::{BinaryHeap, HashMap, HashSet, VecDeque},
     };
 
     fn dijkstra<F: Fn(usize) -> bool>(
@@ -672,6 +672,50 @@ mod graph {
         }
         dfs(start, adj_nodess, dists_to_start, &mut edges, &mut visited);
         DirectedGraph::from_edges(edges, adj_nodess.len())
+    }
+
+    fn hamiltonian_path(adj_nodess: &[Vec<(usize, i128)>]) -> Option<Vec<usize>> {
+        let visited = vec![false; adj_nodess.len()];
+        let mut memoize = HashMap::new();
+        fn path(
+            param: &(usize, Vec<bool>),
+            adj_nodess: &[Vec<(usize, i128)>],
+            memoize: &mut HashMap<(usize, Vec<bool>), Option<Vec<usize>>>,
+            count: usize,
+        ) -> Option<Vec<usize>> {
+            if let Some(result) = memoize.get(param) {
+                return result.clone();
+            }
+            let end = param.0;
+            let mut visited = param.1.clone();
+            visited[end] = true;
+            let count = count + 1;
+            if count == visited.len() {
+                return Some(vec![end]);
+            }
+            let mut next_param = (0, visited);
+            let mut result = None;
+            for &(next_end, _) in &adj_nodess[end] {
+                if !param.1[next_end] {
+                    next_param.0 = next_end;
+                    if let Some(mut path) = path(&next_param, adj_nodess, memoize, count) {
+                        path.push(end);
+                        result = Some(path);
+                        break;
+                    }
+                }
+            }
+            memoize.insert(next_param, result.clone());
+            result
+        }
+        let mut param = (0, visited);
+        for end in 0..adj_nodess.len() {
+            param.0 = end;
+            if let Some(path) = path(&param, adj_nodess, &mut memoize, 0) {
+                return Some(path);
+            }
+        }
+        None
     }
 
     pub struct DirectedGraph {
@@ -941,6 +985,10 @@ mod graph {
                 &mut next_edge_to_walk,
             );
             Some(path)
+        }
+
+        pub fn get_hamiltonian_path(&self) -> Option<Vec<usize>> {
+            hamiltonian_path(&self.adj_nodess)
         }
     }
 
@@ -1240,6 +1288,12 @@ mod graph {
             );
             assert_eq!(g.get_eulerian_path(), Some(vec![0, 1, 2, 4, 1, 4, 3, 0]))
         }
+
+        #[test]
+        fn get_hamiltonian_path() {
+            let g = DirectedGraph::from_edges(EDGES.to_vec(), 5);
+            assert_eq!(g.get_hamiltonian_path(), Some(vec![2, 3, 4, 1, 0]));
+        }
     }
 
     pub struct UndirectedGraph {
@@ -1444,6 +1498,10 @@ mod graph {
             build_path(start, end, &mut path, &mut remaining_edge);
             Some(path)
         }
+
+        pub fn get_hamiltonian_path(&self) -> Option<Vec<usize>> {
+            hamiltonian_path(&self.adj_nodess)
+        }
     }
 
     #[cfg(test)]
@@ -1628,6 +1686,12 @@ mod graph {
                 edges.remove(to_remove);
             }
             assert!(edges.is_empty());
+        }
+
+        #[test]
+        fn no_hamiltonian_path() {
+            let g = UndirectedGraph::from_edges(vec![(0, 1, 1), (0, 2, 1), (0, 3, 1)], 4);
+            assert_eq!(g.get_hamiltonian_path(), None);
         }
     }
 }

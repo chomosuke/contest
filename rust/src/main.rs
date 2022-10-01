@@ -530,7 +530,7 @@ use search_graph::*;
 mod graph {
     use crate::{collections::MultiSet, search_graph::DepthFirstIter, tree::Tree};
     use std::{
-        cmp::Reverse,
+        cmp::{Ordering, Reverse},
         collections::{BinaryHeap, HashMap, HashSet, VecDeque},
     };
 
@@ -1455,47 +1455,102 @@ mod graph {
                 return None;
             };
             // index edges to avoid duplication
-            let mut remaining_edge = vec![MultiSet::new(); self.node_count()];
+            let mut remaining_edges = MultiSet::new();
             for (node, adj_nodes) in self.adj_nodess.iter().enumerate() {
+                let mut self_edge_count = 0;
                 for &(adj_node, _) in adj_nodes {
-                    remaining_edge[node].insert(adj_node);
+                    match node.cmp(&adj_node) {
+                        Ordering::Less => remaining_edges.insert((node, adj_node)),
+                        Ordering::Equal => self_edge_count += 1,
+                        _ => {}
+                    }
+                }
+                for _ in 0..self_edge_count / 2 {
+                    remaining_edges.insert((node, node));
                 }
             }
 
+            let mut next_edge_to_walk = vec![0; self.node_count()];
             let mut path = Vec::with_capacity(self.node_count());
+            fn ot(a: usize, b: usize) -> (usize, usize) {
+                (a.min(b), a.max(b))
+            }
             fn build_path(
                 start: usize,
                 end: usize,
+                adj_nodess: &[Vec<(usize, i128)>],
                 path: &mut Vec<usize>,
-                remaining_edge: &mut [MultiSet<usize>],
+                next_edge_to_walk: &mut [usize],
+                remaining_edges: &mut MultiSet<(usize, usize)>,
             ) {
                 // build sub_path / cycle
                 let mut sub_path = Vec::new();
                 let mut node = start;
-                if let Some(&next_node) = remaining_edge[node].iter().next() {
+
+                // check node has unused edges
+                while {
+                    if next_edge_to_walk[node] < adj_nodess[node].len() {
+                        let edge_index = ot(adj_nodess[node][next_edge_to_walk[node]].0, node);
+                        remaining_edges.count(&edge_index) == 0
+                    } else {
+                        false
+                    }
+                } {
+                    next_edge_to_walk[node] += 1;
+                }
+
+                if let Some(&(next_node, _)) = adj_nodess[node].get(next_edge_to_walk[node]) {
                     sub_path.push(node);
-                    remaining_edge[node].remove(&next_node);
-                    remaining_edge[next_node].remove(&node);
-                    node = next_node
+                    next_edge_to_walk[node] += 1;
+                    remaining_edges.remove(&ot(node, next_node));
+                    node = next_node;
                 } else {
                     path.push(node);
                     return;
                 }
+
+                // build sub_path
                 while node != end {
-                    let &next_node = remaining_edge[node].iter().next().unwrap();
+                    // check node has unused edges
+                    while {
+                        if next_edge_to_walk[node] < adj_nodess[node].len() {
+                            let edge_index = ot(adj_nodess[node][next_edge_to_walk[node]].0, node);
+                            remaining_edges.count(&edge_index) == 0
+                        } else {
+                            false
+                        }
+                    } {
+                        next_edge_to_walk[node] += 1;
+                    }
+
+                    let (next_node, _) = adj_nodess[node][next_edge_to_walk[node]];
                     sub_path.push(node);
-                    remaining_edge[node].remove(&next_node);
-                    remaining_edge[next_node].remove(&node);
+                    next_edge_to_walk[node] += 1;
+                    remaining_edges.remove(&ot(node, next_node));
                     node = next_node;
                 }
                 sub_path.push(node);
 
                 // build path
                 for node in sub_path {
-                    build_path(node, node, path, remaining_edge);
+                    build_path(
+                        node,
+                        node,
+                        adj_nodess,
+                        path,
+                        next_edge_to_walk,
+                        remaining_edges,
+                    );
                 }
             }
-            build_path(start, end, &mut path, &mut remaining_edge);
+            build_path(
+                start,
+                end,
+                &self.adj_nodess,
+                &mut path,
+                &mut next_edge_to_walk,
+                &mut remaining_edges,
+            );
             Some(path)
         }
 

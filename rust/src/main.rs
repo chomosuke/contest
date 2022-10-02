@@ -718,90 +718,133 @@ mod graph {
         None
     }
 
-    fn get_max_flow(
-        adj_nodess: &[Vec<(usize, i128)>],
-        start: usize,
-        end: usize,
-    ) -> (i128, HashMap<(usize, usize), i128>) {
-        fn get_cap(
+    mod max_flow {
+        use std::collections::{HashMap, HashSet};
+
+        pub type FlowIndex = (usize, usize, HashMap<(usize, usize), i128>, Vec<Vec<usize>>);
+
+        fn get_flow(
             rem_flow: &HashMap<(usize, usize), i128>,
             in_node: usize,
             out_node: usize,
         ) -> i128 {
             *rem_flow.get(&(in_node, out_node)).unwrap_or(&0)
         }
-        fn change_cap(
+        fn change_flow(
             rem_flow: &mut HashMap<(usize, usize), i128>,
             in_node: usize,
             out_node: usize,
             change: i128,
         ) {
-            let new_cap = get_cap(rem_flow, in_node, out_node) + change;
+            let new_cap = get_flow(rem_flow, in_node, out_node) + change;
             rem_flow.insert((in_node, out_node), new_cap);
         }
-        // index flow amount
-        let mut rem_flow = HashMap::with_capacity(adj_nodess.len());
-        let mut bi_dir_adj_nodess = vec![HashSet::new(); adj_nodess.len()];
-        for (node, adj_nodes) in adj_nodess.iter().enumerate() {
-            for &(adj_node, weight) in adj_nodes {
-                change_cap(&mut rem_flow, node, adj_node, weight);
-                bi_dir_adj_nodess[node].insert(adj_node);
-                bi_dir_adj_nodess[adj_node].insert(node);
-            }
-        }
-        let adj_nodess = bi_dir_adj_nodess
-            .into_iter()
-            .map(|adj_nodes| adj_nodes.into_iter().collect::<Vec<_>>())
-            .collect::<Vec<_>>();
 
-        // calculate flow
-        let mut c = i128::MAX / 8;
-        fn find_path(
-            c: i128,
+        pub fn get_max_flow(
+            adj_nodess: &[Vec<(usize, i128)>],
             start: usize,
             end: usize,
-            visited: &mut [bool],
-            adj_nodess: &[Vec<usize>],
-            rem_flow: &HashMap<(usize, usize), i128>,
-        ) -> Option<Vec<usize>> {
-            visited[start] = true;
-            if start == end {
-                return Some(vec![start]);
+        ) -> (i128, FlowIndex) {
+            // index flow amount
+            let mut rem_flow = HashMap::with_capacity(adj_nodess.len());
+            let mut bi_dir_adj_nodess = vec![HashSet::new(); adj_nodess.len()];
+            for (node, adj_nodes) in adj_nodess.iter().enumerate() {
+                for &(adj_node, weight) in adj_nodes {
+                    change_flow(&mut rem_flow, node, adj_node, weight);
+                    bi_dir_adj_nodess[node].insert(adj_node);
+                    bi_dir_adj_nodess[adj_node].insert(node);
+                }
             }
-            for &adj_node in &adj_nodess[start] {
-                if get_cap(rem_flow, start, adj_node) >= c {
-                    if let Some(mut path) =
-                        find_path(c, adj_node, end, visited, adj_nodess, rem_flow)
-                    {
-                        path.push(start);
-                        return Some(path);
+            let adj_nodess = bi_dir_adj_nodess
+                .into_iter()
+                .map(|adj_nodes| adj_nodes.into_iter().collect::<Vec<_>>())
+                .collect::<Vec<_>>();
+
+            // calculate flow
+            let mut c = adj_nodess[start]
+                .iter()
+                .map(|&adj_node| get_flow(&rem_flow, start, adj_node))
+                .max()
+                .unwrap_or(0);
+            fn find_path(
+                c: i128,
+                start: usize,
+                end: usize,
+                visited: &mut [bool],
+                adj_nodess: &[Vec<usize>],
+                rem_flow: &HashMap<(usize, usize), i128>,
+            ) -> Option<Vec<usize>> {
+                visited[start] = true;
+                if start == end {
+                    return Some(vec![start]);
+                }
+                for &adj_node in &adj_nodess[start] {
+                    if !visited[adj_node] && get_flow(rem_flow, start, adj_node) >= c {
+                        if let Some(mut path) =
+                            find_path(c, adj_node, end, visited, adj_nodess, rem_flow)
+                        {
+                            path.push(start);
+                            return Some(path);
+                        }
+                    }
+                }
+                None
+            }
+            let mut max_flow = 0;
+            while c > 0 {
+                let mut visited = vec![false; adj_nodess.len()];
+                if let Some(path) = find_path(c, start, end, &mut visited, &adj_nodess, &rem_flow) {
+                    let edges = path.iter().skip(1).zip(path.iter()).collect::<Vec<_>>();
+                    let flow_consumed = path
+                        .iter()
+                        .skip(1)
+                        .zip(path.iter())
+                        .map(|(&in_node, &out_node)| get_flow(&rem_flow, in_node, out_node))
+                        .min()
+                        .unwrap();
+                    for (&in_node, &out_node) in edges {
+                        change_flow(&mut rem_flow, in_node, out_node, -flow_consumed);
+                        change_flow(&mut rem_flow, out_node, in_node, flow_consumed);
+                    }
+                    max_flow += flow_consumed;
+                } else {
+                    c /= 2;
+                }
+            }
+            (max_flow, (start, end, rem_flow, adj_nodess))
+        }
+
+        pub fn get_min_cut((start, _end, rem_flow, adj_nodess): &FlowIndex) -> Vec<(usize, usize)> {
+            let mut visited = vec![false; adj_nodess.len()];
+            fn dfs(
+                node: usize,
+                visited: &mut [bool],
+                adj_nodess: &[Vec<usize>],
+                rem_flow: &HashMap<(usize, usize), i128>,
+            ) {
+                visited[node] = true;
+                for &adj_node in &adj_nodess[node] {
+                    if !visited[adj_node] && get_flow(rem_flow, node, adj_node) > 0 {
+                        dfs(adj_node, visited, adj_nodess, rem_flow);
                     }
                 }
             }
-            None
-        }
-        let mut max_flow = 0;
-        while c > 0 {
-            let mut visited = vec![false; adj_nodess.len()];
-            if let Some(path) = find_path(c, start, end, &mut visited, &adj_nodess, &rem_flow) {
-                let edges = path.iter().skip(1).zip(path.iter()).collect::<Vec<_>>();
-                let flow_consumed = path
-                    .iter()
-                    .skip(1)
-                    .zip(path.iter())
-                    .map(|(&in_node, &out_node)| get_cap(&rem_flow, in_node, out_node))
-                    .min()
-                    .unwrap();
-                for (&in_node, &out_node) in edges {
-                    change_cap(&mut rem_flow, in_node, out_node, -flow_consumed);
+            dfs(*start, &mut visited, adj_nodess, rem_flow);
+            let mut min_cut = Vec::new();
+            for (node, &node_visited) in visited.iter().enumerate() {
+                if node_visited {
+                    for &adj_node in &adj_nodess[node] {
+                        if get_flow(rem_flow, node, adj_node) == 0 && !visited[adj_node] {
+                            min_cut.push((node, adj_node));
+                        }
+                    }
                 }
-                max_flow += flow_consumed;
-            } else {
-                c /= 2;
             }
+            min_cut
         }
-        (max_flow, rem_flow)
     }
+    pub use max_flow::get_min_cut;
+    use max_flow::*;
 
     pub struct DirectedGraph {
         adj_nodess: Vec<Vec<(usize, i128)>>,
@@ -1076,11 +1119,7 @@ mod graph {
             hamiltonian_path(&self.adj_nodess)
         }
 
-        pub fn get_max_flow(
-            &self,
-            start: usize,
-            end: usize,
-        ) -> (i128, HashMap<(usize, usize), i128>) {
+        pub fn get_max_flow(&self, start: usize, end: usize) -> (i128, FlowIndex) {
             get_max_flow(&self.adj_nodess, start, end)
         }
     }
@@ -1089,7 +1128,7 @@ mod graph {
     mod test_directed {
         use std::collections::HashSet;
 
-        use super::DirectedGraph;
+        use super::*;
 
         // cphb p.g. 124
         const EDGES: &[(usize, usize, i128)] = &[
@@ -1389,7 +1428,7 @@ mod graph {
         }
 
         #[test]
-        fn get_max_flow() {
+        fn max_flow() {
             let g = DirectedGraph::from_edges(
                 vec![
                     (0, 1, 5),
@@ -1404,6 +1443,25 @@ mod graph {
                 6,
             );
             assert_eq!(g.get_max_flow(0, 5).0, 7);
+        }
+
+        #[test]
+        fn min_cut() {
+            let g = DirectedGraph::from_edges(
+                vec![
+                    (0, 1, 5),
+                    (0, 3, 4),
+                    (1, 2, 6),
+                    (2, 4, 8),
+                    (2, 5, 5),
+                    (3, 1, 3),
+                    (3, 4, 1),
+                    (4, 5, 2),
+                ],
+                6,
+            );
+            let index = g.get_max_flow(0, 5).1;
+            assert_eq!(get_min_cut(&index), vec![(1, 2), (3, 4)]);
         }
     }
 
@@ -1669,11 +1727,7 @@ mod graph {
             hamiltonian_path(&self.adj_nodess)
         }
 
-        pub fn get_max_flow(
-            &self,
-            start: usize,
-            end: usize,
-        ) -> (i128, HashMap<(usize, usize), i128>) {
+        pub fn get_max_flow(&self, start: usize, end: usize) -> (i128, FlowIndex) {
             get_max_flow(&self.adj_nodess, start, end)
         }
     }

@@ -863,7 +863,7 @@ mod graph {
             (start, end, rem_flow, _): &FlowIndex,
         ) -> Vec<Vec<usize>> {
             let (start, end) = (*start, *end);
-            let mut adj_nodess = adj_nodess
+            let mut adj_nodess_ = adj_nodess
                 .iter()
                 .enumerate()
                 .map(|(node, adj_nodes)| {
@@ -880,13 +880,13 @@ mod graph {
                 })
                 .collect::<Vec<_>>();
             let mut paths = Vec::new();
-            while let Some(snd) = adj_nodess[start].pop() {
+            while let Some(snd) = adj_nodess_[start].pop() {
                 let mut path = Vec::new();
                 path.push(start);
                 let mut node = snd;
                 while node != end {
                     path.push(node);
-                    node = adj_nodess[node].pop().unwrap();
+                    node = adj_nodess_[node].pop().unwrap();
                 }
                 path.push(end);
                 paths.push(path);
@@ -1464,10 +1464,10 @@ mod graph {
             assert_eq!(
                 components,
                 vec![
-                    HashSet::from_iter([0, 1].into_iter()),
-                    HashSet::from_iter([2, 5, 6].into_iter()),
-                    HashSet::from_iter([3].into_iter()),
-                    HashSet::from_iter([4].into_iter()),
+                    HashSet::from([0, 1]),
+                    HashSet::from([2, 5, 6]),
+                    HashSet::from([3]),
+                    HashSet::from([4]),
                 ],
             );
         }
@@ -2033,8 +2033,8 @@ mod graph {
             );
             let eulerian_start_end = g.get_eulerian_start_end().unwrap();
             assert_eq!(
-                HashSet::from_iter(&[eulerian_start_end.0, eulerian_start_end.1]),
-                HashSet::<&usize>::from_iter(&[1, 4]),
+                HashSet::from([eulerian_start_end.0, eulerian_start_end.1]),
+                HashSet::from([1, 4]),
             );
         }
 
@@ -2112,6 +2112,71 @@ mod graph {
         fn no_hamiltonian_path() {
             let g = UndirectedGraph::from_edges(vec![(0, 1, 1), (0, 2, 1), (0, 3, 1)], 4);
             assert_eq!(g.get_hamiltonian_path(), None);
+        }
+    }
+
+    pub type MaxMatchIndex = (FlowIndex, DirectedGraph);
+    pub fn get_max_matchings_count(
+        matches: &[(usize, usize)],
+        node_count: usize,
+    ) -> (usize, MaxMatchIndex) {
+        let start = node_count;
+        let end = start + 1;
+        let mid_edges = matches.iter().map(|&(fst, snd)| (fst, snd, 1));
+        let start_edges = matches
+            .iter()
+            .map(|&(fst, _)| fst)
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .map(|fst| (start, fst, 1));
+        let end_edges = matches
+            .iter()
+            .map(|&(_, snd)| snd)
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .map(|snd| (snd, end, 1));
+        let graph = DirectedGraph::from_edges(
+            start_edges.chain(mid_edges).chain(end_edges).collect(),
+            node_count + 2,
+        );
+        let (count, flow_index) = graph.get_edge_disjointed_paths_count(start, end);
+        (count, (flow_index, graph))
+    }
+    pub fn get_max_matchings((flow_index, graph): &MaxMatchIndex) -> Vec<(usize, usize)> {
+        graph
+            .get_edge_disjointed_paths(flow_index)
+            .into_iter()
+            .map(|path| (path[1], path[2]))
+            .collect()
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+
+        #[test]
+        fn max_matchings() {
+            let edges = &[(0, 4), (1, 6), (2, 4), (2, 5), (2, 7), (3, 6)];
+            let (count, index) = get_max_matchings_count(edges, 8);
+            assert_eq!(count, 3);
+            let max_matchings = get_max_matchings(&index);
+            assert_eq!(
+                max_matchings
+                    .iter()
+                    .map(|&(fst, _)| fst)
+                    .collect::<HashSet<_>>()
+                    .len(),
+                3,
+            );
+            assert_eq!(
+                max_matchings
+                    .iter()
+                    .map(|&(_, snd)| snd)
+                    .collect::<HashSet<_>>()
+                    .len(),
+                3,
+            );
+            assert!(HashSet::from(*edges).is_superset(&HashSet::from_iter(max_matchings.into_iter())));
         }
     }
 }

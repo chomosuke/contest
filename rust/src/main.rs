@@ -841,11 +841,11 @@ mod graph {
             min_cut
         }
 
-        pub fn get_edge_disjoint_paths_count(
+        pub fn get_edge_disjointed_paths_count(
             adj_nodess: &[Vec<(usize, i128)>],
             start: usize,
             end: usize,
-            ) -> (usize, FlowIndex) {
+        ) -> (usize, FlowIndex) {
             let adj_nodess = adj_nodess
                 .iter()
                 .map(|adj_nodes| {
@@ -858,8 +858,7 @@ mod graph {
             let max_flow = get_max_flow(&adj_nodess, start, end);
             (max_flow.0 as usize, max_flow.1)
         }
-
-        pub fn get_edge_disjoint_paths(
+        pub fn get_edge_disjointed_paths(
             adj_nodess: &[Vec<(usize, i128)>],
             (start, end, rem_flow, _): &FlowIndex,
         ) -> Vec<Vec<usize>> {
@@ -893,6 +892,37 @@ mod graph {
                 paths.push(path);
             }
             paths
+        }
+
+        pub type DisjointedNodeIndex = (FlowIndex, Vec<Vec<(usize, i128)>>);
+        pub fn get_node_disjointed_paths_count(
+            adj_nodess: &[Vec<(usize, i128)>],
+            start: usize,
+            end: usize,
+        ) -> (usize, DisjointedNodeIndex) {
+            // i * 2 is in node while i * 2 + 1
+            let mut adj_nodess_splitted = vec![Vec::new(); adj_nodess.len() * 2];
+            for i in 0..adj_nodess.len() {
+                adj_nodess_splitted[i * 2] = vec![(i * 2 + 1, 1)];
+                adj_nodess_splitted[i * 2 + 1] = adj_nodess[i]
+                    .iter()
+                    .map(|&(adj_node, _)| (adj_node * 2, 1))
+                    .collect();
+            }
+            let max_flow = get_max_flow(&adj_nodess_splitted, start * 2, end * 2 + 1);
+            (max_flow.0 as usize, (max_flow.1, adj_nodess_splitted))
+        }
+        pub fn get_node_disjointed_paths(
+            (index, adj_nodess_splitted): &DisjointedNodeIndex,
+        ) -> Vec<Vec<usize>> {
+            get_edge_disjointed_paths(adj_nodess_splitted, index)
+                .into_iter()
+                .map(|path| {
+                    let mut path = path.into_iter().map(|node| node / 2).collect::<Vec<_>>();
+                    path.dedup();
+                    path
+                })
+                .collect::<Vec<_>>()
         }
     }
     use max_flow::*;
@@ -1178,12 +1208,28 @@ mod graph {
             get_min_cut(index)
         }
 
-        pub fn get_edge_disjoint_paths_count(&self, start: usize, end: usize) -> (usize, FlowIndex) {
-            get_edge_disjoint_paths_count(&self.adj_nodess, start, end)
+        pub fn get_edge_disjointed_paths_count(
+            &self,
+            start: usize,
+            end: usize,
+        ) -> (usize, FlowIndex) {
+            get_edge_disjointed_paths_count(&self.adj_nodess, start, end)
         }
 
-        pub fn get_edge_disjoint_paths(&self, index: &FlowIndex) -> Vec<Vec<usize>> {
-            get_edge_disjoint_paths(&self.adj_nodess, index)
+        pub fn get_edge_disjointed_paths(&self, index: &FlowIndex) -> Vec<Vec<usize>> {
+            get_edge_disjointed_paths(&self.adj_nodess, index)
+        }
+
+        pub fn get_node_disjointed_paths_count(
+            &self,
+            start: usize,
+            end: usize,
+        ) -> (usize, DisjointedNodeIndex) {
+            get_node_disjointed_paths_count(&self.adj_nodess, start, end)
+        }
+
+        pub fn get_node_disjointed_paths(&self, index: &DisjointedNodeIndex) -> Vec<Vec<usize>> {
+            get_node_disjointed_paths(index)
         }
     }
 
@@ -1528,7 +1574,7 @@ mod graph {
         }
 
         #[test]
-        fn get_edge_disjoint_paths() {
+        fn get_edge_disjointed_paths() {
             let g = DirectedGraph::from_edges(
                 vec![
                     (0, 1, 5),
@@ -1543,12 +1589,43 @@ mod graph {
                 ],
                 6,
             );
-            let (count, index) = g.get_edge_disjoint_paths_count(0, 5);
+            let (count, index) = g.get_edge_disjointed_paths_count(0, 5);
             assert_eq!(count, 2);
             assert_eq!(
-                g.get_edge_disjoint_paths(&index),
+                g.get_edge_disjointed_paths(&index),
                 vec![vec![0, 3, 4, 5], vec![0, 1, 3, 2, 5]],
             );
+        }
+
+        #[test]
+        fn get_node_disjointed_paths() {
+            let g = DirectedGraph::from_edges(
+                vec![
+                    (0, 1, 5),
+                    (0, 3, 4),
+                    (1, 3, 6),
+                    (2, 1, 9),
+                    (2, 4, 8),
+                    (2, 5, 5),
+                    (3, 2, 3),
+                    (3, 4, 1),
+                    (4, 5, 2),
+                ],
+                6,
+            );
+            let (count, index) = g.get_node_disjointed_paths_count(0, 5);
+            assert_eq!(count, 1);
+            let paths = g.get_node_disjointed_paths(&index);
+            let adj_nodess = g.get_adj_nodess();
+            for path in paths {
+                let mut in_path = vec![false; g.node_count()];
+                in_path[path[0]] = true;
+                for (&node1, &node2) in path.iter().zip(path.iter().skip(1)) {
+                    assert!(!in_path[node2]);
+                    in_path[node2] = true;
+                    assert!(adj_nodess[node1].iter().any(|&(n, _)| n == node2));
+                }
+            }
         }
     }
 
@@ -1822,12 +1899,28 @@ mod graph {
             get_min_cut(index)
         }
 
-        pub fn get_edge_disjoint_paths_count(&self, start: usize, end: usize) -> (usize, FlowIndex) {
-            get_edge_disjoint_paths_count(&self.adj_nodess, start, end)
+        pub fn get_edge_disjointed_paths_count(
+            &self,
+            start: usize,
+            end: usize,
+        ) -> (usize, FlowIndex) {
+            get_edge_disjointed_paths_count(&self.adj_nodess, start, end)
         }
 
-        pub fn get_edge_disjoint_paths(&self, index: &FlowIndex) -> Vec<Vec<usize>> {
-            get_edge_disjoint_paths(&self.adj_nodess, index)
+        pub fn get_edge_disjointed_paths(&self, index: &FlowIndex) -> Vec<Vec<usize>> {
+            get_edge_disjointed_paths(&self.adj_nodess, index)
+        }
+
+        pub fn get_node_disjointed_paths_count(
+            &self,
+            start: usize,
+            end: usize,
+        ) -> (usize, DisjointedNodeIndex) {
+            get_node_disjointed_paths_count(&self.adj_nodess, start, end)
+        }
+
+        pub fn get_node_disjointed_paths(&self, index: &DisjointedNodeIndex) -> Vec<Vec<usize>> {
+            get_node_disjointed_paths(index)
         }
     }
 

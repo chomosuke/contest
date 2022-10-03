@@ -63,6 +63,59 @@ mod scanner {
 #[allow(unused_imports)]
 use scanner::*;
 
+mod math {
+    pub fn log2_ceil(x: usize) -> u32 {
+        if x == 0 {
+            0
+        } else {
+            usize::BITS - (x - 1).leading_zeros()
+        }
+    }
+    pub fn pow2_ceil(x: usize) -> usize {
+        let n = log2_ceil(x);
+        2usize.pow(n)
+    }
+
+    pub fn highest_one_bit(x: usize) -> u32 {
+        usize::BITS - x.leading_zeros()
+    }
+
+    pub fn factorial(n: i128, cap: i128) -> i128 {
+        let mut r: i128 = 1;
+        for i in 1..=n {
+            r = (r * i.rem_euclid(cap)).rem_euclid(cap);
+        }
+        r
+    }
+
+    pub fn permutations(n: i128, r: i128, cap: i128) -> i128 {
+        let mut p: i128 = 1;
+        for i in (n - r + 1)..=n {
+            p = (p * i.rem_euclid(cap)).rem_euclid(cap);
+        }
+        p
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+
+        #[test]
+        fn test() {
+            assert_eq!(log2_ceil(128), 7);
+            assert_eq!(log2_ceil(129), 8);
+            assert_eq!(pow2_ceil(128), 128);
+            assert_eq!(pow2_ceil(129), 256);
+            assert_eq!(highest_one_bit(128), 8);
+            assert_eq!(highest_one_bit(127), 7);
+            assert_eq!(factorial(10, 1007), 579);
+            assert_eq!(permutations(100, 66, 1000007), 188297);
+        }
+    }
+}
+#[allow(unused_imports)]
+use math::*;
+
 mod collections {
     use core::hash::Hash;
     use std::collections::{hash_map, HashMap};
@@ -201,22 +254,6 @@ mod binary_searchable {
 }
 #[allow(unused_imports)]
 use binary_searchable::*;
-
-fn log2_ceil(x: usize) -> u32 {
-    if x == 0 {
-        0
-    } else {
-        usize::BITS - (x - 1).leading_zeros()
-    }
-}
-fn pow2_ceil(x: usize) -> usize {
-    let n = log2_ceil(x);
-    2usize.pow(n)
-}
-
-fn highest_one_bit(x: usize) -> u32 {
-    usize::BITS - x.leading_zeros()
-}
 
 mod indexed_vec {
     use std::ops::Bound::*;
@@ -1351,7 +1388,7 @@ mod graph {
             let shortest_path_lens = g.get_shortest_path_lens(0).unwrap();
             assert_eq!(
                 g.reconstruct_shortest_path(&shortest_path_lens, 0, 4),
-                Some(vec![0, 2, 3, 4])
+                Some(vec![0, 2, 3, 4]),
             );
         }
 
@@ -1363,7 +1400,7 @@ mod graph {
             let shortest_path_lens = g.get_shortest_path_lens(0).unwrap();
             assert_eq!(
                 g.reconstruct_shortest_path(&shortest_path_lens, 0, 4),
-                Some(vec![0, 2, 4])
+                Some(vec![0, 2, 4]),
             );
         }
 
@@ -2176,7 +2213,9 @@ mod graph {
                     .len(),
                 3,
             );
-            assert!(HashSet::from(*edges).is_superset(&HashSet::from_iter(max_matchings.into_iter())));
+            assert!(
+                HashSet::from(*edges).is_superset(&HashSet::from_iter(max_matchings.into_iter()))
+            );
         }
     }
 }

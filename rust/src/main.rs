@@ -64,6 +64,7 @@ mod scanner {
 use scanner::*;
 
 mod math {
+    /// O(1)
     pub fn log2_ceil(x: usize) -> u32 {
         if x == 0 {
             0
@@ -71,15 +72,18 @@ mod math {
             usize::BITS - (x - 1).leading_zeros()
         }
     }
+    /// O(1)
     pub fn pow2_ceil(x: usize) -> usize {
         let n = log2_ceil(x);
         2usize.pow(n)
     }
 
+    /// O(1)
     pub fn highest_one_bit(x: usize) -> u32 {
         usize::BITS - x.leading_zeros()
     }
 
+    /// O(n)
     pub fn factorial(n: i128, cap: i128) -> i128 {
         let mut r: i128 = 1;
         for i in 1..=n {
@@ -88,6 +92,7 @@ mod math {
         r
     }
 
+    /// O(r)
     pub fn permutations(n: i128, r: i128, cap: i128) -> i128 {
         let mut p: i128 = 1;
         for i in (n - r + 1)..=n {
@@ -135,6 +140,7 @@ mod collections {
     impl<'a, E, I: Iterator<Item = (&'a E, &'a usize)>> Iterator for MultiSetIter<'a, E, I> {
         type Item = &'a E;
 
+        /// O(capacity)
         fn next(&mut self) -> Option<Self::Item> {
             while self.elem_count.is_none() || self.elem_count.unwrap().1 == 0 {
                 if let Some((e, &c)) = self.count_iter.next() {
@@ -164,15 +170,18 @@ mod collections {
             }
         }
 
+        /// O(1)
         pub fn count(&self, e: &E) -> usize {
             *self.count_map.get(e).unwrap_or(&0)
         }
 
+        /// O(1)
         pub fn insert(&mut self, e: E) {
             let next = self.count(&e) + 1;
             self.count_map.insert(e, next);
         }
 
+        /// O(1)
         pub fn remove<'a>(&mut self, e: &'a E) -> Option<&'a E> {
             let next = self.count(e) as i128 - 1;
             if next < 0 {
@@ -304,6 +313,7 @@ mod indexed_vec {
                 zero,
             }
         }
+        /// O(n)
         pub fn from_vec(vec: Vec<E>, zero: E, combine: F) -> Self {
             let mut iv = Self {
                 combine,
@@ -316,6 +326,7 @@ mod indexed_vec {
             iv
         }
 
+        /// O(n)
         fn rebuild(&mut self) {
             let inner = &mut self.inner;
             let combine = &self.combine;
@@ -334,6 +345,7 @@ mod indexed_vec {
             self.inner_cap = inner_cap;
         }
 
+        /// O(log(n))
         pub fn query(&self, rng: impl RangeBounds<usize>) -> E {
             let start = match rng.start_bound() {
                 Excluded(x) => x + 1,
@@ -378,6 +390,7 @@ mod indexed_vec {
                 );
             }
         }
+        /// O(log(n))
         pub fn push(&mut self, e: E) {
             self.inner.push(e);
             if self.inner.len() > self.inner_cap {
@@ -386,11 +399,13 @@ mod indexed_vec {
                 self.update(self.inner.len() - 1);
             }
         }
+        /// O(log(n))
         pub fn pop(&mut self) -> Option<E> {
             let e = self.inner.pop();
             self.update(self.inner.len());
             e
         }
+        /// O(log(n))
         pub fn set(&mut self, i: usize, e: E) {
             self.inner[i] = e;
             self.update(i);
@@ -565,6 +580,9 @@ mod graph {
         collections::{BinaryHeap, HashMap, HashSet, VecDeque},
     };
 
+    /// assuming connected
+    /// average: O(m + nlog(m))
+    /// worst: O((m + n)log(m))
     fn dijkstra<F: Fn(usize) -> bool>(
         adj_nodess: &[Vec<(usize, i128)>],
         start: usize,
@@ -587,6 +605,7 @@ mod graph {
         }
         shortest_path_len
     }
+    /// worst: O(mn)
     fn spfa(adj_nodess: &[Vec<(usize, i128)>], start: usize) -> Option<Vec<i128>> {
         let mut shortest_path_len = vec![i128::MAX; adj_nodess.len()];
         let mut shortest_path_edge_len = vec![0; adj_nodess.len()];
@@ -608,6 +627,7 @@ mod graph {
         }
         Some(shortest_path_len)
     }
+    /// O(n^3)
     fn floyd_warshall(adj_nodess: &[Vec<(usize, i128)>]) -> Option<Vec<Vec<i128>>> {
         let n = adj_nodess.len();
         let mut shortest_path_lens = vec![vec![i128::MAX; n]; n];
@@ -640,6 +660,7 @@ mod graph {
         Some(shortest_path_lens)
     }
 
+    /// O(n + m)
     fn reconstruct_shortest_path(
         rev_adj_nodess: &[Vec<(usize, i128)>],
         shortest_path_lens: &[i128],
@@ -670,6 +691,7 @@ mod graph {
         shortest_path.push(node);
         Some(shortest_path.into_iter().rev().collect())
     }
+    /// O(n + m)
     fn reconstruct_all_shortest_path(
         adj_nodess: &Vec<Vec<(usize, i128)>>,
         shortest_path_lens: &[i128],
@@ -705,6 +727,7 @@ mod graph {
         DirectedGraph::from_edges(edges, adj_nodess.len())
     }
 
+    /// O(2^n * n^2)
     fn hamiltonian_path(adj_nodess: &[Vec<(usize, i128)>]) -> Option<Vec<usize>> {
         let visited = vec![false; adj_nodess.len()];
         let mut memoize = HashMap::new();
@@ -771,6 +794,8 @@ mod graph {
             rem_flow.insert((in_node, out_node), new_cap);
         }
 
+        /// O(m^2 log(max(weight)) + n)
+        /// if all weights are the same: O(m + n)
         pub fn get_max_flow(
             adj_nodess: &[Vec<(usize, i128)>],
             start: usize,
@@ -845,6 +870,7 @@ mod graph {
             (max_flow, (start, end, rem_flow, adj_nodess))
         }
 
+        /// O(m + n)
         pub fn get_min_cut((start, _end, rem_flow, adj_nodess): &FlowIndex) -> Vec<(usize, usize)> {
             let mut visited = vec![false; adj_nodess.len()];
             fn dfs(
@@ -874,6 +900,7 @@ mod graph {
             min_cut
         }
 
+        /// O(m + n)
         pub fn get_edge_disjointed_paths_count(
             adj_nodess: &[Vec<(usize, i128)>],
             start: usize,
@@ -891,12 +918,14 @@ mod graph {
             let max_flow = get_max_flow(&adj_nodess, start, end);
             (max_flow.0 as usize, max_flow.1)
         }
+        /// O(m + n)
         pub fn get_edge_disjointed_paths(
             adj_nodess: &[Vec<(usize, i128)>],
             (start, end, rem_flow, _): &FlowIndex,
         ) -> Vec<Vec<usize>> {
             let (start, end) = (*start, *end);
-            let mut adj_nodess_ = adj_nodess
+            // filter edge with non zero rem flow
+            let mut adj_nodess = adj_nodess
                 .iter()
                 .enumerate()
                 .map(|(node, adj_nodes)| {
@@ -912,14 +941,16 @@ mod graph {
                         .collect::<Vec<_>>()
                 })
                 .collect::<Vec<_>>();
+
+            // build paths
             let mut paths = Vec::new();
-            while let Some(snd) = adj_nodess_[start].pop() {
+            while let Some(snd) = adj_nodess[start].pop() {
                 let mut path = Vec::new();
                 path.push(start);
                 let mut node = snd;
                 while node != end {
                     path.push(node);
-                    node = adj_nodess_[node].pop().unwrap();
+                    node = adj_nodess[node].pop().unwrap();
                 }
                 path.push(end);
                 paths.push(path);
@@ -928,6 +959,7 @@ mod graph {
         }
 
         pub type DisjointedNodeIndex = (FlowIndex, Vec<Vec<(usize, i128)>>);
+        /// O(m + n)
         pub fn get_node_disjointed_paths_count(
             adj_nodess: &[Vec<(usize, i128)>],
             start: usize,
@@ -945,6 +977,7 @@ mod graph {
             let max_flow = get_max_flow(&adj_nodess_splitted, start * 2, end * 2 + 1);
             (max_flow.0 as usize, (max_flow.1, adj_nodess_splitted))
         }
+        /// O(m + n)
         pub fn get_node_disjointed_paths(
             (index, adj_nodess_splitted): &DisjointedNodeIndex,
         ) -> Vec<Vec<usize>> {
@@ -980,6 +1013,7 @@ mod graph {
                 neg_edge_count: 0,
             }
         }
+        /// O(m + n)
         pub fn from_edges(edges: Vec<(usize, usize, i128)>, node_count: usize) -> Self {
             let mut g = Self {
                 adj_nodess: vec![Vec::new(); node_count],
@@ -1003,11 +1037,13 @@ mod graph {
             self.adj_nodess.len()
         }
 
+        /// O(1)
         pub fn add_node(&mut self) -> usize {
             self.adj_nodess.push(Vec::new());
             self.rev_adj_nodess.push(Vec::new());
             self.adj_nodess.len() - 1
         }
+        /// O(1)
         pub fn add_edge(&mut self, edge: (usize, usize, i128)) {
             self.adj_nodess[edge.0].push((edge.1, edge.2));
             self.rev_adj_nodess[edge.1].push((edge.0, edge.2));
@@ -1016,9 +1052,15 @@ mod graph {
             }
         }
 
+        /// neg weight: O(mn)
+        /// pos weight average: O(m + nlog(m))
+        /// pos weight worst: O((m + n)log(m))
         pub fn get_shortest_path_lens(&self, start: usize) -> Option<Vec<i128>> {
             self.get_shortest_path_lens_till_stop(start, |_| false)
         }
+        /// neg weight: O(mn)
+        /// pos weight average: O(m + nlog(m))
+        /// pos weight worst: O((m + n)log(m))
         pub fn get_shortest_path_lens_till_stop<F: Fn(usize) -> bool>(
             &self,
             start: usize,
@@ -1031,10 +1073,12 @@ mod graph {
             }
         }
 
+        /// O(n^3)
         pub fn get_all_shortest_path_lens(&self) -> Option<Vec<Vec<i128>>> {
             floyd_warshall(&self.adj_nodess)
         }
 
+        /// O(n + m)
         pub fn reconstruct_shortest_path(
             &self,
             shortest_path_lens: &[i128],
@@ -1043,6 +1087,7 @@ mod graph {
         ) -> Option<Vec<usize>> {
             reconstruct_shortest_path(&self.rev_adj_nodess, shortest_path_lens, start, end)
         }
+        /// O(n + m)
         pub fn reconstruct_all_shortest_path(
             &self,
             shortest_path_lens: &[i128],
@@ -1051,6 +1096,7 @@ mod graph {
             reconstruct_all_shortest_path(&self.adj_nodess, shortest_path_lens, start)
         }
 
+        /// O(n + m)
         pub fn get_topological_sort(&self, from: Option<usize>) -> Result<Vec<usize>, Vec<usize>> {
             let mut rev_sort = Vec::with_capacity(self.node_count());
             let mut states = vec![0; self.node_count()];
@@ -1096,6 +1142,7 @@ mod graph {
             Ok(rev_sort.into_iter().rev().collect())
         }
 
+        /// O(n + m)
         pub fn get_strongly_connected_components(&self) -> Vec<HashSet<usize>> {
             let rev_adj_nodess = self.get_rev_adj_nodess();
             let adj_nodess = &self.adj_nodess;
@@ -1150,6 +1197,7 @@ mod graph {
             strongly_connected_components
         }
 
+        /// O(n)
         pub fn get_eulerian_start_end(&self) -> Option<(usize, usize)> {
             if self.adj_nodess.is_empty()
                 || DepthFirstIter::new(&self.adj_nodess, 0).count() != self.node_count()
@@ -1180,6 +1228,7 @@ mod graph {
                 None
             }
         }
+        /// O(m + n)
         pub fn get_eulerian_path(&self) -> Option<Vec<usize>> {
             let (start, end) = if let Some((start, end)) = self.get_eulerian_start_end() {
                 (start, end)
@@ -1229,18 +1278,23 @@ mod graph {
             Some(path)
         }
 
+        /// O(2^n * n^2)
         pub fn get_hamiltonian_path(&self) -> Option<Vec<usize>> {
             hamiltonian_path(&self.adj_nodess)
         }
 
+        /// O(m^2 log(max(weight)) + n)
+        /// if all weights are the same: O(m + n)
         pub fn get_max_flow(&self, start: usize, end: usize) -> (i128, FlowIndex) {
             get_max_flow(&self.adj_nodess, start, end)
         }
 
+        /// O(m + n)
         pub fn get_min_cut(&self, index: &FlowIndex) -> Vec<(usize, usize)> {
             get_min_cut(index)
         }
 
+        /// O(m + n)
         pub fn get_edge_disjointed_paths_count(
             &self,
             start: usize,
@@ -1249,10 +1303,12 @@ mod graph {
             get_edge_disjointed_paths_count(&self.adj_nodess, start, end)
         }
 
+        /// O(m + n)
         pub fn get_edge_disjointed_paths(&self, index: &FlowIndex) -> Vec<Vec<usize>> {
             get_edge_disjointed_paths(&self.adj_nodess, index)
         }
 
+        /// O(m + n)
         pub fn get_node_disjointed_paths_count(
             &self,
             start: usize,
@@ -1261,6 +1317,7 @@ mod graph {
             get_node_disjointed_paths_count(&self.adj_nodess, start, end)
         }
 
+        /// O(m + n)
         pub fn get_node_disjointed_paths(&self, index: &DisjointedNodeIndex) -> Vec<Vec<usize>> {
             get_node_disjointed_paths(index)
         }
@@ -1679,6 +1736,7 @@ mod graph {
                 neg_edge_count: 0,
             }
         }
+        /// O(m + n)
         pub fn from_edges(edges: Vec<(usize, usize, i128)>, node_count: usize) -> Self {
             let mut g = Self {
                 adj_nodess: vec![Vec::new(); node_count],
@@ -1697,10 +1755,12 @@ mod graph {
             self.adj_nodess.len()
         }
 
+        /// O(1)
         pub fn add_node(&mut self) -> usize {
             self.adj_nodess.push(Vec::new());
             self.adj_nodess.len() - 1
         }
+        /// O(1)
         pub fn add_edge(&mut self, edge: (usize, usize, i128)) {
             self.adj_nodess[edge.0].push((edge.1, edge.2));
             self.adj_nodess[edge.1].push((edge.0, edge.2));
@@ -1709,9 +1769,13 @@ mod graph {
             }
         }
 
+        /// average: O(m + nlog(m))
+        /// worst: O((m + n)log(m))
         pub fn get_shortest_path_lens(&self, start: usize) -> Option<Vec<i128>> {
             self.get_shortest_path_lens_till_stop(start, |_| false)
         }
+        /// average: O(m + nlog(m))
+        /// worst: O((m + n)log(m))
         pub fn get_shortest_path_lens_till_stop<F: Fn(usize) -> bool>(
             &self,
             start: usize,
@@ -1724,6 +1788,7 @@ mod graph {
             }
         }
 
+        /// O(n^3)
         pub fn get_all_shortest_path_lens(&self) -> Option<Vec<Vec<i128>>> {
             if self.neg_edge_count > 0 {
                 None
@@ -1732,6 +1797,7 @@ mod graph {
             }
         }
 
+        /// O(n + m)
         pub fn reconstruct_shortest_path(
             &self,
             shortest_path_lens: &[i128],
@@ -1740,6 +1806,7 @@ mod graph {
         ) -> Option<Vec<usize>> {
             reconstruct_shortest_path(&self.adj_nodess, shortest_path_lens, start, end)
         }
+        /// O(n + m)
         pub fn reconstruct_all_shortest_path(
             &self,
             shortest_path_lens: &[i128],
@@ -1748,6 +1815,8 @@ mod graph {
             reconstruct_all_shortest_path(&self.adj_nodess, shortest_path_lens, start)
         }
 
+        /// average: O(m + nlog(m))
+        /// worst: O((m + n)log(m))
         pub fn get_min_spanning_tree(&self) -> Tree {
             let node_count = self.node_count();
             if node_count == 0 {
@@ -1788,6 +1857,7 @@ mod graph {
             Tree::from_edges(edges, node_count)
         }
 
+        /// O(n)
         pub fn get_eulerian_start_end(&self) -> Option<(usize, usize)> {
             if self.adj_nodess.is_empty()
                 || DepthFirstIter::new(&self.adj_nodess, 0).count() != self.node_count()
@@ -1814,6 +1884,7 @@ mod graph {
                 None
             }
         }
+        /// O(m + n)
         pub fn get_eulerian_path(&self) -> Option<Vec<usize>> {
             let (start, end) = if let Some((start, end)) = self.get_eulerian_start_end() {
                 (start, end)
@@ -1920,18 +1991,23 @@ mod graph {
             Some(path)
         }
 
+        /// O(2^n * n^2)
         pub fn get_hamiltonian_path(&self) -> Option<Vec<usize>> {
             hamiltonian_path(&self.adj_nodess)
         }
 
+        /// O(m^2 log(max(weight)) + n)
+        /// if all weights are the same: O(m + n)
         pub fn get_max_flow(&self, start: usize, end: usize) -> (i128, FlowIndex) {
             get_max_flow(&self.adj_nodess, start, end)
         }
 
+        /// O(m + n)
         pub fn get_min_cut(&self, index: &FlowIndex) -> Vec<(usize, usize)> {
             get_min_cut(index)
         }
 
+        /// O(m + n)
         pub fn get_edge_disjointed_paths_count(
             &self,
             start: usize,
@@ -1940,10 +2016,12 @@ mod graph {
             get_edge_disjointed_paths_count(&self.adj_nodess, start, end)
         }
 
+        /// O(m + n)
         pub fn get_edge_disjointed_paths(&self, index: &FlowIndex) -> Vec<Vec<usize>> {
             get_edge_disjointed_paths(&self.adj_nodess, index)
         }
 
+        /// O(m + n)
         pub fn get_node_disjointed_paths_count(
             &self,
             start: usize,
@@ -1952,6 +2030,7 @@ mod graph {
             get_node_disjointed_paths_count(&self.adj_nodess, start, end)
         }
 
+        /// O(m + n)
         pub fn get_node_disjointed_paths(&self, index: &DisjointedNodeIndex) -> Vec<Vec<usize>> {
             get_node_disjointed_paths(index)
         }
@@ -2149,6 +2228,7 @@ mod graph {
     }
 
     pub type MaxMatchIndex = (FlowIndex, DirectedGraph);
+    /// O(n)
     pub fn get_max_matchings_count(
         matches: &[(usize, usize)],
         node_count: usize,
@@ -2175,6 +2255,7 @@ mod graph {
         let (count, flow_index) = graph.get_edge_disjointed_paths_count(start, end);
         (count, (flow_index, graph))
     }
+    /// O(n)
     pub fn get_max_matchings((flow_index, graph): &MaxMatchIndex) -> Vec<(usize, usize)> {
         graph
             .get_edge_disjointed_paths(flow_index)
@@ -2219,8 +2300,6 @@ mod graph {
 use graph::*;
 
 mod tree {
-    use std::collections::HashMap;
-
     use crate::{pow2_ceil, search_graph::DepthFirstIter, successor_graph::SuccessorGraph};
 
     pub struct Tree {
@@ -2237,6 +2316,7 @@ mod tree {
                 adj_nodess: Vec::with_capacity(capacity),
             }
         }
+        /// O(n)
         pub fn from_edges(edges: Vec<(usize, usize, i128)>, node_count: usize) -> Self {
             assert!(
                 edges.len() == node_count - 1,
@@ -2265,6 +2345,7 @@ mod tree {
             self.adj_nodess.len()
         }
 
+        /// O(1)
         pub fn add_node(&mut self, (connected_node, weight): (usize, i128)) -> usize {
             let new_node = self.adj_nodess.len();
             self.adj_nodess[connected_node].push((new_node, weight));
@@ -2272,6 +2353,7 @@ mod tree {
             new_node
         }
 
+        /// O(n)
         pub fn get_diameter(&self) -> i128 {
             if self.adj_nodess.is_empty() {
                 return 0;
@@ -2318,6 +2400,7 @@ mod tree {
                 .1
         }
 
+        /// O(n)
         pub fn get_longest_path_lens(&self) -> Vec<i128> {
             if self.adj_nodess.is_empty() {
                 return Vec::new();
@@ -2499,6 +2582,7 @@ mod tree {
                 depths,
             }
         }
+        /// O(n)
         pub fn from_tree(tree: &Tree, root: usize) -> Self {
             let adj_nodess = tree.get_adj_nodess();
             let mut children = vec![Vec::new(); adj_nodess.len()];
@@ -2556,6 +2640,7 @@ mod tree {
             }
         }
 
+        /// O(1)
         pub fn add_leaf(&mut self, parent: usize, dist_to_parent: i128) -> usize {
             let node = self.children.len();
             self.children[parent].push((node, dist_to_parent));
@@ -2581,6 +2666,7 @@ mod tree {
             &self.children
         }
 
+        /// O(log(n))
         pub fn lowest_common_ancestor(&self, node1: usize, node2: usize) -> usize {
             let Self {
                 depths, parents, ..
@@ -2678,6 +2764,7 @@ mod successor_graph {
             }
         }
 
+        /// O(log(k))
         pub fn add_node(&mut self, successor: usize) -> usize {
             let node = self.logkth_successors[0].len();
             self.logkth_successors[0].push(successor);
@@ -2689,6 +2776,7 @@ mod successor_graph {
             node
         }
 
+        /// O(nlog(k))
         pub fn index_upto_kth_successor(&mut self, k: usize) {
             let logkth_successors = &mut self.logkth_successors;
             while logkth_successors.len() < highest_one_bit(k) as usize {
@@ -2704,6 +2792,7 @@ mod successor_graph {
             }
         }
 
+        /// O(log(k))
         pub fn get_kth_successor(&self, node: usize, k: usize) -> usize {
             let logkth_successors = &self.logkth_successors;
             assert!(
@@ -2727,6 +2816,7 @@ mod successor_graph {
             self.logkth_successors[0][node]
         }
 
+        /// O(n)
         pub fn get_cycle(&self, start: usize) -> Vec<usize> {
             let mut a = self.get_successor(start);
             let mut b = self.get_successor(self.get_successor(start));

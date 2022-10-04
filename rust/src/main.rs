@@ -388,11 +388,7 @@ mod indexed_vec {
         }
         pub fn pop(&mut self) -> Option<E> {
             let e = self.inner.pop();
-            if self.inner.len() * 2 <= self.inner_cap {
-                self.rebuild();
-            } else {
-                self.update(self.inner.len());
-            }
+            self.update(self.inner.len());
             e
         }
         pub fn set(&mut self, i: usize, e: E) {

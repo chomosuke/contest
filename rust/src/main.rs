@@ -2326,42 +2326,123 @@ mod tree {
             if self.adj_nodess.is_empty() {
                 return Vec::new();
             }
-            let mut mem = HashMap::with_capacity(self.node_count());
-            fn longest_path_len_in_dir(
-                this: &Tree,
-                fst: usize,
-                snd: usize,
-                weight: i128,
-                memoize: &mut HashMap<(usize, usize), i128>,
+            if self.node_count() == 1 {
+                return vec![0];
+            }
+            fn get_longest_path_down(
+                node: usize,
+                parent: usize,
+                adj_nodess: &[Vec<(usize, i128)>],
+                longest_2_paths_down: &mut [(i128, usize, i128)],
             ) -> i128 {
-                if let Some(path_len) = memoize.get(&(fst, snd)) {
-                    return *path_len;
-                }
-                let path_len = this.adj_nodess[snd]
+                let mut longest_path = 0;
+                let mut longest_path_dir = 0; // init dir with something random, this will never be
+                                              // used if this node turns out to be the leaf node
+                let mut snd_longest_path = 0;
+                for &(child, weight) in adj_nodess[node]
                     .iter()
-                    .filter_map(|&(trd, weight2)| {
-                        if trd == fst {
-                            None
-                        } else {
-                            Some(longest_path_len_in_dir(this, snd, trd, weight2, memoize) + weight)
-                        }
-                    })
-                    .max()
-                    .unwrap_or(weight);
-                memoize.insert((fst, snd), path_len);
-                path_len
-            }
-            let mut f =
-                |fst, snd, weight| longest_path_len_in_dir(self, fst, snd, weight, &mut mem);
-            let mut longest_path_lens = Vec::with_capacity(self.node_count());
-            for (node, adj_nodes) in self.adj_nodess.iter().enumerate() {
-                let mut longest_path_len = 0;
-                for &(adj_node, weight) in adj_nodes {
-                    longest_path_len = longest_path_len.max(f(node, adj_node, weight));
+                    .filter(|&&(adj_node, _)| adj_node != parent)
+                {
+                    let path_len = weight
+                        + get_longest_path_down(child, node, adj_nodess, longest_2_paths_down);
+                    if path_len >= longest_path {
+                        // previous longest is now second longest
+                        snd_longest_path = longest_path;
+                        // current path is now longest
+                        longest_path = path_len;
+                        longest_path_dir = child;
+                    } else if path_len >= snd_longest_path {
+                        // current path isn't longest but is now second longest
+                        snd_longest_path = path_len;
+                    }
                 }
-                longest_path_lens.push(longest_path_len);
+                longest_2_paths_down[node] = (longest_path, longest_path_dir, snd_longest_path);
+                longest_path
             }
-            longest_path_lens
+            let root = 0;
+            let mut longest_2_paths_down = vec![(0, 0, 0); self.node_count()];
+            get_longest_path_down(root, root, &self.adj_nodess, &mut longest_2_paths_down);
+
+            fn get_longest_path(
+                node: usize,
+                parent: usize,
+                parent_weight: i128,
+                longest_2_paths_down: &[(i128, usize, i128)],
+                longest_2_paths: &mut [(i128, usize, i128)],
+            ) -> i128 {
+                let (mut longest_path, mut longest_path_dir, mut snd_longest_path) =
+                    longest_2_paths_down[node];
+                if node != parent {
+                    // not root => has parent
+                    // init parent as the longest path
+                    let (longest_parent_path, parent_path_dir, snd_longest_parent_path) =
+                        longest_2_paths[parent]; // we expect the parent longest_2_paths
+                                                 // has already been populated
+                    let parent_path_len = if parent_path_dir != node {
+                        // in another direction
+                        longest_parent_path + parent_weight
+                    } else {
+                        // take the len that's in another direction
+                        snd_longest_parent_path + parent_weight
+                    };
+
+                    if parent_path_len >= longest_path {
+                        // previous longest is now second longest
+                        snd_longest_path = longest_path;
+                        // parent path is now longest
+                        longest_path = parent_path_len;
+                        longest_path_dir = parent;
+                    } else if parent_path_len >= snd_longest_path {
+                        // parent path isn't longest but is now second longest
+                        snd_longest_path = parent_path_len;
+                    }
+                }
+                longest_2_paths[node] = (longest_path, longest_path_dir, snd_longest_path);
+                longest_path
+            }
+            fn dfs(
+                node: usize,
+                parent: usize,
+                parent_weight: i128,
+                adj_nodess: &[Vec<(usize, i128)>],
+                longest_2_paths_down: &[(i128, usize, i128)],
+                longest_2_paths: &mut [(i128, usize, i128)],
+                longest_paths: &mut [i128],
+            ) {
+                longest_paths[node] = get_longest_path(
+                    node,
+                    parent,
+                    parent_weight,
+                    longest_2_paths_down,
+                    longest_2_paths,
+                );
+                for &(child, weight) in adj_nodess[node]
+                    .iter()
+                    .filter(|&&(adj_node, _)| adj_node != parent)
+                {
+                    dfs(
+                        child,
+                        node,
+                        weight,
+                        adj_nodess,
+                        longest_2_paths_down,
+                        longest_2_paths,
+                        longest_paths,
+                    );
+                }
+            }
+            let mut longest_2_paths = vec![(0, 0, 0); self.node_count()];
+            let mut longest_paths = vec![0; self.node_count()];
+            dfs(
+                root,
+                root,
+                0,
+                &self.adj_nodess,
+                &longest_2_paths_down,
+                &mut longest_2_paths,
+                &mut longest_paths,
+            );
+            longest_paths
         }
     }
 

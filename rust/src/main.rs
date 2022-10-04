@@ -2233,21 +2233,18 @@ mod graph {
         matches: &[(usize, usize)],
         node_count: usize,
     ) -> (usize, MaxMatchIndex) {
+        let fst_nodes = matches.iter().map(|&(fst, _)| fst).collect::<HashSet<_>>();
+        let snd_nodes = matches.iter().map(|&(_, snd)| snd).collect::<HashSet<_>>();
+        assert!(
+            fst_nodes.is_disjoint(&snd_nodes),
+            "get_max_matchings_count can only process bipartite graph."
+        );
+
         let start = node_count;
         let end = start + 1;
         let mid_edges = matches.iter().map(|&(fst, snd)| (fst, snd, 1));
-        let start_edges = matches
-            .iter()
-            .map(|&(fst, _)| fst)
-            .collect::<HashSet<_>>()
-            .into_iter()
-            .map(|fst| (start, fst, 1));
-        let end_edges = matches
-            .iter()
-            .map(|&(_, snd)| snd)
-            .collect::<HashSet<_>>()
-            .into_iter()
-            .map(|snd| (snd, end, 1));
+        let start_edges = fst_nodes.into_iter().map(|fst| (start, fst, 1));
+        let end_edges = snd_nodes.into_iter().map(|snd| (snd, end, 1));
         let graph = DirectedGraph::from_edges(
             start_edges.chain(mid_edges).chain(end_edges).collect(),
             node_count + 2,

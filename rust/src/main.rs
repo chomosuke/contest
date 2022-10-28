@@ -101,6 +101,47 @@ mod math {
         p
     }
 
+    /// O(sqrt(x))
+    pub fn get_prime_fact(x: i128) -> Vec<(i128, usize)> {
+        let mut result = Vec::new();
+        let mut n = 2;
+        let mut x = x;
+        while n * n <= x {
+            if x % n == 0 {
+                x /= n;
+                let mut count = 1;
+                while x % n == 0 {
+                    x /= n;
+                    count += 1;
+                }
+                result.push((n, count));
+            }
+            n += 1;
+        }
+        if x != 1 {
+            result.push((x, 1));
+        }
+        result
+    }
+
+    pub fn isqrt(x: i128) -> i128 {
+        if x < 0 {
+            panic!("negative number doesn't have sqrt");
+        }
+        if x <= 1 {
+            return x;
+        }
+
+        let mut x0 = x / 2;
+        let mut x1 = (x0 + x / x0) / 2;
+
+        while x1 < x0 {
+            x0 = x1;
+            x1 = (x0 + x / x0) / 2;
+        }
+        x0
+    }
+
     #[cfg(test)]
     mod test {
         use super::*;
@@ -115,6 +156,12 @@ mod math {
             assert_eq!(highest_one_bit(127), 7);
             assert_eq!(factorial(10, 1007), 579);
             assert_eq!(permutations(100, 66, 1000007), 188297);
+            assert_eq!(get_prime_fact(4), vec![(2, 2)]);
+            assert_eq!(get_prime_fact(12), vec![(2, 2), (3, 1)]);
+            assert_eq!(get_prime_fact(84), vec![(2, 2), (3, 1), (7, 1)]);
+            assert_eq!(get_prime_fact(17), vec![(17, 1)]);
+            assert_eq!(isqrt(12), 3);
+            assert_eq!(isqrt(1024), 32);
         }
     }
 }

@@ -2227,6 +2227,24 @@ mod graph {
         }
     }
 
+    pub struct BipartiteGraph {
+        lr_adj_nodess: Vec<Vec<usize>>,
+        rl_adj_nodess: Vec<Vec<usize>>,
+        r_nodes: HashSet<usize>,
+        l_nodes: HashSet<usize>,
+    }
+    impl BipartiteGraph {
+        pub fn new() -> Self {
+            Self {
+                lr_adj_nodess: Vec::new(),
+                rl_adj_nodess: Vec::new(),
+                r_nodes: HashSet::new(),
+                l_nodes: HashSet::new(),
+            }
+        }
+        pub fn 
+    }
+
     pub type MaxMatchIndex = (FlowIndex, DirectedGraph);
     /// O(n)
     pub fn get_max_matchings_count(
@@ -2237,7 +2255,7 @@ mod graph {
         let snd_nodes = matches.iter().map(|&(_, snd)| snd).collect::<HashSet<_>>();
         assert!(
             fst_nodes.is_disjoint(&snd_nodes),
-            "invalide format, first nodes and second nodes aren't disjoint",
+            "Invalided matches, first nodes and second nodes aren't disjoint",
         );
 
         let start = node_count;

@@ -212,6 +212,48 @@ mod math {
         }
     }
 
+    /// O(log(x))
+    pub fn solve_ax_by_c(a: i128, b: i128, c: i128) -> Option<(i128, i128)> {
+        let mut rn = a; // r0 = a
+        let mut rn1 = b; // r1 = b
+        let mut q = Vec::new();
+        let mut r = Vec::new();
+        while rn1 != 0 {
+            // r[n] = q[n]r[n+1] + r[n+2]
+            let qn = rn / rn1;
+            let rn2 = rn % rn1;
+
+            q.push(qn);
+            r.push(rn);
+
+            rn = rn1;
+            rn1 = rn2;
+        }
+        let g = rn;
+
+        if c % g != 0 {
+            return None;
+        }
+
+        // r[n-1] = q[n-1]r[n] + g
+        // g = r[n-1] - q[n-1]r[n]
+        let mut x = 1;
+        let mut y = -q[q.len() - 2];
+        for i in (2..r.len()).rev() {
+            // g = r[i-1]x + r[i]y
+            // r[i-2] = q[i-2]r[i-1] + r[i]
+            // r[i] = r[i-2] - q[i-2]r[i-1]
+            // g = r[i-1]x + r[i-2]y - q[i-2]r[i-1]y
+            // g = (y)r[i-2] + (x - q[i-2]y)r[i-1]
+            let new_x = y;
+            let new_y = x - (q[i-2] * y);
+            x = new_x;
+            y = new_y;
+            // g = r[i-2]x + r[i-1]y
+        }
+        Some((x * (c / g), y * (c / g)))
+    }
+
     /// O(sqrt(x))
     pub fn isqrt(x: i128) -> i128 {
         if x < 0 {
@@ -267,6 +309,9 @@ mod math {
             assert_eq!(get_gcd(24, 36), 12);
             assert_eq!(get_smaller_coprimes_count(12), 4);
             assert_eq!(pow(123, 123, i64::MAX.into()), 5600154571973842357);
+            assert_eq!(solve_ax_by_c(39, 15, 12), Some((8, -20)));
+            assert_eq!(solve_ax_by_c(191, 1097, 12), Some((2688, -468)));
+            assert_eq!(solve_ax_by_c(39, 15, 10), None);
             assert_eq!(isqrt(12), 3);
             assert_eq!(isqrt(1024), 32);
         }

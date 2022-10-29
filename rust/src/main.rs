@@ -209,7 +209,7 @@ mod math {
         } else if n % 2 == 0 {
             pow(x, n / 2, m).pow(2) % m
         } else {
-            pow(x, n-1, m) * x % m
+            pow(x, n - 1, m) * x % m
         }
     }
 
@@ -255,7 +255,7 @@ mod math {
             // g = r[i-1]x + r[i-2]y - q[i-2]r[i-1]y
             // g = (y)r[i-2] + (x - q[i-2]y)r[i-1]
             let new_x = y;
-            let new_y = x - (q[i-2] * y);
+            let new_y = x - (q[i - 2] * y);
             x = new_x;
             y = new_y;
             // g = r[i-2]x + r[i-1]y
@@ -263,9 +263,16 @@ mod math {
         Some((x * (c / g), y * (c / g)))
     }
 
-    /// 
-    pub fn solve_crt(a: &[i128], m: &[i128]) -> Option<i128> {
-        Some(263)
+    /// O(am.len() * sqrt(m_prod))
+    pub fn solve_crt(am: &[(i128, i128)]) -> Option<i128> {
+        let mut result = 0;
+        let m_prod = am.iter().fold(1, |res, &(_, m)| res * m);
+        for &(a, m) in am.iter() {
+            let x = m_prod / m;
+            let inv_x = mod_inv(x, m)?;
+            result += a * x * inv_x;
+        }
+        Some(result)
     }
 
     /// O(sqrt(x))
@@ -329,7 +336,8 @@ mod math {
             assert_eq!(solve_ax_by_c(39, 15, 12), Some((8, -20)));
             assert_eq!(solve_ax_by_c(191, 1097, 12), Some((2688, -468)));
             assert_eq!(solve_ax_by_c(39, 15, 10), None);
-            assert_eq!(solve_crt(&[3, 4, 2], &[5, 7, 3]), Some(263));
+            assert_eq!(solve_crt(&[(3, 5), (4, 7), (2, 3)]), Some(263));
+            assert_eq!(solve_crt(&[(3, 5), (4, 6), (2, 3)]), None);
             assert_eq!(isqrt(12), 3);
             assert_eq!(isqrt(1024), 32);
         }

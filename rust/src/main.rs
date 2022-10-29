@@ -77,6 +77,19 @@ mod math {
         let n = log2_ceil(x);
         2usize.pow(n)
     }
+    /// O(1)
+    pub fn log2_floor(x: usize) -> u32 {
+        if x == 0 {
+            0
+        } else {
+            usize::BITS - x.leading_zeros() - 1
+        }
+    }
+    /// O(1)
+    pub fn pow2_floor(x: usize) -> usize {
+        let n = log2_floor(x);
+        2usize.pow(n)
+    }
 
     /// O(1)
     pub fn highest_one_bit(x: usize) -> u32 {
@@ -102,10 +115,9 @@ mod math {
     }
 
     /// O(sqrt(x))
-    pub fn get_prime_fact(x: i128) -> Vec<(i128, usize)> {
+    pub fn get_prime_facts(mut x: i128) -> Vec<(i128, usize)> {
         let mut result = Vec::new();
         let mut n = 2;
-        let mut x = x;
         while n * n <= x {
             if x % n == 0 {
                 x /= n;
@@ -124,6 +136,52 @@ mod math {
         result
     }
 
+    /// O(sqrt(x))
+    pub fn get_factors(x: i128) -> Vec<i128> {
+        let pfs = get_prime_facts(x);
+        let mut result = Vec::new();
+        fn make_primes(mut fact: i128, pfi: usize, pfs: &[(i128, usize)], result: &mut Vec<i128>) {
+            if pfi >= pfs.len() {
+                result.push(fact);
+                return;
+            }
+            make_primes(fact, pfi + 1, pfs, result); // choose zero
+            for _ in 0..pfs[pfi].1 {
+                // choose 1 or more
+                fact *= pfs[pfi].0;
+                make_primes(fact, pfi + 1, pfs, result);
+            }
+        }
+        make_primes(1, 0, &pfs, &mut result);
+        result
+    }
+
+    /// O(sqrt(x))
+    pub fn get_facts_count(x: i128) -> usize {
+        let pfs = get_prime_facts(x);
+        let mut r = 1;
+        for (_, count) in pfs {
+            r *= count + 1;
+        }
+        r
+    }
+
+    /// O(sqrt(x))
+    pub fn get_facts_sum(x: i128) -> i128 {
+        let pfs = get_prime_facts(x);
+        let mut sum = 1;
+        for (pf, count) in pfs {
+            sum *= (pf.pow(count as u32 + 1) - 1) / (pf - 1);
+        }
+        sum
+    }
+
+    /// O(sqrt(x))
+    pub fn get_facts_prod(x: i128) -> i128 {
+        x.pow(get_facts_count(x) as u32 / 2)
+    }
+
+    /// O(sqrt(x))
     pub fn isqrt(x: i128) -> i128 {
         if x < 0 {
             panic!("negative number doesn't have sqrt");
@@ -144,6 +202,8 @@ mod math {
 
     #[cfg(test)]
     mod test {
+        use std::collections::HashSet;
+
         use super::*;
 
         #[test]
@@ -152,14 +212,27 @@ mod math {
             assert_eq!(log2_ceil(129), 8);
             assert_eq!(pow2_ceil(128), 128);
             assert_eq!(pow2_ceil(129), 256);
+            assert_eq!(log2_floor(128), 7);
+            assert_eq!(log2_floor(127), 6);
+            assert_eq!(pow2_floor(128), 128);
+            assert_eq!(pow2_floor(127), 64);
             assert_eq!(highest_one_bit(128), 8);
             assert_eq!(highest_one_bit(127), 7);
             assert_eq!(factorial(10, 1007), 579);
             assert_eq!(permutations(100, 66, 1000007), 188297);
-            assert_eq!(get_prime_fact(4), vec![(2, 2)]);
-            assert_eq!(get_prime_fact(12), vec![(2, 2), (3, 1)]);
-            assert_eq!(get_prime_fact(84), vec![(2, 2), (3, 1), (7, 1)]);
-            assert_eq!(get_prime_fact(17), vec![(17, 1)]);
+            assert_eq!(get_prime_facts(4), vec![(2, 2)]);
+            assert_eq!(get_prime_facts(12), vec![(2, 2), (3, 1)]);
+            assert_eq!(get_prime_facts(84), vec![(2, 2), (3, 1), (7, 1)]);
+            assert_eq!(get_prime_facts(17), vec![(17, 1)]);
+            assert_eq!(
+                get_factors(84).iter().collect::<HashSet<_>>(),
+                HashSet::from_iter(&[1, 2, 3, 4, 6, 7, 12, 14, 21, 28, 42, 84])
+            );
+            assert_eq!(get_facts_count(84), 12);
+            assert_eq!(get_facts_sum(1), 1);
+            assert_eq!(get_facts_sum(84), 224);
+            assert_eq!(get_facts_prod(1), 1);
+            assert_eq!(get_facts_prod(84), 351298031616);
             assert_eq!(isqrt(12), 3);
             assert_eq!(isqrt(1024), 32);
         }

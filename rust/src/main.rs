@@ -181,6 +181,26 @@ mod math {
         x.pow(get_facts_count(x) as u32 / 2)
     }
 
+    /// O(log(x))
+    pub fn get_gcd(mut x: i128, mut y: i128) -> i128 {
+        while y != 0 {
+            let ty = y;
+            y = x % y;
+            x = ty;
+        }
+        x
+    }
+
+    /// O(sqrt(x))
+    pub fn get_smaller_coprimes_count(x: i128) -> usize {
+        let pfs = get_prime_facts(x);
+        let mut c = 1;
+        for (pf, count) in pfs {
+            c *= pf.pow(count as u32 - 1) * (pf - 1);
+        }
+        c as usize
+    }
+
     /// O(sqrt(x))
     pub fn isqrt(x: i128) -> i128 {
         if x < 0 {
@@ -233,6 +253,8 @@ mod math {
             assert_eq!(get_facts_sum(84), 224);
             assert_eq!(get_facts_prod(1), 1);
             assert_eq!(get_facts_prod(84), 351298031616);
+            assert_eq!(get_gcd(24, 36), 12);
+            assert_eq!(get_smaller_coprimes_count(12), 4);
             assert_eq!(isqrt(12), 3);
             assert_eq!(isqrt(1024), 32);
         }

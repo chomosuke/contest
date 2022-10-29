@@ -192,13 +192,24 @@ mod math {
     }
 
     /// O(sqrt(x))
-    pub fn get_smaller_coprimes_count(x: i128) -> usize {
+    pub fn get_smaller_coprimes_count(x: i128) -> i128 {
         let pfs = get_prime_facts(x);
         let mut c = 1;
         for (pf, count) in pfs {
             c *= pf.pow(count as u32 - 1) * (pf - 1);
         }
-        c as usize
+        c
+    }
+
+    /// O(log(n))
+    pub fn pow(x: i128, n: i128, cap: i128) -> i128 {
+        if n == 0 {
+            1
+        } else if n % 2 == 0 {
+            pow(x, n / 2, cap).pow(2) % cap
+        } else {
+            pow(x, n-1, cap) * x % cap
+        }
     }
 
     /// O(sqrt(x))
@@ -255,6 +266,7 @@ mod math {
             assert_eq!(get_facts_prod(84), 351298031616);
             assert_eq!(get_gcd(24, 36), 12);
             assert_eq!(get_smaller_coprimes_count(12), 4);
+            assert_eq!(pow(123, 123, i64::MAX.into()), 5600154571973842357);
             assert_eq!(isqrt(12), 3);
             assert_eq!(isqrt(1024), 32);
         }

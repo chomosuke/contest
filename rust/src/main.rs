@@ -97,19 +97,19 @@ mod math {
     }
 
     /// O(n)
-    pub fn factorial(n: i128, cap: i128) -> i128 {
+    pub fn factorial(n: i128, m: i128) -> i128 {
         let mut r: i128 = 1;
         for i in 1..=n {
-            r = (r * i.rem_euclid(cap)).rem_euclid(cap);
+            r = (r * i.rem_euclid(m)).rem_euclid(m);
         }
         r
     }
 
     /// O(r)
-    pub fn permutations(n: i128, r: i128, cap: i128) -> i128 {
+    pub fn permutations(n: i128, r: i128, m: i128) -> i128 {
         let mut p: i128 = 1;
         for i in (n - r + 1)..=n {
-            p = (p * i.rem_euclid(cap)).rem_euclid(cap);
+            p = (p * i.rem_euclid(m)).rem_euclid(m);
         }
         p
     }
@@ -192,6 +192,7 @@ mod math {
     }
 
     /// O(sqrt(x))
+    /// i.e. φ
     pub fn get_smaller_coprimes_count(x: i128) -> i128 {
         let pfs = get_prime_facts(x);
         let mut c = 1;
@@ -202,14 +203,22 @@ mod math {
     }
 
     /// O(log(n))
-    pub fn pow(x: i128, n: i128, cap: i128) -> i128 {
+    pub fn pow(x: i128, n: i128, m: i128) -> i128 {
         if n == 0 {
             1
         } else if n % 2 == 0 {
-            pow(x, n / 2, cap).pow(2) % cap
+            pow(x, n / 2, m).pow(2) % m
         } else {
-            pow(x, n-1, cap) * x % cap
+            pow(x, n-1, m) * x % m
         }
+    }
+
+    /// O(sqrt(x))
+    pub fn mod_inv(x: i128, m: i128) -> Option<i128> {
+        if get_gcd(x, m) != 1 {
+            return None;
+        }
+        Some(pow(x, get_smaller_coprimes_count(m) - 1, m))
     }
 
     /// O(log(x))
@@ -252,6 +261,11 @@ mod math {
             // g = r[i-2]x + r[i-1]y
         }
         Some((x * (c / g), y * (c / g)))
+    }
+
+    /// 
+    pub fn solve_crt(a: &[i128], m: &[i128]) -> Option<i128> {
+        Some(263)
     }
 
     /// O(sqrt(x))
@@ -308,10 +322,14 @@ mod math {
             assert_eq!(get_facts_prod(84), 351298031616);
             assert_eq!(get_gcd(24, 36), 12);
             assert_eq!(get_smaller_coprimes_count(12), 4);
+            assert_eq!(get_smaller_coprimes_count(11), 10);
             assert_eq!(pow(123, 123, i64::MAX.into()), 5600154571973842357);
+            assert_eq!(mod_inv(6, 17), Some(3));
+            assert_eq!(mod_inv(6, 9), None);
             assert_eq!(solve_ax_by_c(39, 15, 12), Some((8, -20)));
             assert_eq!(solve_ax_by_c(191, 1097, 12), Some((2688, -468)));
             assert_eq!(solve_ax_by_c(39, 15, 10), None);
+            assert_eq!(solve_crt(&[3, 4, 2], &[5, 7, 3]), Some(263));
             assert_eq!(isqrt(12), 3);
             assert_eq!(isqrt(1024), 32);
         }

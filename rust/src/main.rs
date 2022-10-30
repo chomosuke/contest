@@ -114,17 +114,22 @@ mod math {
         p
     }
 
-    /// O((n-r)*r)
-    pub fn binomial(n: usize, r: usize, m: usize) -> usize {
-        // let r = r.min(n - r);
-        let mut row = vec![1; r + 1];
-        for _i in 0..(n - r) {
-            for j in 1..=r {
-                row[j] += row[j - 1];
-                row[j] %= m;
+    /// O(min((n-r)*r, min(n-r, r)^2 * log(n)))
+    pub fn binomial(n: i128, r: i128, m: i128) -> i128 {
+        if (r - n / 2).abs() < n / 4 || n > usize::MAX as i128 || r > usize::MAX as i128 {
+            multinomial(n, &[r], m)
+        } else {
+            let r = r as usize;
+            let n = n as usize;
+            let mut row = vec![1; r as usize + 1];
+            for _i in 0..(n - r) {
+                for j in 1..=r {
+                    row[j] += row[j - 1];
+                    row[j] %= m;
+                }
             }
+            row[r]
         }
-        row[r]
     }
 
     /// O(n * log(n))
@@ -140,14 +145,22 @@ mod math {
         Some(c)
     }
 
-    /// O(n * log(n))
+    /// O((n-max(rs))^2 * log(n))
     pub fn multinomial(n: i128, rs: &[i128], m: i128) -> i128 {
         let mut rs = rs.to_vec();
         let sum: i128 = rs.iter().sum();
         if sum != n {
             rs.push(n - sum);
         }
-        let mut ns = (2..=n).collect::<Vec<_>>();
+        let mut maxi = 0;
+        for i in 1..rs.len() {
+            if rs[maxi] < rs[i] {
+                maxi = i;
+            }
+        }
+        let max = rs[maxi];
+        rs.remove(maxi);
+        let mut ns = ((max + 1)..=n).collect::<Vec<_>>();
         while let Some(r) = rs.pop() {
             for d in 2..=r {
                 let mut d = d;
@@ -368,7 +381,10 @@ mod math {
             assert_eq!(binomial(100, 66, 1000007), 754526);
             assert_eq!(binomial_mod_inv(100, 66, 1000007), None);
             assert_eq!(binomial_mod_inv(100, 66, 100000007), Some(39929235));
-            assert_eq!(multinomial(100, &(1..=13).collect::<Vec<_>>(), 1000007), 497843);
+            assert_eq!(
+                multinomial(100, &(1..=13).collect::<Vec<_>>(), 1000007),
+                497843
+            );
             assert_eq!(get_prime_facts(4), vec![(2, 2)]);
             assert_eq!(get_prime_facts(12), vec![(2, 2), (3, 1)]);
             assert_eq!(get_prime_facts(84), vec![(2, 2), (3, 1), (7, 1)]);

@@ -1,6 +1,43 @@
 #![allow(dead_code, clippy::needless_range_loop)]
 
-fn main() {}
+fn main() {
+    let mut sc = Scanner::new();
+    let mut n: usize = sc.next();
+    let mut m: usize = sc.next();
+    let d: usize = sc.next();
+    let mut cs = Vec::with_capacity(m);
+    for _ in 0..m {
+        cs.push(sc.next::<usize>());
+    }
+    let mut sum: usize = cs.iter().sum();
+    let mut max_gap = (n - sum) / (m + 1);
+    if max_gap * (m + 1) < n - sum {
+        max_gap += 1;
+    }
+    if max_gap >= d {
+        println!("NO");
+    } else {
+        println!("YES");
+        for p in 1..=cs.len() {
+            let mut gap = (n - sum) / (m + 1);
+            if gap * (m + 1) < n - sum {
+                gap += 1;
+            }
+            print!("{}", vec!["0".to_string(); gap].join(" "));
+            print!(" {}", vec![p.to_string(); cs[p-1]].join(" "));
+            if p != cs.len() {
+                print!(" ");
+            }
+            n -= gap + cs[p-1];
+            sum -= cs[p-1];
+            m -= 1;
+        }
+        if n > 0 {
+            print!(" {}", vec!["0".to_string(); n].join(" "));
+        }
+        println!();
+    }
+}
 
 mod scanner {
     use std::collections::{HashSet, VecDeque};

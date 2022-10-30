@@ -114,6 +114,32 @@ mod math {
         p
     }
 
+    /// O((n-r)*r)
+    pub fn combinations(n: usize, r: usize, m: usize) -> usize {
+        // let r = r.min(n - r);
+        let mut row = vec![1; r + 1];
+        for _i in 0..(n - r) {
+            for j in 1..=r {
+                row[j] += row[j - 1];
+                row[j] %= m;
+            }
+        }
+        row[r]
+    }
+
+    /// O(n+r)
+    pub fn combinations_mod_inv(n: i128, r: i128, m: i128) -> Option<i128> {
+        let r = r.min(n-r);
+        let mut c = 1;
+        for i in (n - r + 1)..=n {
+            c = (c * i.rem_euclid(m)).rem_euclid(m);
+        }
+        for i in 2..=r {
+            c = (c * mod_inv(i, m)?).rem_euclid(m);
+        }
+        Some(c)
+    }
+
     /// O(sqrt(x))
     pub fn get_prime_facts(mut x: i128) -> Vec<(i128, usize)> {
         let mut result = Vec::new();
@@ -185,7 +211,7 @@ mod math {
     pub fn get_gcd(mut x: i128, mut y: i128) -> i128 {
         while y != 0 {
             let ty = y;
-            y = x % y;
+            y = x.rem_euclid(y);
             x = ty;
         }
         x
@@ -204,12 +230,13 @@ mod math {
 
     /// O(log(n))
     pub fn pow(x: i128, n: i128, m: i128) -> i128 {
+        let x = x.rem_euclid(m);
         if n == 0 {
             1
         } else if n % 2 == 0 {
-            pow(x, n / 2, m).pow(2) % m
+            pow(x, n / 2, m).pow(2).rem_euclid(m)
         } else {
-            pow(x, n - 1, m) * x % m
+            (pow(x, n - 1, m) * x).rem_euclid(m)
         }
     }
 
@@ -230,7 +257,7 @@ mod math {
         while rn1 != 0 {
             // r[n] = q[n]r[n+1] + r[n+2]
             let qn = rn / rn1;
-            let rn2 = rn % rn1;
+            let rn2 = rn.rem_euclid(rn1);
 
             q.push(qn);
             r.push(rn);
@@ -314,6 +341,9 @@ mod math {
             assert_eq!(highest_one_bit(127), 7);
             assert_eq!(factorial(10, 1007), 579);
             assert_eq!(permutations(100, 66, 1000007), 188297);
+            assert_eq!(combinations(100, 66, 1000007), 754526);
+            assert_eq!(combinations_mod_inv(100, 66, 1000007), None);
+            assert_eq!(combinations_mod_inv(100, 66, 100000007), Some(39929235));
             assert_eq!(get_prime_facts(4), vec![(2, 2)]);
             assert_eq!(get_prime_facts(12), vec![(2, 2), (3, 1)]);
             assert_eq!(get_prime_facts(84), vec![(2, 2), (3, 1), (7, 1)]);

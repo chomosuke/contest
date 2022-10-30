@@ -115,7 +115,7 @@ mod math {
     }
 
     /// O((n-r)*r)
-    pub fn combinations(n: usize, r: usize, m: usize) -> usize {
+    pub fn binomial(n: usize, r: usize, m: usize) -> usize {
         // let r = r.min(n - r);
         let mut row = vec![1; r + 1];
         for _i in 0..(n - r) {
@@ -127,9 +127,9 @@ mod math {
         row[r]
     }
 
-    /// O(n+r)
-    pub fn combinations_mod_inv(n: i128, r: i128, m: i128) -> Option<i128> {
-        let r = r.min(n-r);
+    /// O(n * log(n))
+    pub fn binomial_mod_inv(n: i128, r: i128, m: i128) -> Option<i128> {
+        let r = r.min(n - r);
         let mut c = 1;
         for i in (n - r + 1)..=n {
             c = (c * i.rem_euclid(m)).rem_euclid(m);
@@ -138,6 +138,30 @@ mod math {
             c = (c * mod_inv(i, m)?).rem_euclid(m);
         }
         Some(c)
+    }
+
+    /// O(n * log(n))
+    pub fn multinomial(n: i128, rs: &[i128], m: i128) -> i128 {
+        let mut rs = rs.to_vec();
+        let sum: i128 = rs.iter().sum();
+        if sum != n {
+            rs.push(n - sum);
+        }
+        let mut ns = (2..=n).collect::<Vec<_>>();
+        while let Some(r) = rs.pop() {
+            for d in 2..=r {
+                let mut d = d;
+                for n in ns.iter_mut() {
+                    let g = get_gcd(*n, d);
+                    d /= g;
+                    *n /= g;
+                    if d == 1 {
+                        break;
+                    }
+                }
+            }
+        }
+        ns.iter().fold(1, |res, &n| (res * n).rem_euclid(m))
     }
 
     /// O(sqrt(x))
@@ -341,9 +365,10 @@ mod math {
             assert_eq!(highest_one_bit(127), 7);
             assert_eq!(factorial(10, 1007), 579);
             assert_eq!(permutations(100, 66, 1000007), 188297);
-            assert_eq!(combinations(100, 66, 1000007), 754526);
-            assert_eq!(combinations_mod_inv(100, 66, 1000007), None);
-            assert_eq!(combinations_mod_inv(100, 66, 100000007), Some(39929235));
+            assert_eq!(binomial(100, 66, 1000007), 754526);
+            assert_eq!(binomial_mod_inv(100, 66, 1000007), None);
+            assert_eq!(binomial_mod_inv(100, 66, 100000007), Some(39929235));
+            assert_eq!(multinomial(100, &(1..=13).collect::<Vec<_>>(), 1000007), 497843);
             assert_eq!(get_prime_facts(4), vec![(2, 2)]);
             assert_eq!(get_prime_facts(12), vec![(2, 2), (3, 1)]);
             assert_eq!(get_prime_facts(84), vec![(2, 2), (3, 1), (7, 1)]);

@@ -4,25 +4,52 @@ fn main() {
     let mut sc = Scanner::new();
     let t = sc.next::<usize>();
     for case_number in 1..=t {
-        sc.next::<usize>();
-        let s = sc.next_line();
-        let s = s.as_bytes();
-        let mut current = 1;
-        let mut index = vec![1];
-        for i in 1..s.len() {
-            if s[i] > s[i-1] {
-                current += 1;
+        let n = sc.next::<usize>();
+        let mut arr = Vec::with_capacity(n);
+        for _ in 0..n {
+            arr.push(sc.next::<i128>());
+        }
+        // start of the arithmetic array that end on the curent element
+        let mut index = vec![0, 0];
+        for i in 2..n {
+            if arr[i] - arr[i - 1] == arr[i - 1] - arr[i - 2] {
+                // extend array
+                index.push(index[i - 1]);
             } else {
-                current = 1;
+                // new array started at i-1
+                index.push(i - 1);
             }
-            index.push(current);
         }
 
-        print!("Case #{}:", case_number);
-        for current in index {
-            print!(" {}", current);
+        let mut max = 0;
+        for end in 1..index.len() {
+            // try to extend to left
+            let start = index[end];
+            let diff = arr[end] - arr[end - 1];
+
+            // don't extend
+            max = max.max(end - start + 1);
+
+            // extend by 1
+            if start >= 1 || end < index.len() - 1 {
+                max = max.max(end - start + 2);
+            }
+
+            // extend left by 2
+            if start >= 2 && diff * 2 == arr[start] - arr[start - 2] {
+                max = max.max(end - start + 3);
+                // extend left by more
+                if start >= 3 && diff == arr[start - 2] - arr[start - 3] {
+                    max = max.max(end - index[start-2] + 1);
+                }
+            }
+
+            // extend right by 2
+            if end < index.len() - 2 && diff * 2 == arr[end + 2] - arr[end] {
+                max = max.max(end - start + 3);
+            }
         }
-        println!();
+        println!("Case #{}: {}", case_number, max);
     }
 }
 

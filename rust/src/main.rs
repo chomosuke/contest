@@ -1,67 +1,28 @@
 #![allow(dead_code, clippy::needless_range_loop)]
-use std::collections::BinaryHeap;
-
-type U = usize;
-type I = i128;
 
 fn main() {
     let mut sc = Scanner::new();
-    let t = sc.next::<U>();
+    let t = sc.next::<usize>();
     for case_number in 1..=t {
-        let n = sc.next::<U>();
-        let mut a = Vec::with_capacity(n);
-        for _ in 0..n {
-            let mut row = Vec::with_capacity(n);
-            for _ in 0..n {
-                row.push(sc.next::<i8>());
+        sc.next::<usize>();
+        let s = sc.next_line();
+        let s = s.as_bytes();
+        let mut current = 1;
+        let mut index = vec![1];
+        for i in 1..s.len() {
+            if s[i] > s[i-1] {
+                current += 1;
+            } else {
+                current = 1;
             }
-            a.push(row);
-        }
-        let mut b = Vec::with_capacity(n);
-        for _ in 0..n {
-            let mut row = Vec::with_capacity(n);
-            for _ in 0..n {
-                row.push(sc.next::<I>());
-            }
-            b.push(row);
+            index.push(current);
         }
 
-        sc.next_line();
-        sc.next_line();
-
-        let mut visited = vec![false; n * 2];
-        let mut cost = 0;
-        let mut edge_queue = BinaryHeap::new();
-        let mut edge_visited = vec![vec![false; n]; n];
-        for i in 0..n {
-            if !visited[i] {
-                for j in 0..n {
-                    if a[i][j] == -1 {
-                        edge_queue.push((b[i][j], j + n));
-                        edge_visited[i][j] = true;
-                    }
-                }
-                visited[i] = true;
-                while let Some((w, node)) = edge_queue.pop() {
-                    if visited[node] {
-                        cost += w;
-                    } else {
-                        let next_nodes = if node < n { n..n * 2 } else { 0..n };
-                        for next_node in next_nodes {
-                            let i = node.min(next_node);
-                            let j = node.max(next_node) - n;
-                            if a[i][j] == -1 && !edge_visited[i][j] {
-                                edge_visited[i][j] = true;
-                                edge_queue.push((b[i][j], next_node));
-                            }
-                        }
-                        visited[node] = true;
-                    }
-                }
-            }
+        print!("Case #{}:", case_number);
+        for current in index {
+            print!(" {}", current);
         }
-
-        println!("Case #{}: {}", case_number, cost);
+        println!();
     }
 }
 
@@ -105,6 +66,7 @@ mod scanner {
             assert!(self.tokens.is_empty(), "You have unprocessed token");
             let mut line = String::new();
             stdin().read_line(&mut line).expect("Failed to read.");
+            line.pop();
             line
         }
 

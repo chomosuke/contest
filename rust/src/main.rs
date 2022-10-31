@@ -3,53 +3,51 @@
 fn main() {
     let mut sc = Scanner::new();
     let t = sc.next::<usize>();
+    let mut is_prime = vec![true; 10usize.pow(5)]; // a large gap assumed between primes
+    let mut i = 2;
+    while i * i < is_prime.len() {
+        if is_prime[i] {
+            let mut j = i + i;
+            while j < is_prime.len() {
+                is_prime[j] = false;
+                j += i;
+            }
+        }
+        i += 1;
+    }
+    let mut primes = Vec::new();
+    for (i, &is_prime) in is_prime.iter().enumerate().skip(2) {
+        if is_prime {
+            primes.push(i);
+        }
+    }
+    fn prime(x: usize, primes: &[usize]) -> bool {
+        let mut i = 0;
+        while primes[i] * primes[i] <= x {
+            if x % primes[i] == 0 {
+                return false;
+            }
+            i += 1;
+        }
+        true
+    }
+    fn prime_before(x: usize, primes: &[usize]) -> usize {
+        for n in (3..x).rev() {
+            if prime(n, primes) {
+                return n;
+            }
+        }
+        2
+    }
     for case_number in 1..=t {
-        let n = sc.next::<usize>();
-        let mut arr = Vec::with_capacity(n);
-        for _ in 0..n {
-            arr.push(sc.next::<i128>());
+        let z = sc.next::<usize>();
+        let mut a2 = prime_before((z as f64).sqrt() as usize + 300, &primes);
+        let mut a1 = prime_before(a2, &primes);
+        while a1 * a2 > z {
+            a2 = a1;
+            a1 = prime_before(a2, &primes);
         }
-        // start of the arithmetic array that end on the curent element
-        let mut index = vec![0, 0];
-        for i in 2..n {
-            if arr[i] - arr[i - 1] == arr[i - 1] - arr[i - 2] {
-                // extend array
-                index.push(index[i - 1]);
-            } else {
-                // new array started at i-1
-                index.push(i - 1);
-            }
-        }
-
-        let mut max = 0;
-        for end in 1..index.len() {
-            // try to extend to left
-            let start = index[end];
-            let diff = arr[end] - arr[end - 1];
-
-            // don't extend
-            max = max.max(end - start + 1);
-
-            // extend by 1
-            if start >= 1 || end < index.len() - 1 {
-                max = max.max(end - start + 2);
-            }
-
-            // extend left by 2
-            if start >= 2 && diff * 2 == arr[start] - arr[start - 2] {
-                max = max.max(end - start + 3);
-                // extend left by more
-                if start >= 3 && diff == arr[start - 2] - arr[start - 3] {
-                    max = max.max(end - index[start-2] + 1);
-                }
-            }
-
-            // extend right by 2
-            if end < index.len() - 2 && diff * 2 == arr[end + 2] - arr[end] {
-                max = max.max(end - start + 3);
-            }
-        }
-        println!("Case #{}: {}", case_number, max);
+        println!("Case #{}: {}", case_number, a1 * a2);
     }
 }
 

@@ -1,41 +1,67 @@
 #![allow(dead_code, clippy::needless_range_loop)]
+use std::collections::BinaryHeap;
+
+type U = usize;
+type I = i128;
 
 fn main() {
     let mut sc = Scanner::new();
-    let mut n: usize = sc.next();
-    let mut m: usize = sc.next();
-    let d: usize = sc.next();
-    let mut cs = Vec::with_capacity(m);
-    for _ in 0..m {
-        cs.push(sc.next::<usize>());
-    }
-    let mut sum: usize = cs.iter().sum();
-    let mut max_gap = (n - sum) / (m + 1);
-    if max_gap * (m + 1) < n - sum {
-        max_gap += 1;
-    }
-    if max_gap >= d {
-        println!("NO");
-    } else {
-        println!("YES");
-        for p in 1..=cs.len() {
-            let mut gap = (n - sum) / (m + 1);
-            if gap * (m + 1) < n - sum {
-                gap += 1;
+    let t = sc.next::<U>();
+    for case_number in 1..=t {
+        let n = sc.next::<U>();
+        let mut a = Vec::with_capacity(n);
+        for _ in 0..n {
+            let mut row = Vec::with_capacity(n);
+            for _ in 0..n {
+                row.push(sc.next::<i8>());
             }
-            print!("{}", vec!["0".to_string(); gap].join(" "));
-            print!(" {}", vec![p.to_string(); cs[p-1]].join(" "));
-            if p != cs.len() {
-                print!(" ");
+            a.push(row);
+        }
+        let mut b = Vec::with_capacity(n);
+        for _ in 0..n {
+            let mut row = Vec::with_capacity(n);
+            for _ in 0..n {
+                row.push(sc.next::<I>());
             }
-            n -= gap + cs[p-1];
-            sum -= cs[p-1];
-            m -= 1;
+            b.push(row);
         }
-        if n > 0 {
-            print!(" {}", vec!["0".to_string(); n].join(" "));
+
+        sc.next_line();
+        sc.next_line();
+
+        let mut visited = vec![false; n * 2];
+        let mut cost = 0;
+        let mut edge_queue = BinaryHeap::new();
+        let mut edge_visited = vec![vec![false; n]; n];
+        for i in 0..n {
+            if !visited[i] {
+                for j in 0..n {
+                    if a[i][j] == -1 {
+                        edge_queue.push((b[i][j], j + n));
+                        edge_visited[i][j] = true;
+                    }
+                }
+                visited[i] = true;
+                while let Some((w, node)) = edge_queue.pop() {
+                    if visited[node] {
+                        cost += w;
+                    } else {
+                        let next_nodes = if node < n { n..n * 2 } else { 0..n };
+                        for next_node in next_nodes {
+                            let i = node.min(next_node);
+                            let j = node.max(next_node) - n;
+                            if a[i][j] == -1 && !edge_visited[i][j] {
+                                edge_visited[i][j] = true;
+                                edge_queue.push((b[i][j], next_node));
+                            }
+                        }
+                        visited[node] = true;
+                    }
+                }
+            }
         }
-        println!();
+
+        println!("Case #{}: {}", case_number, cost);
     }
 }
 
@@ -101,12 +127,13 @@ mod scanner {
 use scanner::*;
 
 mod math {
+    const USIZE_BITS: u32 = 64;
     /// O(1)
     pub fn log2_ceil(x: usize) -> u32 {
         if x == 0 {
             0
         } else {
-            usize::BITS - (x - 1).leading_zeros()
+            USIZE_BITS - (x - 1).leading_zeros()
         }
     }
     /// O(1)
@@ -119,7 +146,7 @@ mod math {
         if x == 0 {
             0
         } else {
-            usize::BITS - x.leading_zeros() - 1
+            USIZE_BITS - x.leading_zeros() - 1
         }
     }
     /// O(1)
@@ -130,7 +157,8 @@ mod math {
 
     /// O(1)
     pub fn highest_one_bit(x: usize) -> u32 {
-        usize::BITS - x.leading_zeros()
+        // assuming 64 bit system
+        USIZE_BITS - x.leading_zeros()
     }
 
     /// O(n)
@@ -153,7 +181,7 @@ mod math {
 
     /// O(min((n-r)*r, min(n-r, r)^2 * log(n)))
     pub fn binomial(n: i128, r: i128, m: i128) -> i128 {
-        if (r - n / 2).abs() < n / 4 || n > usize::MAX as i128 || r > usize::MAX as i128 {
+        if (r - n / 2).abs() < n / 4 || n > std::usize::MAX as i128 || r > std::usize::MAX as i128 {
             multinomial(n, &[r], m)
         } else {
             let r = r as usize;
@@ -397,7 +425,7 @@ mod math {
 
     #[cfg(test)]
     mod test {
-        use std::collections::HashSet;
+        use std::{collections::HashSet, iter::FromIterator};
 
         use super::*;
 
@@ -414,13 +442,13 @@ mod math {
             assert_eq!(highest_one_bit(128), 8);
             assert_eq!(highest_one_bit(127), 7);
             assert_eq!(factorial(10, 1007), 579);
-            assert_eq!(permutations(100, 66, 1000007), 188297);
-            assert_eq!(binomial(100, 66, 1000007), 754526);
-            assert_eq!(binomial_mod_inv(100, 66, 1000007), None);
-            assert_eq!(binomial_mod_inv(100, 66, 100000007), Some(39929235));
+            assert_eq!(permutations(100, 66, 1_000_007), 188_297);
+            assert_eq!(binomial(100, 66, 1_000_007), 754_526);
+            assert_eq!(binomial_mod_inv(100, 66, 1_000_007), None);
+            assert_eq!(binomial_mod_inv(100, 66, 100_000_007), Some(39_929_235));
             assert_eq!(
-                multinomial(100, &(1..=13).collect::<Vec<_>>(), 1000007),
-                497843
+                multinomial(100, &(1..=13).collect::<Vec<_>>(), 1_000_007),
+                497_843
             );
             assert_eq!(get_prime_facts(4), vec![(2, 2)]);
             assert_eq!(get_prime_facts(12), vec![(2, 2), (3, 1)]);
@@ -434,11 +462,14 @@ mod math {
             assert_eq!(get_facts_sum(1), 1);
             assert_eq!(get_facts_sum(84), 224);
             assert_eq!(get_facts_prod(1), 1);
-            assert_eq!(get_facts_prod(84), 351298031616);
+            assert_eq!(get_facts_prod(84), 351_298_031_616);
             assert_eq!(get_gcd(24, 36), 12);
             assert_eq!(get_smaller_coprimes_count(12), 4);
             assert_eq!(get_smaller_coprimes_count(11), 10);
-            assert_eq!(pow(123, 123, i64::MAX.into()), 5600154571973842357);
+            assert_eq!(
+                pow(123, 123, std::i64::MAX.into()),
+                5_600_154_571_973_842_357
+            );
             assert_eq!(mod_inv(6, 17), Some(3));
             assert_eq!(mod_inv(6, 9), None);
             assert_eq!(solve_ax_by_c(39, 15, 12), Some((8, -20)));
@@ -455,8 +486,8 @@ mod math {
 use math::*;
 
 mod collections {
-    use core::hash::Hash;
     use std::collections::{hash_map, HashMap};
+    use std::hash::Hash;
 
     pub struct MultiSetIter<'a, E, I> {
         elem_count: Option<(&'a E, usize)>,
@@ -527,32 +558,6 @@ mod collections {
 
         pub fn iter(&self) -> MultiSetIter<'_, E, hash_map::Iter<'_, E, usize>> {
             MultiSetIter::new(self.count_map.iter())
-        }
-    }
-
-    #[cfg(test)]
-    mod test {
-        use std::collections::HashSet;
-
-        use super::*;
-
-        #[test]
-        fn multi_set() {
-            let mut s = MultiSet::new();
-            s.insert(1);
-            s.insert(2);
-            s.insert(1);
-            assert_eq!(s.count(&1), 2);
-            assert_eq!(s.count(&2), 1);
-            assert_eq!(s.count(&3), 0);
-            assert_eq!(
-                s.iter().collect::<HashSet<_>>(),
-                HashSet::from_iter(&[1, 1, 2])
-            );
-            s.remove(&2);
-            s.remove(&1);
-            assert_eq!(s.count(&1), 1);
-            assert_eq!(s.count(&2), 0);
         }
     }
 }
@@ -744,33 +749,6 @@ mod indexed_vec {
             self.update(i);
         }
     }
-
-    #[cfg(test)]
-    mod test {
-        use super::IndexedVec;
-
-        #[test]
-        fn test() {
-            let mut iv = IndexedVec::from_vec(vec![1, 3, 4, 8, 6, 1, 4, 2], i32::MAX, |a, b| {
-                if a < b {
-                    *a
-                } else {
-                    *b
-                }
-            });
-            assert_eq!(iv.query(1..7), 1);
-            iv.set(5, 100);
-            assert_eq!(iv.query(1..7), 3);
-            iv.push(-2);
-            assert_eq!(iv.query(..), -2);
-            iv.set(8, 100);
-            assert_eq!(iv.query(7..=8), 2);
-            iv.set(8, -2);
-            assert_eq!(iv.query(7..=8), -2);
-            assert_eq!(iv.pop(), Some(-2));
-            assert_eq!(iv.query(..), 1);
-        }
-    }
 }
 #[allow(unused_imports)]
 use indexed_vec::*;
@@ -860,48 +838,6 @@ mod search_graph {
             }
         }
     }
-
-    #[cfg(test)]
-    mod test {
-        use crate::graph::DirectedGraph;
-
-        use super::*;
-
-        const EDGES: &[(usize, usize, i128)] = &[
-            (0, 1, 5),
-            (0, 2, 3),
-            (0, 3, 7),
-            (1, 0, 5),
-            (1, 3, 3),
-            (1, 4, 2),
-            (2, 0, 3),
-            (2, 3, 1),
-            (3, 0, 7),
-            (3, 1, 3),
-            (3, 2, 1),
-            (3, 4, 2),
-            (4, 1, 2),
-            (4, 3, 2),
-        ];
-
-        #[test]
-        fn dfs() {
-            let g = DirectedGraph::from_edges(EDGES.to_vec(), 5);
-            assert_eq!(
-                DepthFirstIter::new(g.get_adj_nodess(), 0).collect::<Vec<_>>(),
-                vec![0, 1, 4, 2, 3]
-            );
-        }
-
-        #[test]
-        fn bfs() {
-            let g = DirectedGraph::from_edges(EDGES.to_vec(), 5);
-            assert_eq!(
-                BreathFirstIter::new(g.get_adj_nodess(), 0).collect::<Vec<_>>(),
-                vec![0, 1, 2, 3, 4]
-            );
-        }
-    }
 }
 #[allow(unused_imports)]
 use search_graph::*;
@@ -911,6 +847,7 @@ mod graph {
     use std::{
         cmp::{Ordering, Reverse},
         collections::{BinaryHeap, HashMap, HashSet, VecDeque},
+        iter::FromIterator,
     };
 
     /// assuming connected
@@ -921,11 +858,11 @@ mod graph {
         start: usize,
         stop_when: F,
     ) -> Vec<i128> {
-        let mut shortest_path_len = vec![i128::MAX; adj_nodess.len()];
+        let mut shortest_path_len = vec![std::i128::MAX; adj_nodess.len()];
         let mut queue = BinaryHeap::new();
         queue.push(Reverse((0, start)));
         while let Some(Reverse((distance, node))) = queue.pop() {
-            if shortest_path_len[node] != i128::MAX {
+            if shortest_path_len[node] != std::i128::MAX {
                 continue;
             }
             shortest_path_len[node] = distance;
@@ -940,7 +877,7 @@ mod graph {
     }
     /// worst: O(mn)
     fn spfa(adj_nodess: &[Vec<(usize, i128)>], start: usize) -> Option<Vec<i128>> {
-        let mut shortest_path_len = vec![i128::MAX; adj_nodess.len()];
+        let mut shortest_path_len = vec![std::i128::MAX; adj_nodess.len()];
         let mut shortest_path_edge_len = vec![0; adj_nodess.len()];
         shortest_path_len[start] = 0;
         let mut queue = VecDeque::new();
@@ -963,7 +900,7 @@ mod graph {
     /// O(n^3)
     fn floyd_warshall(adj_nodess: &[Vec<(usize, i128)>]) -> Option<Vec<Vec<i128>>> {
         let n = adj_nodess.len();
-        let mut shortest_path_lens = vec![vec![i128::MAX; n]; n];
+        let mut shortest_path_lens = vec![vec![std::i128::MAX; n]; n];
         for (node, adj_nodes) in adj_nodess.iter().enumerate() {
             for &(adj_node, weight) in adj_nodes {
                 shortest_path_lens[node][adj_node] = weight;
@@ -975,8 +912,8 @@ mod graph {
         for nodei in 0..n {
             for node1 in 0..n {
                 for node2 in 0..n {
-                    if shortest_path_lens[node1][nodei] != i128::MAX
-                        && shortest_path_lens[nodei][node2] != i128::MAX
+                    if shortest_path_lens[node1][nodei] != std::i128::MAX
+                        && shortest_path_lens[nodei][node2] != std::i128::MAX
                     {
                         shortest_path_lens[node1][node2] = shortest_path_lens[node1][node2].min(
                             shortest_path_lens[node1][nodei] + shortest_path_lens[nodei][node2],
@@ -1005,7 +942,7 @@ mod graph {
                 dists_to_start[start] == 0,
                 "expected shortest_path_lens[start] to be zero, looks like you got the wrong start node",
             );
-        if dists_to_start[end] == i128::MAX {
+        if dists_to_start[end] == std::i128::MAX {
             return None;
         }
         let mut shortest_path = Vec::new();
@@ -1324,7 +1261,7 @@ mod graph {
                 .collect::<Vec<_>>()
         }
     }
-    use max_flow::*;
+    use self::max_flow::*;
 
     pub struct DirectedGraph {
         adj_nodess: Vec<Vec<(usize, i128)>>,
@@ -1656,402 +1593,6 @@ mod graph {
         }
     }
 
-    #[cfg(test)]
-    mod test_directed {
-        use std::collections::HashSet;
-
-        use super::*;
-
-        // cphb p.g. 124
-        const EDGES: &[(usize, usize, i128)] = &[
-            (0, 1, 5),
-            (0, 2, 3),
-            (0, 3, 7),
-            (1, 0, 5),
-            (1, 3, 3),
-            (1, 4, 2),
-            (2, 0, 3),
-            (2, 3, 1),
-            (3, 0, 7),
-            (3, 1, 3),
-            (3, 2, 1),
-            (3, 4, 2),
-            (4, 1, 2),
-            (4, 3, 2),
-        ];
-
-        #[test]
-        fn dijkstra() {
-            let g = DirectedGraph::from_edges(EDGES.to_vec(), 5);
-            assert_eq!(g.get_shortest_path_lens(0), Some(vec![0, 5, 3, 4, 6]),);
-        }
-
-        #[test]
-        fn spfa() {
-            let mut edges = EDGES.to_vec();
-            edges.push((2, 4, -1));
-            let g = DirectedGraph::from_edges(edges, 5);
-            assert_eq!(g.get_shortest_path_lens(0), Some(vec![0, 4, 3, 4, 2]),);
-        }
-
-        #[test]
-        fn spfa_negative_cycle() {
-            let mut edges = EDGES.to_vec();
-            edges.push((2, 4, -4));
-            let g = DirectedGraph::from_edges(edges, 5);
-            assert_eq!(g.get_shortest_path_lens(1), None);
-        }
-
-        #[test]
-        fn spfa_negative_cycle_no_false_positive() {
-            let g = DirectedGraph::from_edges(
-                vec![
-                    (0, 1, 0),
-                    (1, 2, 0),
-                    (2, 3, -1),
-                    (3, 4, 0),
-                    (4, 5, 0),
-                    (5, 0, 1),
-                ],
-                6,
-            );
-            assert_eq!(g.get_shortest_path_lens(0), Some(vec![0, 0, 0, -1, -1, -1]));
-        }
-
-        #[test]
-        fn floyd_warshall() {
-            let g = DirectedGraph::from_edges(EDGES.to_vec(), 5);
-            assert_eq!(
-                g.get_all_shortest_path_lens(),
-                Some(vec![
-                    vec![0, 5, 3, 4, 6],
-                    vec![5, 0, 4, 3, 2],
-                    vec![3, 4, 0, 1, 3],
-                    vec![4, 3, 1, 0, 2],
-                    vec![6, 2, 3, 2, 0],
-                ]),
-            );
-        }
-
-        #[test]
-        fn floyd_warshall_negative_cycle() {
-            let mut edges = EDGES.to_vec();
-            edges.push((2, 4, -4));
-            edges.push((4, 2, -4));
-            let g = DirectedGraph::from_edges(edges, 5);
-            assert_eq!(g.get_all_shortest_path_lens(), None);
-        }
-
-        #[test]
-        fn floyd_warshall_negative_cycle_no_false_positive() {
-            let g = DirectedGraph::from_edges(
-                vec![
-                    (0, 1, 0),
-                    (1, 2, 0),
-                    (2, 3, -1),
-                    (3, 4, 0),
-                    (4, 5, 0),
-                    (5, 0, 1),
-                ],
-                6,
-            );
-            assert_eq!(
-                g.get_all_shortest_path_lens(),
-                Some(vec![
-                    vec![0, 0, 0, -1, -1, -1],
-                    vec![0, 0, 0, -1, -1, -1],
-                    vec![0, 0, 0, -1, -1, -1],
-                    vec![1, 1, 1, 0, 0, 0],
-                    vec![1, 1, 1, 0, 0, 0],
-                    vec![1, 1, 1, 0, 0, 0],
-                ]),
-            );
-        }
-
-        #[test]
-        fn reconstruct_shortest_path() {
-            let g = DirectedGraph::from_edges(EDGES.to_vec(), 5);
-            let shortest_path_lens = g.get_shortest_path_lens(0).unwrap();
-            assert_eq!(
-                g.reconstruct_shortest_path(&shortest_path_lens, 0, 4),
-                Some(vec![0, 2, 3, 4]),
-            );
-        }
-
-        #[test]
-        fn reconstruct_shortest_path_negative_edge() {
-            let mut edges = EDGES.to_vec();
-            edges.push((2, 4, -1));
-            let g = DirectedGraph::from_edges(edges, 5);
-            let shortest_path_lens = g.get_shortest_path_lens(0).unwrap();
-            assert_eq!(
-                g.reconstruct_shortest_path(&shortest_path_lens, 0, 4),
-                Some(vec![0, 2, 4]),
-            );
-        }
-
-        #[test]
-        fn reconstruct_all_shortest_path() {
-            let mut edges = EDGES.to_vec();
-            edges.push((2, 4, -1));
-            let g = DirectedGraph::from_edges(edges, 5);
-            let shortest_path_lens = g.get_shortest_path_lens(0).unwrap();
-            assert_eq!(
-                g.reconstruct_all_shortest_path(&shortest_path_lens, 0)
-                    .get_adj_nodess()
-                    .iter()
-                    .map(|adj_nodes| { HashSet::from_iter(adj_nodes) })
-                    .collect::<Vec<HashSet<&(usize, i128)>>>(),
-                vec![
-                    HashSet::from_iter(&[(2, 3)]),
-                    HashSet::from_iter(&[]),
-                    HashSet::from_iter(&[(3, 1), (4, -1)]),
-                    HashSet::from_iter(&[]),
-                    HashSet::from_iter(&[(1, 2), (3, 2)]),
-                ],
-            );
-        }
-
-        #[test]
-        fn topological_sort() {
-            let g = DirectedGraph::from_edges(
-                vec![
-                    (0, 1, 1),
-                    (1, 2, 1),
-                    (2, 5, 1),
-                    (3, 0, 1),
-                    (3, 4, 1),
-                    (4, 1, 1),
-                    (4, 2, 1),
-                ],
-                6,
-            );
-            assert_eq!(g.get_topological_sort(None), Ok(vec![3, 4, 0, 1, 2, 5]));
-        }
-
-        #[test]
-        fn topological_sort_with_start() {
-            let g = DirectedGraph::from_edges(
-                vec![
-                    (0, 1, 1),
-                    (1, 2, 1),
-                    (2, 5, 1),
-                    (3, 0, 1),
-                    (3, 4, 1),
-                    (4, 3, 1),
-                    (4, 1, 1),
-                    (4, 2, 1),
-                ],
-                6,
-            );
-            assert_eq!(g.get_topological_sort(Some(0)), Ok(vec![0, 1, 2, 5]));
-        }
-
-        #[test]
-        fn cycle_detection() {
-            let g = DirectedGraph::from_edges(
-                vec![
-                    (0, 1, 1),
-                    (1, 2, 1),
-                    (2, 5, 1),
-                    (3, 0, 1),
-                    (3, 4, 1),
-                    (4, 1, 1),
-                    (4, 2, 1),
-                    (5, 4, 1),
-                ],
-                6,
-            );
-            assert_eq!(g.get_topological_sort(None), Err(vec![1, 2, 5, 4]));
-        }
-
-        #[test]
-        fn get_strongly_connected_components() {
-            let g = DirectedGraph::from_edges(
-                vec![
-                    (0, 1, 1),
-                    (0, 3, 1),
-                    (1, 0, 1),
-                    (1, 4, 1),
-                    (2, 1, 1),
-                    (2, 6, 1),
-                    (4, 3, 1),
-                    (5, 4, 1),
-                    (5, 2, 1),
-                    (6, 5, 1),
-                ],
-                7,
-            );
-            let mut components = g.get_strongly_connected_components();
-            components.sort_by_key(|c| c.iter().min().unwrap().to_owned());
-            assert_eq!(
-                components,
-                vec![
-                    HashSet::from([0, 1]),
-                    HashSet::from([2, 5, 6]),
-                    HashSet::from([3]),
-                    HashSet::from([4]),
-                ],
-            );
-        }
-
-        #[test]
-        fn get_eulerian_start_end() {
-            let g = DirectedGraph::from_edges(
-                vec![
-                    (0, 1, 1),
-                    (1, 2, 1),
-                    (1, 4, 1),
-                    (2, 4, 1),
-                    (3, 0, 1),
-                    (4, 3, 1),
-                ],
-                5,
-            );
-            assert_eq!(g.get_eulerian_start_end(), Some((1, 4)));
-        }
-
-        #[test]
-        fn no_eulerian_path() {
-            let g = DirectedGraph::from_edges(
-                vec![(0, 1, 1), (1, 2, 1), (1, 4, 1), (2, 4, 1), (3, 0, 1)],
-                5,
-            );
-            assert_eq!(g.get_eulerian_start_end(), None);
-        }
-
-        #[test]
-        fn get_eulerian_path() {
-            let g = DirectedGraph::from_edges(
-                vec![
-                    (0, 1, 1),
-                    (1, 2, 1),
-                    (1, 4, 1),
-                    (2, 4, 1),
-                    (3, 0, 1),
-                    (4, 3, 1),
-                ],
-                5,
-            );
-            assert_eq!(g.get_eulerian_path(), Some(vec![1, 4, 3, 0, 1, 2, 4]))
-        }
-
-        #[test]
-        fn get_eulerian_cycle() {
-            let g = DirectedGraph::from_edges(
-                vec![
-                    (0, 1, 1),
-                    (1, 2, 1),
-                    (1, 4, 1),
-                    (2, 4, 1),
-                    (3, 0, 1),
-                    (4, 1, 1),
-                    (4, 3, 1),
-                ],
-                5,
-            );
-            assert_eq!(g.get_eulerian_path(), Some(vec![0, 1, 2, 4, 1, 4, 3, 0]))
-        }
-
-        #[test]
-        fn get_hamiltonian_path() {
-            let g = DirectedGraph::from_edges(EDGES.to_vec(), 5);
-            assert_eq!(g.get_hamiltonian_path(), Some(vec![2, 3, 4, 1, 0]));
-        }
-
-        #[test]
-        fn max_flow() {
-            let g = DirectedGraph::from_edges(
-                vec![
-                    (0, 1, 5),
-                    (0, 3, 4),
-                    (1, 2, 6),
-                    (2, 4, 8),
-                    (2, 5, 5),
-                    (3, 1, 3),
-                    (3, 4, 1),
-                    (4, 5, 2),
-                ],
-                6,
-            );
-            assert_eq!(g.get_max_flow(0, 5).0, 7);
-        }
-
-        #[test]
-        fn min_cut() {
-            let g = DirectedGraph::from_edges(
-                vec![
-                    (0, 1, 5),
-                    (0, 3, 4),
-                    (1, 2, 6),
-                    (2, 4, 8),
-                    (2, 5, 5),
-                    (3, 1, 3),
-                    (3, 4, 1),
-                    (4, 5, 2),
-                ],
-                6,
-            );
-            let index = g.get_max_flow(0, 5).1;
-            assert_eq!(g.get_min_cut(&index), vec![(1, 2), (3, 4)]);
-        }
-
-        #[test]
-        fn get_edge_disjoint_paths() {
-            let g = DirectedGraph::from_edges(
-                vec![
-                    (0, 1, 5),
-                    (0, 3, 4),
-                    (1, 3, 6),
-                    (2, 1, 9),
-                    (2, 4, 8),
-                    (2, 5, 5),
-                    (3, 2, 3),
-                    (3, 4, 1),
-                    (4, 5, 2),
-                ],
-                6,
-            );
-            let (count, index) = g.get_edge_disjoint_paths_count(0, 5);
-            assert_eq!(count, 2);
-            assert_eq!(
-                g.get_edge_disjoint_paths(&index),
-                vec![vec![0, 3, 4, 5], vec![0, 1, 3, 2, 5]],
-            );
-        }
-
-        #[test]
-        fn get_node_disjoint_paths() {
-            let g = DirectedGraph::from_edges(
-                vec![
-                    (0, 1, 5),
-                    (0, 3, 4),
-                    (1, 3, 6),
-                    (2, 1, 9),
-                    (2, 4, 8),
-                    (2, 5, 5),
-                    (3, 2, 3),
-                    (3, 4, 1),
-                    (4, 5, 2),
-                ],
-                6,
-            );
-            let (count, index) = g.get_node_disjoint_paths_count(0, 5);
-            assert_eq!(count, 1);
-            let paths = g.get_node_disjoint_paths(&index);
-            let adj_nodess = g.get_adj_nodess();
-            for path in paths {
-                let mut in_path = vec![false; g.node_count()];
-                in_path[path[0]] = true;
-                for (&node1, &node2) in path.iter().zip(path.iter().skip(1)) {
-                    assert!(!in_path[node2]);
-                    in_path[node2] = true;
-                    assert!(adj_nodess[node1].iter().any(|&(n, _)| n == node2));
-                }
-            }
-        }
-    }
-
     pub struct UndirectedGraph {
         adj_nodess: Vec<Vec<(usize, i128)>>,
         neg_edge_count: usize,
@@ -2369,197 +1910,6 @@ mod graph {
         }
     }
 
-    #[cfg(test)]
-    mod test_undirected {
-        use std::collections::HashSet;
-
-        use super::UndirectedGraph;
-
-        // cphb p.g. 124
-        const EDGES: &[(usize, usize, i128)] = &[
-            (0, 1, 5),
-            (0, 2, 3),
-            (0, 3, 7),
-            (1, 3, 3),
-            (1, 4, 2),
-            (2, 3, 1),
-            (3, 4, 2),
-        ];
-
-        #[test]
-        fn dijkstra() {
-            let g = UndirectedGraph::from_edges(EDGES.to_vec(), 5);
-            assert_eq!(g.get_shortest_path_lens(0), Some(vec![0, 5, 3, 4, 6]),);
-        }
-
-        #[test]
-        fn shortest_path_with_neg_edge() {
-            let mut g = UndirectedGraph::from_edges(EDGES.to_vec(), 5);
-            g.add_edge((1, 2, -1));
-            assert_eq!(g.get_shortest_path_lens(0), None);
-        }
-
-        #[test]
-        fn reconstruct_shortest_path() {
-            let g = UndirectedGraph::from_edges(EDGES.to_vec(), 5);
-            let shortest_path_lens = g.get_shortest_path_lens(0).unwrap();
-            assert_eq!(
-                g.reconstruct_shortest_path(&shortest_path_lens, 0, 4),
-                Some(vec![0, 2, 3, 4])
-            );
-        }
-
-        #[test]
-        fn reconstruct_all_shortest_path() {
-            let g = UndirectedGraph::from_edges(EDGES.to_vec(), 5);
-            let shortest_path_lens = g.get_shortest_path_lens(0).unwrap();
-            assert_eq!(
-                g.reconstruct_all_shortest_path(&shortest_path_lens, 0)
-                    .get_adj_nodess()
-                    .iter()
-                    .map(|adj_nodes| { HashSet::from_iter(adj_nodes) })
-                    .collect::<Vec<HashSet<&(usize, i128)>>>(),
-                vec![
-                    HashSet::from_iter(&[(1, 5), (2, 3)]),
-                    HashSet::from_iter(&[]),
-                    HashSet::from_iter(&[(3, 1)]),
-                    HashSet::from_iter(&[(4, 2)]),
-                    HashSet::from_iter(&[]),
-                ],
-            );
-        }
-
-        #[test]
-        fn min_spanning_tree() {
-            let g = UndirectedGraph::from_edges(EDGES.to_vec(), 5); // (0, 2, 3), (1, 4, 2), (2, 3, 1), (3, 4, 2)
-            assert_eq!(
-                g.get_min_spanning_tree()
-                    .get_adj_nodess()
-                    .iter()
-                    .map(|adj_nodes| { HashSet::from_iter(adj_nodes) })
-                    .collect::<Vec<HashSet<&(usize, i128)>>>(),
-                vec![
-                    HashSet::from_iter(&[(2, 3)]),
-                    HashSet::from_iter(&[(4, 2)]),
-                    HashSet::from_iter(&[(0, 3), (3, 1)]),
-                    HashSet::from_iter(&[(2, 1), (4, 2)]),
-                    HashSet::from_iter(&[(1, 2), (3, 2)]),
-                ],
-            );
-        }
-
-        #[test]
-        fn floyd_warshall() {
-            let g = UndirectedGraph::from_edges(EDGES.to_vec(), 5);
-            assert_eq!(
-                g.get_all_shortest_path_lens(),
-                Some(vec![
-                    vec![0, 5, 3, 4, 6],
-                    vec![5, 0, 4, 3, 2],
-                    vec![3, 4, 0, 1, 3],
-                    vec![4, 3, 1, 0, 2],
-                    vec![6, 2, 3, 2, 0],
-                ]),
-            );
-        }
-
-        #[test]
-        fn get_eulerian_start_end() {
-            let g = UndirectedGraph::from_edges(
-                vec![
-                    (0, 1, 1),
-                    (1, 2, 1),
-                    (1, 4, 1),
-                    (2, 4, 1),
-                    (3, 0, 1),
-                    (4, 3, 1),
-                ],
-                5,
-            );
-            let eulerian_start_end = g.get_eulerian_start_end().unwrap();
-            assert_eq!(
-                HashSet::from([eulerian_start_end.0, eulerian_start_end.1]),
-                HashSet::from([1, 4]),
-            );
-        }
-
-        #[test]
-        fn no_eulerian_path() {
-            let g = UndirectedGraph::from_edges(
-                vec![
-                    (0, 1, 1),
-                    (1, 2, 1),
-                    (1, 4, 1),
-                    (2, 4, 1),
-                    (3, 0, 1),
-                    (4, 3, 1),
-                    (0, 2, 1),
-                ],
-                5,
-            );
-            assert_eq!(g.get_eulerian_start_end(), None);
-        }
-
-        #[test]
-        fn get_eulerian_path() {
-            let mut edges = vec![
-                (0, 1, 1),
-                (1, 2, 1),
-                (1, 4, 1),
-                (2, 4, 1),
-                (3, 0, 1),
-                (4, 3, 1),
-            ];
-            let g = UndirectedGraph::from_edges(edges.clone(), 5);
-            let path = g.get_eulerian_path().unwrap();
-            for (node1, node2) in path.iter().zip(path.iter().skip(1)) {
-                let mut to_remove = edges.len();
-                for (i, (node_1, node_2, _)) in edges.iter().enumerate() {
-                    if (node1 == node_1 && node2 == node_2) || (node1 == node_2 && node2 == node_1)
-                    {
-                        to_remove = i;
-                        break;
-                    }
-                }
-                edges.remove(to_remove);
-            }
-            assert!(edges.is_empty());
-        }
-
-        #[test]
-        fn get_eulerian_cycle() {
-            let mut edges = vec![
-                (0, 1, 1),
-                (1, 2, 1),
-                (1, 4, 1),
-                (2, 4, 1),
-                (3, 0, 1),
-                (4, 1, 1),
-                (4, 3, 1),
-            ];
-            let g = UndirectedGraph::from_edges(edges.clone(), 5);
-            let path = g.get_eulerian_path().unwrap();
-            for (node1, node2) in path.iter().zip(path.iter().skip(1)) {
-                let mut to_remove = edges.len();
-                for (i, (node_1, node_2, _)) in edges.iter().enumerate() {
-                    if (node1 == node_1 && node2 == node_2) || (node1 == node_2 && node2 == node_1)
-                    {
-                        to_remove = i;
-                        break;
-                    }
-                }
-                edges.remove(to_remove);
-            }
-            assert!(edges.is_empty());
-        }
-
-        #[test]
-        fn no_hamiltonian_path() {
-            let g = UndirectedGraph::from_edges(vec![(0, 1, 1), (0, 2, 1), (0, 3, 1)], 4);
-            assert_eq!(g.get_hamiltonian_path(), None);
-        }
-    }
-
     pub type MaxMatchIndex = (FlowIndex, DirectedGraph);
     /// O(n)
     pub fn get_max_matchings_count(
@@ -2592,38 +1942,6 @@ mod graph {
             .into_iter()
             .map(|path| (path[1], path[2]))
             .collect()
-    }
-
-    #[cfg(test)]
-    mod test {
-        use super::*;
-
-        #[test]
-        fn max_matchings() {
-            let edges = &[(0, 4), (1, 6), (2, 4), (2, 5), (2, 7), (3, 6)];
-            let (count, index) = get_max_matchings_count(edges, 8);
-            assert_eq!(count, 3);
-            let max_matchings = get_max_matchings(&index);
-            assert_eq!(
-                max_matchings
-                    .iter()
-                    .map(|&(fst, _)| fst)
-                    .collect::<HashSet<_>>()
-                    .len(),
-                3,
-            );
-            assert_eq!(
-                max_matchings
-                    .iter()
-                    .map(|&(_, snd)| snd)
-                    .collect::<HashSet<_>>()
-                    .len(),
-                3,
-            );
-            assert!(
-                HashSet::from(*edges).is_superset(&HashSet::from_iter(max_matchings.into_iter()))
-            );
-        }
     }
 }
 #[allow(unused_imports)]
@@ -2688,13 +2006,13 @@ mod tree {
             if self.adj_nodess.is_empty() {
                 return 0;
             }
-            let mut dist_to_zero = vec![i128::MAX; self.node_count()];
+            let mut dist_to_zero = vec![std::i128::MAX; self.node_count()];
             dist_to_zero[0] = 0;
             for node in DepthFirstIter::new(self.get_adj_nodess(), 0).skip(1) {
                 dist_to_zero[node] = self.adj_nodess[node]
                     .iter()
                     .find_map(|&(adj_node, weight)| {
-                        if dist_to_zero[adj_node] < i128::MAX {
+                        if dist_to_zero[adj_node] < std::i128::MAX {
                             Some(dist_to_zero[adj_node] + weight)
                         } else {
                             None
@@ -2708,13 +2026,13 @@ mod tree {
                 .max_by_key(|&(_, dist)| dist)
                 .unwrap()
                 .0;
-            let mut dist_to_start = vec![i128::MAX; self.node_count()];
+            let mut dist_to_start = vec![std::i128::MAX; self.node_count()];
             dist_to_start[start] = 0;
             for node in DepthFirstIter::new(self.get_adj_nodess(), start).skip(1) {
                 dist_to_start[node] = self.adj_nodess[node]
                     .iter()
                     .find_map(|&(adj_node, weight)| {
-                        if dist_to_start[adj_node] < i128::MAX {
+                        if dist_to_start[adj_node] < std::i128::MAX {
                             Some(dist_to_start[adj_node] + weight)
                         } else {
                             None
@@ -2855,34 +2173,6 @@ mod tree {
         }
     }
 
-    #[cfg(test)]
-    mod test {
-        use super::*;
-
-        // cphb 163
-        const EDGES: &[(usize, usize, i128)] = &[
-            (1, 2, 1),
-            (1, 3, 1),
-            (1, 4, 1),
-            (2, 5, 1),
-            (2, 6, 1),
-            (6, 0, 3),
-            (4, 7, 1),
-        ];
-
-        #[test]
-        fn diameter() {
-            let t = Tree::from_edges(EDGES.to_vec(), 8);
-            assert_eq!(t.get_diameter(), 7);
-        }
-
-        #[test]
-        fn all_longest_path_len() {
-            let t = Tree::from_edges(EDGES.to_vec(), 8);
-            assert_eq!(t.get_longest_path_lens(), vec![7, 5, 4, 6, 6, 5, 4, 7]);
-        }
-    }
-
     pub struct RootedTree {
         root: usize,
         children: Vec<Vec<(usize, i128)>>,
@@ -3018,54 +2308,6 @@ mod tree {
             self.parent(node1).unwrap_or(node1)
         }
     }
-
-    #[cfg(test)]
-    mod test_rooted {
-        use super::*;
-
-        // cphb 163
-        const EDGES: &[(usize, usize, i128)] = &[
-            (1, 2, 1),
-            (1, 3, 1),
-            (1, 4, 1),
-            (2, 5, 1),
-            (2, 6, 1),
-            (6, 0, 3),
-            (4, 7, 1),
-        ];
-
-        #[test]
-        fn from_tree() {
-            let t = RootedTree::from_tree(&Tree::from_edges(EDGES.to_vec(), 8), 1);
-            assert_eq!(t.child(2), &vec![(5, 1), (6, 1)]);
-            assert_eq!(t.parent(0), Some(6));
-            assert_eq!(t.parent(2), Some(1));
-            assert_eq!(t.parent(1), None);
-        }
-
-        #[test]
-        fn modify() {
-            let mut t = RootedTree::new();
-            t.add_leaf(0, 1);
-            assert_eq!(t.child(0), &vec![(1, 1)]);
-            assert_eq!(t.parent(1), Some(0));
-            assert_eq!(t.parent(0), None);
-            assert_eq!(t.lowest_common_ancestor(0, 1), 0);
-            let mut t = RootedTree::with_capacity(10);
-            t.add_leaf(0, 1);
-            assert_eq!(t.child(0), &vec![(1, 1)]);
-            assert_eq!(t.parent(1), Some(0));
-            assert_eq!(t.parent(0), None);
-            assert_eq!(t.lowest_common_ancestor(0, 1), 0);
-        }
-
-        #[test]
-        fn lowest_common_ancestor() {
-            let t = RootedTree::from_tree(&Tree::from_edges(EDGES.to_vec(), 8), 1);
-            assert_eq!(t.lowest_common_ancestor(0, 5), 2);
-            assert_eq!(t.lowest_common_ancestor(1, 1), 1);
-        }
-    }
 }
 #[allow(unused_imports)]
 use tree::*;
@@ -3169,33 +2411,6 @@ mod successor_graph {
                 node = self.get_successor(node);
             }
             cycle
-        }
-    }
-
-    #[cfg(test)]
-    mod test {
-        use super::*;
-
-        #[test]
-        fn add_node() {
-            let mut g = SuccessorGraph::from_successors(vec![2, 4, 6, 5, 1, 1, 0]);
-            g.index_upto_kth_successor(128);
-            g.add_node(5);
-            g.add_node(2);
-            assert_eq!(g.get_kth_successor(7, 128), 1);
-        }
-
-        #[test]
-        fn get_k_step_node_fn() {
-            let mut g = SuccessorGraph::from_successors(vec![2, 4, 6, 5, 1, 1, 0, 5, 2]);
-            g.index_upto_kth_successor(6);
-            assert_eq!(g.get_kth_successor(3, 6), 1);
-        }
-
-        #[test]
-        fn get_cycle() {
-            let g = SuccessorGraph::from_successors(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 6]);
-            assert_eq!(g.get_cycle(0), vec![6, 7, 8, 9]);
         }
     }
 }

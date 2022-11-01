@@ -1,103 +1,30 @@
 #![allow(dead_code, clippy::needless_range_loop)]
 
-fn gcd(mut x: usize, mut y: usize) -> usize {
-    while y != 0 {
-        let ty = y;
-        y = x.rem_euclid(y);
-        x = ty;
-    }
-    x
-}
-
 fn main() {
     let mut sc = Scanner::new();
     let test_cases = sc.next::<usize>();
     for case_number in 1..=test_cases {
         let n = sc.next::<usize>();
-        let q = sc.next::<usize>();
-        let mut edges = Vec::with_capacity(n);
-        for _ in 0..n - 1 {
-            edges.push((
-                sc.next::<usize>() - 1,
-                sc.next::<usize>() - 1,
-                sc.next::<usize>(),
-                sc.next::<usize>(),
-            ));
+        let k = sc.next::<usize>();
+        let s = sc.next_line().into_bytes();
+        let significant_len = (n as f64 / 2.0).ceil() as usize;
+        let mut result = 0;
+        let m: usize = 1_000_000_007;
+        for i in 0..significant_len {
+            result += (s[i] as usize - 'a' as usize)
+                * pow(k as i128, (significant_len - i - 1) as i128, m as i128) as usize;
+            result %= m;
         }
-        let mut adj_nodess = vec![Vec::new(); n];
-        for (node1, node2, l, a) in edges {
-            adj_nodess[node1].push((node2, l, a));
-            adj_nodess[node2].push((node1, l, a));
-        }
-
-        let mut qs = vec![Vec::new(); n];
-        for i in 0..q {
-            let c = sc.next::<usize>() - 1;
-            qs[c].push((sc.next::<usize>(), i));
-        }
-
-        fn dfs(
-            node: usize,
-            parent: usize,
-            adj_nodess: &[Vec<(usize, usize, usize)>],
-            qs: &mut [Vec<(usize, usize)>],
-            ans: &mut [usize],
-            // (load limit, gcd), gcd will strictly decrease while loadlimit strictly increase
-            index: Vec<(usize, usize)>,
-        ) {
-            qs[node].sort_unstable();
-            let mut j = index.len() - 1;
-            for &(weight, i) in qs[node].iter().rev() {
-                while index[j].0 > weight {
-                    // if load limit is bigger than weight, gcd can't be used
-                    // This will be called on most iteration because the weight decrease each
-                    // iteration
-                    j -= 1;
-                }
-                // the last load limit is bigger than weight, which means this one is the correct
-                // one
-                ans[i] = index[j].1;
-            }
-            for &(child, l, a) in &adj_nodess[node] {
-                if child == parent {
-                    continue;
-                }
-                // add the index
-                let mut new_index = Vec::new();
-                let mut i = 0;
-                while i < index.len() && index[i].0 < l {
-                    new_index.push(index[i]);
-                    i += 1;
-                }
-                if i < index.len() && l == index[i].0 {
-                    let g = gcd(index[i].1, a);
-                    if g != new_index[new_index.len() - 1].1 {
-                        new_index.push((l, g));
-                        i += 1;
-                    }
-                } else {
-                    let g = gcd(new_index[new_index.len() - 1].1, a);
-                    if g != new_index[new_index.len() - 1].1 {
-                        new_index.push((l, g));
-                    }
-                }
-                while i < index.len() {
-                    let g = gcd(new_index[new_index.len() - 1].1, index[i].1);
-                    if g != new_index[new_index.len() - 1].1 {
-                        new_index.push((index[i].0, g));
-                    }
-                    i += 1;
-                }
-                dfs(child, node, adj_nodess, qs, ans, new_index);
+        for i in (0..n/2).rev() {
+            if s[s.len() - 1 - i] < s[i] {
+                break;
+            } else if s[s.len() - 1 - i] > s[i] {
+                result += 1;
+                result %= m;
+                break;
             }
         }
-        let mut ans = vec![0; q];
-        dfs(0, 0, &adj_nodess, &mut qs, &mut ans, vec![(0, 0)]);
-        print!("Case #{}:", case_number);
-        for a in ans {
-            print!(" {}", a);
-        }
-        println!();
+        println!("Case #{}: {}", case_number, result);
     }
 }
 

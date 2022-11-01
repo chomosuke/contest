@@ -1,53 +1,103 @@
 #![allow(dead_code, clippy::needless_range_loop)]
 
+fn gcd(mut x: usize, mut y: usize) -> usize {
+    while y != 0 {
+        let ty = y;
+        y = x.rem_euclid(y);
+        x = ty;
+    }
+    x
+}
+
 fn main() {
     let mut sc = Scanner::new();
-    let t = sc.next::<usize>();
-    let mut is_prime = vec![true; 10usize.pow(5)]; // a large gap assumed between primes
-    let mut i = 2;
-    while i * i < is_prime.len() {
-        if is_prime[i] {
-            let mut j = i + i;
-            while j < is_prime.len() {
-                is_prime[j] = false;
-                j += i;
+    let test_cases = sc.next::<usize>();
+    for case_number in 1..=test_cases {
+        let n = sc.next::<usize>();
+        let q = sc.next::<usize>();
+        let mut edges = Vec::with_capacity(n);
+        for _ in 0..n - 1 {
+            edges.push((
+                sc.next::<usize>() - 1,
+                sc.next::<usize>() - 1,
+                sc.next::<usize>(),
+                sc.next::<usize>(),
+            ));
+        }
+        let mut adj_nodess = vec![Vec::new(); n];
+        for (node1, node2, l, a) in edges {
+            adj_nodess[node1].push((node2, l, a));
+            adj_nodess[node2].push((node1, l, a));
+        }
+
+        let mut qs = vec![Vec::new(); n];
+        for i in 0..q {
+            let c = sc.next::<usize>() - 1;
+            qs[c].push((sc.next::<usize>(), i));
+        }
+
+        fn dfs(
+            node: usize,
+            parent: usize,
+            adj_nodess: &[Vec<(usize, usize, usize)>],
+            qs: &mut [Vec<(usize, usize)>],
+            ans: &mut [usize],
+            // (load limit, gcd), gcd will strictly decrease while loadlimit strictly increase
+            index: Vec<(usize, usize)>,
+        ) {
+            qs[node].sort_unstable();
+            let mut j = index.len() - 1;
+            for &(weight, i) in qs[node].iter().rev() {
+                while index[j].0 > weight {
+                    // if load limit is bigger than weight, gcd can't be used
+                    // This will be called on most iteration because the weight decrease each
+                    // iteration
+                    j -= 1;
+                }
+                // the last load limit is bigger than weight, which means this one is the correct
+                // one
+                ans[i] = index[j].1;
+            }
+            for &(child, l, a) in &adj_nodess[node] {
+                if child == parent {
+                    continue;
+                }
+                // add the index
+                let mut new_index = Vec::new();
+                let mut i = 0;
+                while i < index.len() && index[i].0 < l {
+                    new_index.push(index[i]);
+                    i += 1;
+                }
+                if i < index.len() && l == index[i].0 {
+                    let g = gcd(index[i].1, a);
+                    if g != new_index[new_index.len() - 1].1 {
+                        new_index.push((l, g));
+                        i += 1;
+                    }
+                } else {
+                    let g = gcd(new_index[new_index.len() - 1].1, a);
+                    if g != new_index[new_index.len() - 1].1 {
+                        new_index.push((l, g));
+                    }
+                }
+                while i < index.len() {
+                    let g = gcd(new_index[new_index.len() - 1].1, index[i].1);
+                    if g != new_index[new_index.len() - 1].1 {
+                        new_index.push((index[i].0, g));
+                    }
+                    i += 1;
+                }
+                dfs(child, node, adj_nodess, qs, ans, new_index);
             }
         }
-        i += 1;
-    }
-    let mut primes = Vec::new();
-    for (i, &is_prime) in is_prime.iter().enumerate().skip(2) {
-        if is_prime {
-            primes.push(i);
+        let mut ans = vec![0; q];
+        dfs(0, 0, &adj_nodess, &mut qs, &mut ans, vec![(0, 0)]);
+        print!("Case #{}:", case_number);
+        for a in ans {
+            print!(" {}", a);
         }
-    }
-    fn prime(x: usize, primes: &[usize]) -> bool {
-        let mut i = 0;
-        while primes[i] * primes[i] <= x {
-            if x % primes[i] == 0 {
-                return false;
-            }
-            i += 1;
-        }
-        true
-    }
-    fn prime_before(x: usize, primes: &[usize]) -> usize {
-        for n in (3..x).rev() {
-            if prime(n, primes) {
-                return n;
-            }
-        }
-        2
-    }
-    for case_number in 1..=t {
-        let z = sc.next::<usize>();
-        let mut a2 = prime_before((z as f64).sqrt() as usize + 300, &primes);
-        let mut a1 = prime_before(a2, &primes);
-        while a1 * a2 > z {
-            a2 = a1;
-            a1 = prime_before(a2, &primes);
-        }
-        println!("Case #{}: {}", case_number, a1 * a2);
+        println!();
     }
 }
 

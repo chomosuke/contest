@@ -3,29 +3,76 @@
 fn main() {
     let mut sc = Scanner::new();
     let test_cases = sc.next::<usize>();
+    sc.next::<usize>();
     for case_number in 1..=test_cases {
-        let n = sc.next::<usize>();
-        let k = sc.next::<usize>();
-        let s = sc.next_line().into_bytes();
-        let significant_len = (n as f64 / 2.0).ceil() as usize;
-        let mut result = 0;
-        let m: usize = 1_000_000_007;
-        for i in 0..significant_len {
-            result += (s[i] as usize - 'a' as usize)
-                * pow(k as i128, (significant_len - i - 1) as i128, m as i128) as usize;
-            result %= m;
-        }
-        for i in (0..n/2).rev() {
-            if s[s.len() - 1 - i] < s[i] {
-                break;
-            } else if s[s.len() - 1 - i] > s[i] {
-                result += 1;
-                result %= m;
-                break;
-            }
-        }
+        let w = sc.next::<usize>();
+        let e = sc.next::<usize>();
+        let result = get_best_sequence(w as f64, e as f64);
         println!("Case #{}: {}", case_number, result);
     }
+}
+
+fn get_best_sequence(w: f64, e: f64) -> String {
+    let mut max_score = vec![vec![vec![(0.0, 'n'); 61]; 61]; 61];
+    let mut r = 0;
+    let mut max_combination = (0, 0, 0);
+    while r <= 60 {
+        let mut p = 0;
+        while r + p <= 60 {
+            let mut s = 0;
+            while r + p + s <= 60 {
+                let prev_total = (r + p + s - 1) as f64;
+                let this_rock = if r > 0 && prev_total > 0.0 {
+                    max_score[r - 1][p][s].0 + e * s as f64 / prev_total + w * p as f64 / prev_total
+                } else if r > 0 && prev_total == 0.0 {
+                    e * 1.0 / 3.0 + w * 1.0 / 3.0
+                } else {
+                    0.0
+                };
+                let this_paper = if p > 0 && prev_total > 0.0 {
+                    max_score[r][p - 1][s].0 + e * r as f64 / prev_total + w * s as f64 / prev_total
+                } else if r > 0 && prev_total == 0.0 {
+                    e * 1.0 / 3.0 + w * 1.0 / 3.0
+                } else {
+                    0.0
+                };
+                let this_scissor = if s > 0 && prev_total > 0.0 {
+                    max_score[r][p][s - 1].0 + e * p as f64 / prev_total + w * r as f64 / prev_total
+                } else if r > 0 && prev_total == 0.0 {
+                    e * 1.0 / 3.0 + w * 1.0 / 3.0
+                } else {
+                    0.0
+                };
+                max_score[r][p][s] = if this_rock >= this_paper && this_rock >= this_scissor {
+                    (this_rock, 'r')
+                } else if this_paper >= this_scissor {
+                    (this_paper, 'p')
+                } else {
+                    (this_scissor, 's')
+                };
+                let (rm, pm, sm) = max_combination;
+                if r + p + s == 60 && max_score[rm][pm][sm].0 <= max_score[r][p][s].0 {
+                    max_combination = (r, p, s);
+                }
+                s += 1;
+            }
+            p += 1;
+        }
+        r += 1;
+    }
+    let mut sequence = vec!['r'; 60];
+    let (mut r, mut p, mut s) = max_combination;
+    while r + s + p > 0 {
+        let (_, rps) = max_score[r][p][s];
+        sequence[r + p + s - 1] = rps;
+        match rps {
+            'r' => r -= 1,
+            'p' => p -= 1,
+            's' => s -= 1,
+            _ => panic!(),
+        }
+    }
+    sequence.iter().collect::<String>().to_ascii_uppercase()
 }
 
 mod scanner {

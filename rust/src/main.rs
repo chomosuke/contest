@@ -1,48 +1,75 @@
 #![allow(dead_code, clippy::needless_range_loop)]
 #[allow(unused_imports)]
 use std::cmp::Ordering;
+use std::collections::BTreeMap;
 
 fn main() {
     let mut sc = Scanner::new();
     let test_cases = sc.next::<usize>();
     for case_number in 1..=test_cases {
-        let mut n = sc.next::<usize>();
-        let mut c = sc.next::<usize>();
-        let mut edges = Vec::<(usize, i128)>::with_capacity(n);
+        let n = sc.next::<usize>();
+        let m = sc.next::<usize>();
+        let mut questionss = BTreeMap::new();
         for _ in 0..n {
-            edges.push((sc.next::<usize>() + 1, 1));
-            edges.push((sc.next::<usize>(), -1));
+            let start = sc.next::<usize>();
+            let end = sc.next::<usize>();
+            questionss.insert(start, (start, end));
         }
-        edges.sort();
-        let mut boundries = Vec::new();
-        let mut edges = edges.into_iter();
-        let (mut cur_b, mut cur_diff) = edges.next().unwrap();
-        for (b, diff) in edges {
-            if b == cur_b {
-                cur_diff += diff;
-            } else {
-                boundries.push((cur_b, cur_diff));
-                cur_b = b;
-                cur_diff = diff;
+        print!("Case #{}:", case_number);
+        for _ in 0..m {
+            let q_req = sc.next::<usize>();
+            let before = questionss.range(..=q_req).next_back();
+            if let Some((_, &(start, end))) = before {
+                if start <= q_req && q_req <= end {
+                    questionss.remove(&start);
+                    if q_req < end {
+                        questionss.insert(q_req + 1, (q_req + 1, end));
+                    }
+                    if start < q_req {
+                        questionss.insert(start, (start, q_req - 1));
+                    }
+                    print!(" {}", q_req);
+                    continue;
+                }
+            }
+            let after = questionss.range(q_req..).next();
+            if let Some((_, &(bstart, bend))) = before {
+                if let Some((_, &(astart, aend))) = after {
+                    if q_req - bend <= astart - q_req {
+                        print!(" {}", bend);
+                        questionss.remove(&bstart);
+                        if bstart < bend {
+                            questionss.insert(bstart, (bstart, bend - 1));
+                        }
+                        continue;
+                    } else {
+                        print!(" {}", astart);
+                        questionss.remove(&astart);
+                        if astart < aend {
+                            questionss.insert(astart + 1, (astart + 1, aend));
+                        }
+                        continue;
+                    }
+                }
+            }
+            if let Some((_, &(bstart, bend))) = before {
+                print!(" {}", bend);
+                questionss.remove(&bstart);
+                if bstart < bend {
+                    questionss.insert(bstart, (bstart, bend - 1));
+                }
+                continue;
+            }
+            if let Some((_, &(astart, aend))) = after {
+                print!(" {}", astart);
+                questionss.remove(&astart);
+                if astart < aend {
+                    questionss.insert(astart + 1, (astart + 1, aend));
+                }
+                continue;
             }
         }
-        boundries.push((cur_b, cur_diff));
-        let mut intervals = Vec::new();
-        let mut boundries = boundries.into_iter();
-        let (mut last_b, mut cuts) = boundries.next().unwrap();
-        for (b, diff) in boundries {
-            intervals.push((cuts, last_b, b));
-            last_b = b;
-            cuts += diff;
-        }
-        intervals.sort();
-        for (cuts, a, b) in intervals.into_iter().rev() {
-            let cuts = cuts as usize;
-            let can_make_cuts = (b-a).min(c);
-            c -= can_make_cuts;
-            n += cuts * can_make_cuts;
-        }
-        println!("Case #{}: {}", case_number, n);
+        println!();
     }
 }
 

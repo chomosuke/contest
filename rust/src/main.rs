@@ -1,78 +1,215 @@
 #![allow(dead_code, clippy::needless_range_loop)]
+#[allow(unused_imports)]
+use std::cmp::Ordering;
 
 fn main() {
     let mut sc = Scanner::new();
     let test_cases = sc.next::<usize>();
-    sc.next::<usize>();
     for case_number in 1..=test_cases {
-        let w = sc.next::<usize>();
-        let e = sc.next::<usize>();
-        let result = get_best_sequence(w as f64, e as f64);
-        println!("Case #{}: {}", case_number, result);
+        let n = sc.next::<usize>();
+        let mut eqs = Vec::<(usize, Node)>::new();
+        let mut group = 1;
+        for _ in 0..n {
+            let mut i = 0;
+            let eq = simplify(parse(sc.next_line().as_bytes()));
+            for (prev_i, prev_eq) in &eqs {
+                if prev_eq == &eq {
+                    i = *prev_i;
+                    break;
+                }
+            }
+            if i == 0 {
+                i = group;
+                group += 1;
+            }
+            eqs.push((i, eq));
+        }
+        print!("Case #{}:", case_number);
+        for (i, _eq) in eqs {
+            print!(" {}", i);
+            // println!("EQ: {:?}", _eq);
+        }
+        println!();
     }
 }
 
-fn get_best_sequence(w: f64, e: f64) -> String {
-    let mut max_score = vec![vec![vec![(0.0, 'n'); 61]; 61]; 61];
-    let mut r = 0;
-    let mut max_combination = (0, 0, 0);
-    while r <= 60 {
-        let mut p = 0;
-        while r + p <= 60 {
-            let mut s = 0;
-            while r + p + s <= 60 {
-                let prev_total = (r + p + s - 1) as f64;
-                let this_rock = if r > 0 && prev_total > 0.0 {
-                    max_score[r - 1][p][s].0 + e * s as f64 / prev_total + w * p as f64 / prev_total
-                } else if r > 0 && prev_total == 0.0 {
-                    e * 1.0 / 3.0 + w * 1.0 / 3.0
-                } else {
-                    0.0
-                };
-                let this_paper = if p > 0 && prev_total > 0.0 {
-                    max_score[r][p - 1][s].0 + e * r as f64 / prev_total + w * s as f64 / prev_total
-                } else if r > 0 && prev_total == 0.0 {
-                    e * 1.0 / 3.0 + w * 1.0 / 3.0
-                } else {
-                    0.0
-                };
-                let this_scissor = if s > 0 && prev_total > 0.0 {
-                    max_score[r][p][s - 1].0 + e * p as f64 / prev_total + w * r as f64 / prev_total
-                } else if r > 0 && prev_total == 0.0 {
-                    e * 1.0 / 3.0 + w * 1.0 / 3.0
-                } else {
-                    0.0
-                };
-                max_score[r][p][s] = if this_rock >= this_paper && this_rock >= this_scissor {
-                    (this_rock, 'r')
-                } else if this_paper >= this_scissor {
-                    (this_paper, 'p')
-                } else {
-                    (this_scissor, 's')
-                };
-                let (rm, pm, sm) = max_combination;
-                if r + p + s == 60 && max_score[rm][pm][sm].0 <= max_score[r][p][s].0 {
-                    max_combination = (r, p, s);
-                }
-                s += 1;
+fn parse(str: &[u8]) -> Node {
+    if str[0] != b'(' {
+        return Literal(String::from_utf8(str.to_owned()).unwrap().parse().unwrap());
+    }
+    let mut e = 2;
+    if str[1] == b'(' {
+        let mut b_count = 1;
+        while b_count > 0 {
+            if str[e] == b'(' {
+                b_count += 1;
             }
-            p += 1;
+            if str[e] == b')' {
+                b_count -= 1;
+            }
+            e += 1;
         }
-        r += 1;
-    }
-    let mut sequence = vec!['r'; 60];
-    let (mut r, mut p, mut s) = max_combination;
-    while r + s + p > 0 {
-        let (_, rps) = max_score[r][p][s];
-        sequence[r + p + s - 1] = rps;
-        match rps {
-            'r' => r -= 1,
-            'p' => p -= 1,
-            's' => s -= 1,
-            _ => panic!(),
+    } else {
+        while str[e] != b'#' && str[e] != b'*' && str[e] != b'+' {
+            e += 1;
         }
     }
-    sequence.iter().collect::<String>().to_ascii_uppercase()
+    let n1 = parse(&str[1..e]);
+    let n2 = parse(&str[e + 1..str.len() - 1]);
+    match str[e] as char {
+        '+' => Plus(vec![n1, n2]),
+        '*' => Multiply {
+            x: 1,
+            ns: vec![n1, n2],
+        },
+        '#' => F {
+            left: Box::new(n1),
+            right: Box::new(n2),
+        },
+        _ => panic!(),
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+enum Node {
+    Literal(u128),
+    Plus(Vec<Node>),
+    Multiply { x: u128, ns: Vec<Node> },
+    F { left: Box<Node>, right: Box<Node> },
+}
+use Node::*;
+
+/// a simple node is unique for all equivalent nodes
+/// it generally follow the format of 2a + 3b + 4ab where a & b are (x1#x2) where x1 and x2 are also simple node
+/// every Plus will have at most one Literal and some Multiply children
+/// every Multiply will have exactly one bigger than 0 Literal and some F children
+/// all children will be sorted
+fn simplify(node: Node) -> Node {
+    match node {
+        Literal(_) => node,
+        Plus(ns) => {
+            let ns = ns
+                .into_iter()
+                .map(simplify)
+                .flat_map(|n| if let Plus(ns) = n { ns } else { vec![n] })
+                .map(|n| {
+                    if let F { .. } = n {
+                        Multiply { x: 1, ns: vec![n] }
+                    } else {
+                        n
+                    }
+                });
+            // at this point only literal and Multiply children
+            let mut literals_sum = 0;
+            let mut multiplies = Vec::new();
+            for n in ns {
+                match n {
+                    Literal(x) => literals_sum += x,
+                    Multiply { x, ns } => multiplies.push((ns, x)),
+                    _ => panic!(),
+                }
+            }
+            multiplies.sort();
+            let mut ns = if literals_sum > 0 {
+                vec![Literal(literals_sum)]
+            } else {
+                Vec::new()
+            };
+            let mut it = multiplies.into_iter();
+            if let Some(mut cur) = it.next() {
+                for (rest, x) in it {
+                    if cur.0 == rest {
+                        cur.1 += x;
+                    } else {
+                        ns.push(Multiply {
+                            x: cur.1,
+                            ns: cur.0,
+                        });
+                        cur = (rest, x);
+                    }
+                }
+                ns.push(Multiply {
+                    x: cur.1,
+                    ns: cur.0,
+                });
+            }
+            if ns.len() > 1 {
+                Plus(ns)
+            } else if let Some(n) = ns.pop() {
+                simplify(n)
+            } else {
+                Literal(0)
+            }
+        }
+        Multiply { mut x, ns } => {
+            let ns = ns
+                .into_iter()
+                .map(simplify)
+                .flat_map(|n| {
+                    if let Multiply { x: x2, ns } = n {
+                        x *= x2;
+                        ns
+                    } else {
+                        vec![n]
+                    }
+                })
+                .collect::<Vec<_>>();
+            // now there are Literal, F and Plus nodes
+            let mut pluses = Vec::new();
+            let mut fs = Vec::new();
+            for n in ns {
+                match n {
+                    Plus(_) => pluses.push(n),
+                    Literal(x2) => x *= x2,
+                    F { .. } => fs.push(n),
+                    _ => panic!(),
+                }
+            }
+            if x == 0 {
+                Literal(0)
+            } else if let Some(Plus(ms)) = pluses.pop() {
+                let mut ns = Vec::new();
+                for m in ms {
+                    match m {
+                        Multiply { x: mx, ns: mns } => {
+                            ns.push(Multiply {
+                                x: x * mx,
+                                ns: fs
+                                    .clone()
+                                    .into_iter()
+                                    .chain(mns)
+                                    .chain(pluses.clone().into_iter())
+                                    .collect(),
+                            });
+                        }
+                        Literal(lx) => ns.push(Multiply {
+                            x: x * lx,
+                            ns: fs
+                                .clone()
+                                .into_iter()
+                                .chain(pluses.clone().into_iter())
+                                .collect(),
+                        }),
+                        _ => panic!(),
+                    }
+                }
+                simplify(Plus(ns))
+            } else {
+                fs.sort();
+                if fs.is_empty() {
+                    Literal(x)
+                } else if fs.len() == 1 && x == 1 {
+                    fs.pop().unwrap()
+                } else {
+                    Multiply { x, ns: fs }
+                }
+            }
+        }
+        F { left, right } => F {
+            left: Box::new(simplify(*left)),
+            right: Box::new(simplify(*right)),
+        },
+    }
 }
 
 mod scanner {

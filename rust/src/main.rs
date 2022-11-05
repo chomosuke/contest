@@ -1,72 +1,73 @@
 #![allow(dead_code, clippy::needless_range_loop)]
 #[allow(unused_imports)]
 use std::cmp::Ordering;
-use std::collections::BTreeMap;
+
+fn v(p: usize, mut x: usize) -> usize {
+    let mut y = 0;
+    while x % p == 0 && x > 0 {
+        x /= p;
+        y += 1;
+    }
+    y
+}
 
 fn main() {
     let mut sc = Scanner::new();
     let test_cases = sc.next::<usize>();
     for case_number in 1..=test_cases {
         let n = sc.next::<usize>();
-        let m = sc.next::<usize>();
-        let mut questionss = BTreeMap::new();
-        for _ in 0..n {
-            let start = sc.next::<usize>();
-            let end = sc.next::<usize>();
-            questionss.insert(start, (start, end));
+        let q = sc.next::<usize>();
+        let p = sc.next::<usize>();
+        let mut va = vec![0; n];
+        let mut vamap = vec![0; n];
+        let mut vapap = vec![0; n];
+        let mut not_div_count = vec![0; n];
+        for i in 0..n {
+            let a = sc.next::<usize>();
+            va[i] = v(p, a);
+            if a % p != 0 {
+                not_div_count[i] = 1;
+                vamap[i] = v(p, a - a % p);
+                if p == 2 {
+                    vapap[i] = v(p, a + a % p) - 1;
+                }
+            }
         }
+        // when Ai is divisible by P
+        let mut va = IndexedVec::from_vec(va, 0, |a, b| a + b);
+        // when Ai isn't divisible by P
+        let mut vamap = IndexedVec::from_vec(vamap, 0, |a, b| a + b);
+        let mut vapap = IndexedVec::from_vec(vapap, 0, |a, b| a + b);
+        let mut not_div_count = IndexedVec::from_vec(not_div_count, 0, |a, b| a + b);
         print!("Case #{}:", case_number);
-        for _ in 0..m {
-            let q_req = sc.next::<usize>();
-            let before = questionss.range(..=q_req).next_back();
-            if let Some((_, &(start, end))) = before {
-                if start <= q_req && q_req <= end {
-                    questionss.remove(&start);
-                    if q_req < end {
-                        questionss.insert(q_req + 1, (q_req + 1, end));
+        for _ in 0..q {
+            let is_update = sc.next::<u8>() == 1;
+            if is_update {
+                let pos = sc.next::<usize>() - 1;
+                let a = sc.next::<usize>();
+                va.set(pos, v(p, a));
+                if a % p != 0 {
+                    not_div_count.set(pos, 1);
+                    vamap.set(pos, v(p, a - a % p));
+                    if p == 2 {
+                        vapap.set(pos, v(p, a + a % p) - 1);
                     }
-                    if start < q_req {
-                        questionss.insert(start, (start, q_req - 1));
-                    }
-                    print!(" {}", q_req);
-                    continue;
+                } else {
+                    not_div_count.set(pos, 0);
+                    vamap.set(pos, 0);
+                    vapap.set(pos, 0);
                 }
-            }
-            let after = questionss.range(q_req..).next();
-            if let Some((_, &(bstart, bend))) = before {
-                if let Some((_, &(astart, aend))) = after {
-                    if q_req - bend <= astart - q_req {
-                        print!(" {}", bend);
-                        questionss.remove(&bstart);
-                        if bstart < bend {
-                            questionss.insert(bstart, (bstart, bend - 1));
-                        }
-                        continue;
-                    } else {
-                        print!(" {}", astart);
-                        questionss.remove(&astart);
-                        if astart < aend {
-                            questionss.insert(astart + 1, (astart + 1, aend));
-                        }
-                        continue;
-                    }
-                }
-            }
-            if let Some((_, &(bstart, bend))) = before {
-                print!(" {}", bend);
-                questionss.remove(&bstart);
-                if bstart < bend {
-                    questionss.insert(bstart, (bstart, bend - 1));
-                }
-                continue;
-            }
-            if let Some((_, &(astart, aend))) = after {
-                print!(" {}", astart);
-                questionss.remove(&astart);
-                if astart < aend {
-                    questionss.insert(astart + 1, (astart + 1, aend));
-                }
-                continue;
+            } else {
+                let s = sc.next::<usize>();
+                let l = sc.next::<usize>() - 1;
+                let r = sc.next::<usize>() - 1;
+                let div_ans = va.query(l..=r) * s;
+                let not_div_ans = if p == 2 && s % 2 == 0 {
+                    vamap.query(l..=r) + vapap.query(l..=r)
+                } else {
+                    vamap.query(l..=r)
+                } + v(p, s) * not_div_count.query(l..=r);
+                print!(" {}", div_ans + not_div_ans);
             }
         }
         println!();
@@ -756,6 +757,51 @@ mod indexed_vec {
         pub fn set(&mut self, i: usize, e: E) {
             self.inner[i] = e;
             self.update(i);
+        }
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::IndexedVec;
+
+        #[test]
+        fn test_min() {
+            let mut iv = IndexedVec::from_vec(vec![1, 3, 4, 8, 6, 1, 4, 2], i32::MAX, |a, b| {
+                if a < b {
+                    *a
+                } else {
+                    *b
+                }
+            });
+            assert_eq!(iv.query(1..7), 1);
+            iv.set(5, 100);
+            assert_eq!(iv.query(1..7), 3);
+            iv.push(-2);
+            assert_eq!(iv.query(..), -2);
+            iv.set(8, 100);
+            assert_eq!(iv.query(7..=8), 2);
+            iv.set(8, -2);
+            assert_eq!(iv.query(7..=8), -2);
+            assert_eq!(iv.pop(), Some(-2));
+            assert_eq!(iv.query(..), 1);
+        }
+
+        #[test]
+        fn test_add() {
+            let mut iv = IndexedVec::from_vec(vec![1, 3, 4, 8, 6, 1, 4, 2], 0, |a, b| {
+                a + b
+            });
+            assert_eq!(iv.query(1..7), 26);
+            iv.set(5, 100);
+            assert_eq!(iv.query(1..7), 125);
+            iv.push(-2);
+            assert_eq!(iv.query(..), 126);
+            iv.set(8, 100);
+            assert_eq!(iv.query(7..=8), 102);
+            iv.set(8, -2);
+            assert_eq!(iv.query(7..=8), 0);
+            assert_eq!(iv.pop(), Some(-2));
+            assert_eq!(iv.query(..), 128);
         }
     }
 }

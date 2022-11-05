@@ -1,76 +1,64 @@
-#![allow(dead_code, clippy::needless_range_loop)]
-#[allow(unused_imports)]
+#![allow(unused_imports, dead_code, clippy::needless_range_loop)]
 use std::cmp::Ordering;
 
-fn v(p: usize, mut x: usize) -> usize {
-    let mut y = 0;
-    while x % p == 0 && x > 0 {
-        x /= p;
-        y += 1;
-    }
-    y
+fn div_ceil(x: usize, y: usize) -> usize {
+    (x as f64 / y as f64).ceil() as usize
 }
 
 fn main() {
     let mut sc = Scanner::new();
     let test_cases = sc.next::<usize>();
     for case_number in 1..=test_cases {
-        let n = sc.next::<usize>();
-        let q = sc.next::<usize>();
-        let p = sc.next::<usize>();
-        let mut va = vec![0; n];
-        let mut vamap = vec![0; n];
-        let mut vapap = vec![0; n];
-        let mut not_div_count = vec![0; n];
-        for i in 0..n {
-            let a = sc.next::<usize>();
-            va[i] = v(p, a);
-            if a % p != 0 {
-                not_div_count[i] = 1;
-                vamap[i] = v(p, a - a % p);
-                if p == 2 {
-                    vapap[i] = v(p, a + a % p) - 1;
-                }
+        let r = sc.next::<usize>();
+        let c = sc.next::<usize>();
+        let k = sc.next::<usize>();
+        let r1 = sc.next::<usize>();
+        let c1 = sc.next::<usize>();
+        let r2 = sc.next::<usize>();
+        let c2 = sc.next::<usize>();
+        let w = c2 - c1 + 1;
+        let h = r2 - r1 + 1;
+        let edge_cut = {
+            let w2 = c2.min(c - c1 + 1);
+            let h2 = r2.min(r - r1 + 1);
+            let mut cut = (div_ceil(w2, k) - div_ceil(w, k)).min(div_ceil(h2, k) - div_ceil(h, k));
+            if c1 > 1 {
+                cut += div_ceil(h, k);
             }
-        }
-        // when Ai is divisible by P
-        let mut va = IndexedVec::from_vec(va, 0, |a, b| a + b);
-        // when Ai isn't divisible by P
-        let mut vamap = IndexedVec::from_vec(vamap, 0, |a, b| a + b);
-        let mut vapap = IndexedVec::from_vec(vapap, 0, |a, b| a + b);
-        let mut not_div_count = IndexedVec::from_vec(not_div_count, 0, |a, b| a + b);
-        print!("Case #{}:", case_number);
-        for _ in 0..q {
-            let is_update = sc.next::<u8>() == 1;
-            if is_update {
-                let pos = sc.next::<usize>() - 1;
-                let a = sc.next::<usize>();
-                va.set(pos, v(p, a));
-                if a % p != 0 {
-                    not_div_count.set(pos, 1);
-                    vamap.set(pos, v(p, a - a % p));
-                    if p == 2 {
-                        vapap.set(pos, v(p, a + a % p) - 1);
-                    }
-                } else {
-                    not_div_count.set(pos, 0);
-                    vamap.set(pos, 0);
-                    vapap.set(pos, 0);
-                }
-            } else {
-                let s = sc.next::<usize>();
-                let l = sc.next::<usize>() - 1;
-                let r = sc.next::<usize>() - 1;
-                let div_ans = va.query(l..=r) * s;
-                let not_div_ans = if p == 2 && s % 2 == 0 {
-                    vamap.query(l..=r) + vapap.query(l..=r)
-                } else {
-                    vamap.query(l..=r)
-                } + v(p, s) * not_div_count.query(l..=r);
-                print!(" {}", div_ans + not_div_ans);
+            if r1 > 1 {
+                cut += div_ceil(w, k);
             }
-        }
-        println!();
+            if c2 < c {
+                cut += div_ceil(h, k);
+            }
+            if r2 < r {
+                cut += div_ceil(w, k);
+            }
+            cut
+        };
+        let grid_cut =
+            { div_ceil(h, k) * (div_ceil(w, k) - 1) + div_ceil(w, k) * (div_ceil(h, k) - 1) };
+        let cut1 = { (k - 1 + k * (k - 1)) * (h / k) * (w / k) };
+        let cut234 = {
+            let h2 = h % k;
+            let w2 = w % k;
+            let mut c = 0;
+            if h2 > 0 && w2 > 0 {
+                c += h2 * w2 - 1;
+            }
+            if h2 > 0 {
+                c += (h2 * k - 1) * (w / k);
+            }
+            if w2 > 0 {
+                c += (w2 * k - 1) * (h / k);
+            }
+            c
+        };
+        println!(
+            "Case #{}: {}",
+            case_number,
+            edge_cut + grid_cut + cut1 + cut234
+        );
     }
 }
 
@@ -788,9 +776,7 @@ mod indexed_vec {
 
         #[test]
         fn test_add() {
-            let mut iv = IndexedVec::from_vec(vec![1, 3, 4, 8, 6, 1, 4, 2], 0, |a, b| {
-                a + b
-            });
+            let mut iv = IndexedVec::from_vec(vec![1, 3, 4, 8, 6, 1, 4, 2], 0, |a, b| a + b);
             assert_eq!(iv.query(1..7), 26);
             iv.set(5, 100);
             assert_eq!(iv.query(1..7), 125);

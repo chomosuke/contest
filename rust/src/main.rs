@@ -1,64 +1,165 @@
 #![allow(unused_imports, dead_code, clippy::needless_range_loop)]
-use std::cmp::Ordering;
+use std::{
+    cmp::Ordering,
+    collections::{BTreeMap, BTreeSet},
+};
 
-fn div_ceil(x: usize, y: usize) -> usize {
-    (x as f64 / y as f64).ceil() as usize
+#[derive(PartialEq, Clone, Copy)]
+enum Cell {
+    White,
+    Black,
+    Filled(u8),
+}
+
+fn is_filled(c: &Cell) -> bool {
+    if let Cell::Filled(_) = c {
+        true
+    } else {
+        false
+    }
 }
 
 fn main() {
     let mut sc = Scanner::new();
     let test_cases = sc.next::<usize>();
     for case_number in 1..=test_cases {
-        let r = sc.next::<usize>();
-        let c = sc.next::<usize>();
-        let k = sc.next::<usize>();
-        let r1 = sc.next::<usize>();
-        let c1 = sc.next::<usize>();
-        let r2 = sc.next::<usize>();
-        let c2 = sc.next::<usize>();
-        let w = c2 - c1 + 1;
-        let h = r2 - r1 + 1;
-        let edge_cut = {
-            let w2 = c2.min(c - c1 + 1);
-            let h2 = r2.min(r - r1 + 1);
-            let mut cut = (div_ceil(w2, k) - div_ceil(w, k)).min(div_ceil(h2, k) - div_ceil(h, k));
-            if c1 > 1 {
-                cut += div_ceil(h, k);
+        let n = sc.next::<usize>();
+        let m = sc.next::<usize>();
+        let mut grid = Vec::with_capacity(n);
+        for _ in 0..n {
+            let row = sc
+                .next_line()
+                .into_bytes()
+                .into_iter()
+                .map(|c| match c {
+                    b'.' => Cell::White,
+                    b'#' => Cell::Black,
+                    _ => Cell::Filled(c),
+                })
+                .collect::<Vec<_>>();
+            grid.push(row);
+        }
+        let mut hori_wordss = Vec::with_capacity(n);
+        for i in 0..n {
+            let mut hori_words = Vec::new();
+            let mut j = 0;
+            while j < m {
+                while j < m && Cell::Black == grid[i][j] {
+                    j += 1;
+                }
+                let start = j;
+                while j < m && Cell::Black != grid[i][j] {
+                    j += 1;
+                }
+                let end = j;
+                hori_words.push((start, end));
             }
-            if r1 > 1 {
-                cut += div_ceil(w, k);
+            hori_wordss.push(hori_words);
+        }
+        let mut vert_wordss = Vec::with_capacity(n);
+        for i in 0..m {
+            let mut vert_words = Vec::new();
+            let mut j = 0;
+            while j < n {
+                while j < n && Cell::Black == grid[j][i] {
+                    j += 1;
+                }
+                let start = j;
+                while j < n && Cell::Black != grid[j][i] {
+                    j += 1;
+                }
+                let end = j;
+                vert_words.push((start, end));
             }
-            if c2 < c {
-                cut += div_ceil(h, k);
+            vert_wordss.push(vert_words);
+        }
+        fn dfs(
+            i: usize,
+            j: usize,
+            hori_wordss: &[Vec<(usize, usize)>],
+            vert_wordss: &[Vec<(usize, usize)>],
+            visited: &mut [Vec<bool>],
+            grid: &mut [Vec<Cell>],
+            changed_count: &mut usize,
+        ) {
+            visited[i][j] = true;
+            let hj = hori_wordss[i]
+                .binary_search(&(j, std::usize::MAX))
+                .err()
+                .unwrap();
+            if hj > 0 {
+                let hj = hj - 1;
+                let (start, end) = hori_wordss[i][hj];
+                let otherj = end - 1 - j + start;
+                if !is_filled(&grid[i][otherj]) {
+                    *changed_count += 1;
+                    assert!(Cell::Black != grid[i][otherj]);
+                    grid[i][otherj] = grid[i][j];
+                    dfs(
+                        i,
+                        otherj,
+                        hori_wordss,
+                        vert_wordss,
+                        visited,
+                        grid,
+                        changed_count,
+                    );
+                }
             }
-            if r2 < r {
-                cut += div_ceil(w, k);
+
+            let vj = vert_wordss[j]
+                .binary_search(&(i, std::usize::MAX))
+                .err()
+                .unwrap();
+            if vj > 0 {
+                let vj = vj - 1;
+                let (start, end) = vert_wordss[j][vj];
+                let otheri = end - 1 - i + start;
+                if !is_filled(&grid[otheri][j]) {
+                    *changed_count += 1;
+                    assert!(Cell::Black != grid[otheri][j]);
+                    grid[otheri][j] = grid[i][j];
+                    dfs(
+                        otheri,
+                        j,
+                        hori_wordss,
+                        vert_wordss,
+                        visited,
+                        grid,
+                        changed_count,
+                    );
+                }
             }
-            cut
-        };
-        let grid_cut =
-            { div_ceil(h, k) * (div_ceil(w, k) - 1) + div_ceil(w, k) * (div_ceil(h, k) - 1) };
-        let cut1 = { (k - 1 + k * (k - 1)) * (h / k) * (w / k) };
-        let cut234 = {
-            let h2 = h % k;
-            let w2 = w % k;
-            let mut c = 0;
-            if h2 > 0 && w2 > 0 {
-                c += h2 * w2 - 1;
+        }
+        let mut visited = vec![vec![false; m]; n];
+        let mut changed_count = 0;
+        for i in 0..n {
+            for j in 0..m {
+                if !visited[i][j] && is_filled(&grid[i][j]) {
+                    dfs(
+                        i,
+                        j,
+                        &hori_wordss,
+                        &vert_wordss,
+                        &mut visited,
+                        &mut grid,
+                        &mut changed_count,
+                    );
+                }
             }
-            if h2 > 0 {
-                c += (h2 * k - 1) * (w / k);
-            }
-            if w2 > 0 {
-                c += (w2 * k - 1) * (h / k);
-            }
-            c
-        };
-        println!(
-            "Case #{}: {}",
-            case_number,
-            edge_cut + grid_cut + cut1 + cut234
-        );
+        }
+        println!("Case #{}: {}", case_number, changed_count);
+        for row in grid {
+            let str = row
+                .into_iter()
+                .map(|c| match c {
+                    Cell::White => b'.',
+                    Cell::Black => b'#',
+                    Cell::Filled(c) => c,
+                })
+                .collect::<Vec<_>>();
+            println!("{}", String::from_utf8(str).unwrap());
+        }
     }
 }
 

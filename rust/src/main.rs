@@ -1,75 +1,91 @@
 #![allow(unused_imports, dead_code, clippy::needless_range_loop)]
 use std::{
     cmp::Ordering,
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, HashMap},
 };
 
-fn area((x1, y1): (f64, f64), (x2, y2): (f64, f64), (x3, y3): (f64, f64)) -> f64 {
-    (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2)).abs() / 2.0
+fn get_visited(v: u16, i: usize) -> bool {
+    (v & (1 << i)) > 0
 }
 
-fn y((x1, _): (f64, f64), (x2, y2): (f64, f64), (x3, y3): (f64, f64)) -> f64 {
-    (x1 - x2) * (y2 - y3) / (x2 - x3) + y2
+fn set_visited(v: u16, i: usize) -> u16 {
+    v | 1 << i
 }
 
-fn len((x1, y1): (f64, f64), (x2, y2): (f64, f64)) -> f64 {
-    ((x1 - x2).powi(2) + (y1 - y2).powi(2)).sqrt()
+fn count(
+    score: usize,
+    v: u16,
+    k: usize,
+    n: usize,
+    rooms: &[(usize, usize, usize)],
+    connected: &[Vec<bool>],
+    mem: &mut HashMap<(usize, u16), usize>,
+) -> usize {
+    if let Some(&c) = mem.get(&(score, v)) {
+        return c;
+    }
+    if score > k {
+        return 0;
+    }
+    if score == k {
+        return 1;
+    }
+    let mut c = 0;
+    for i in 0..n {
+        for j in 0..n {
+            if get_visited(v, j)
+                && !get_visited(v, i)
+                && connected[j][i]
+                && rooms[i].0 <= score
+                && score <= rooms[i].1
+            {
+                let v = set_visited(v, i);
+                c += count(score + rooms[i].2, v, k, n, rooms, connected, mem);
+                break;
+            }
+        }
+    }
+    mem.insert((score, v), c);
+    c
+}
+
+fn solve(sc: &mut Scanner) -> usize {
+    let n = sc.next::<usize>();
+    let m = sc.next::<usize>();
+    let k = sc.next::<usize>();
+    let mut rooms = Vec::with_capacity(n);
+    for _ in 0..n {
+        rooms.push((sc.next::<usize>(), sc.next::<usize>(), sc.next::<usize>()));
+    }
+    let mut connected = vec![vec![false; n]; n];
+    for _ in 0..m {
+        let x = sc.next::<usize>();
+        let y = sc.next::<usize>();
+        connected[x][y] = true;
+        connected[y][x] = true;
+    }
+    let mut c = 0;
+    let v = 0;
+    let mut mem = HashMap::new();
+    for i in 0..n {
+        c += count(
+            rooms[i].2,
+            set_visited(v, i),
+            k,
+            n,
+            &rooms,
+            &connected,
+            &mut mem,
+        );
+    }
+    c
 }
 
 fn main() {
     let mut sc = Scanner::new();
     let test_cases = sc.next::<usize>();
     for case_number in 1..=test_cases {
-        let n = sc.next::<usize>();
-        let mut whites = Vec::with_capacity(n);
-        for _ in 0..n {
-            whites.push((sc.next::<f64>(), sc.next::<f64>()));
-        }
-        let blue = (sc.next::<f64>(), sc.next::<f64>());
-        let mut min_p = std::f64::MAX;
-        for i in 0..n {
-            let w1 = whites[i];
-            for j in i + 1..n {
-                let w2 = whites[j];
-                for k in j + 1..n {
-                    let w3 = whites[k];
-                    let a1 = area(blue, w2, w3);
-                    let a2 = area(blue, w1, w3);
-                    let a3 = area(blue, w1, w2);
-                    let a = area(w1, w2, w3);
-                    if a1 + a2 + a3 == a && a > 0.0 {
-                        if a1 > 0.0 && a2 > 0.0 && a3 > 0.0 {
-                            min_p = min_p.min(len(w1, w2) + len(w2, w3) + len(w3, w1));
-                        } else if a1 + a2 > 0.0 && a2 + a3 > 0.0 && a1 + a3 > 0.0 {
-                            let ws = if a1 == 0.0 {
-                                (w2, w3, w1)
-                            } else if a2 == 0.0 {
-                                (w1, w3, w2)
-                            } else if a3 == 0.0 {
-                                (w1, w2, w3)
-                            } else {
-                                panic!()
-                            };
-                            let (w1, w2, w3) = ws;
-                            for l in k + 1..n {
-                                let w4 = whites[l];
-                                let y3 = y(w3, w1, w2);
-                                let y4 = y(w4, w1, w2);
-                                if (y3 > w3.1 && y4 < w4.1) || (y3 < w3.1 && y4 > w4.1) {
-                                    min_p = min_p
-                                        .min(len(w2, w3) + len(w1, w3) + len(w2, w4) + len(w1, w4));
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        if min_p == std::f64::MAX {
-            println!("Case #{}: IMPOSSIBLE", case_number);
-        } else {
-            println!("Case #{}: {}", case_number, min_p);
-        }
+        println!("Case #{}: {}", case_number, solve(&mut sc));
     }
 }
 

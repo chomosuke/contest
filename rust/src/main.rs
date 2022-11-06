@@ -9,19 +9,33 @@ fn main() {
     let test_cases = sc.next::<usize>();
     for case_number in 1..=test_cases {
         let n = sc.next::<usize>();
-        let mut r = 0.0;
-        if n < 10_000_000 {
-            for k in 1..=n {
-                let k = k as f64;
-                let n = n as f64;
-                r += 1.0 / (n - k + 1.0);
+        let mut bins = Vec::with_capacity(n);
+        let str = sc.next_line().into_bytes();
+        for i in 0..n {
+            if str[i] == b'1' {
+                bins.push(i);
             }
-        } else {
-            let n = n as f64;
-            r = n.ln() + 0.5772156649 + 1.0 / (2.0 * n) - 1.0 / (12.0 * n.powi(2))
-                + 1.0 / (120.0 * n.powi(4));
         }
-        println!("Case #{}: {}", case_number, r);
+        let mut dist = 0;
+        for i in 0..n {
+            dist += match bins.binary_search(&i) {
+                Ok(_) => 0,
+                Err(j) => {
+                    let right = if j < bins.len() {
+                        bins[j] - i
+                    } else {
+                        std::usize::MAX
+                    };
+                    let left = if j > 0 {
+                        i - bins[j - 1]
+                    } else {
+                        std::usize::MAX
+                    };
+                    right.min(left)
+                }
+            }
+        }
+        println!("Case #{}: {}", case_number, dist);
     }
 }
 

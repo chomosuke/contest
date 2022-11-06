@@ -4,70 +4,72 @@ use std::{
     collections::{BTreeMap, BTreeSet},
 };
 
+fn area((x1, y1): (f64, f64), (x2, y2): (f64, f64), (x3, y3): (f64, f64)) -> f64 {
+    (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2)).abs() / 2.0
+}
+
+fn y((x1, _): (f64, f64), (x2, y2): (f64, f64), (x3, y3): (f64, f64)) -> f64 {
+    (x1 - x2) * (y2 - y3) / (x2 - x3) + y2
+}
+
+fn len((x1, y1): (f64, f64), (x2, y2): (f64, f64)) -> f64 {
+    ((x1 - x2).powi(2) + (y1 - y2).powi(2)).sqrt()
+}
+
 fn main() {
     let mut sc = Scanner::new();
     let test_cases = sc.next::<usize>();
     for case_number in 1..=test_cases {
-        let d = sc.next::<usize>();
         let n = sc.next::<usize>();
-        let k = sc.next::<usize>();
-        let mut attrs = Vec::with_capacity(n);
+        let mut whites = Vec::with_capacity(n);
+        for _ in 0..n {
+            whites.push((sc.next::<f64>(), sc.next::<f64>()));
+        }
+        let blue = (sc.next::<f64>(), sc.next::<f64>());
+        let mut min_p = std::f64::MAX;
         for i in 0..n {
-            attrs.push((sc.next::<usize>(), sc.next::<usize>() - 1, sc.next::<usize>() - 1, i));
-        }
-        let mut add_on_day = vec![Vec::new(); d];
-        let mut rem_on_day = vec![Vec::new(); d];
-        for a in attrs {
-            add_on_day[a.1].push(a);
-            rem_on_day[a.2].push(a);
-        }
-        let mut cur_attrs = BTreeSet::new();
-        let mut cur_h = 0;
-        let mut attr_last_k = None;
-        let mut max_h = 0;
-        for i in 0..d {
-            for &a in &add_on_day[i] {
-                if let Some((h, s, e, i)) = attr_last_k {
-                    let a_last_k = (h, s, e, i);
-                    if a_last_k < a {
-                        // attr_last_k won't make it in cur_h
-                        cur_h -= h;
-                        cur_h += a.0;
-                        cur_attrs.insert(a);
-                        attr_last_k = cur_attrs.range((h, s, e, i + 1)..).next().cloned();
-                    } else {
-                        cur_attrs.insert(a);
-                    }
-                } else {
-                    cur_h += a.0;
-                    cur_attrs.insert(a);
-                    if cur_attrs.len() == k {
-                        attr_last_k = cur_attrs.range(..).next().cloned();
-                    }
-                }
-            }
-            max_h = max_h.max(cur_h);
-            for &a in &rem_on_day[i] {
-                if let Some((h, s, e, i)) = attr_last_k {
-                    let a_last_k = (h, s, e, i);
-                    if a_last_k <= a {
-                        // attr_last_k will be second last
-                        cur_h -= a.0;
-                        cur_attrs.remove(&a);
-                        attr_last_k = cur_attrs.range(..a_last_k).next_back().cloned();
-                        if let Some((h, _, _, _)) = attr_last_k {
-                            cur_h += h;
+            let w1 = whites[i];
+            for j in i + 1..n {
+                let w2 = whites[j];
+                for k in j + 1..n {
+                    let w3 = whites[k];
+                    let a1 = area(blue, w2, w3);
+                    let a2 = area(blue, w1, w3);
+                    let a3 = area(blue, w1, w2);
+                    let a = area(w1, w2, w3);
+                    if a1 + a2 + a3 == a && a > 0.0 {
+                        if a1 > 0.0 && a2 > 0.0 && a3 > 0.0 {
+                            min_p = min_p.min(len(w1, w2) + len(w2, w3) + len(w3, w1));
+                        } else if a1 + a2 > 0.0 && a2 + a3 > 0.0 && a1 + a3 > 0.0 {
+                            let ws = if a1 == 0.0 {
+                                (w2, w3, w1)
+                            } else if a2 == 0.0 {
+                                (w1, w3, w2)
+                            } else if a3 == 0.0 {
+                                (w1, w2, w3)
+                            } else {
+                                panic!()
+                            };
+                            let (w1, w2, w3) = ws;
+                            for l in k + 1..n {
+                                let w4 = whites[l];
+                                let y3 = y(w3, w1, w2);
+                                let y4 = y(w4, w1, w2);
+                                if (y3 > w3.1 && y4 < w4.1) || (y3 < w3.1 && y4 > w4.1) {
+                                    min_p = min_p
+                                        .min(len(w2, w3) + len(w1, w3) + len(w2, w4) + len(w1, w4));
+                                }
+                            }
                         }
-                    } else {
-                        cur_attrs.remove(&a);
                     }
-                } else {
-                    cur_h -= a.0;
-                    cur_attrs.remove(&a);
                 }
             }
         }
-        println!("Case #{}: {}", case_number, max_h);
+        if min_p == std::f64::MAX {
+            println!("Case #{}: IMPOSSIBLE", case_number);
+        } else {
+            println!("Case #{}: {}", case_number, min_p);
+        }
     }
 }
 

@@ -8,34 +8,66 @@ fn main() {
     let mut sc = Scanner::new();
     let test_cases = sc.next::<usize>();
     for case_number in 1..=test_cases {
+        let d = sc.next::<usize>();
         let n = sc.next::<usize>();
-        let mut bins = Vec::with_capacity(n);
-        let str = sc.next_line().into_bytes();
+        let k = sc.next::<usize>();
+        let mut attrs = Vec::with_capacity(n);
         for i in 0..n {
-            if str[i] == b'1' {
-                bins.push(i);
-            }
+            attrs.push((sc.next::<usize>(), sc.next::<usize>() - 1, sc.next::<usize>() - 1, i));
         }
-        let mut dist = 0;
-        for i in 0..n {
-            dist += match bins.binary_search(&i) {
-                Ok(_) => 0,
-                Err(j) => {
-                    let right = if j < bins.len() {
-                        bins[j] - i
+        let mut add_on_day = vec![Vec::new(); d];
+        let mut rem_on_day = vec![Vec::new(); d];
+        for a in attrs {
+            add_on_day[a.1].push(a);
+            rem_on_day[a.2].push(a);
+        }
+        let mut cur_attrs = BTreeSet::new();
+        let mut cur_h = 0;
+        let mut attr_last_k = None;
+        let mut max_h = 0;
+        for i in 0..d {
+            for &a in &add_on_day[i] {
+                if let Some((h, s, e, i)) = attr_last_k {
+                    let a_last_k = (h, s, e, i);
+                    if a_last_k < a {
+                        // attr_last_k won't make it in cur_h
+                        cur_h -= h;
+                        cur_h += a.0;
+                        cur_attrs.insert(a);
+                        attr_last_k = cur_attrs.range((h, s, e, i + 1)..).next().cloned();
                     } else {
-                        std::usize::MAX
-                    };
-                    let left = if j > 0 {
-                        i - bins[j - 1]
+                        cur_attrs.insert(a);
+                    }
+                } else {
+                    cur_h += a.0;
+                    cur_attrs.insert(a);
+                    if cur_attrs.len() == k {
+                        attr_last_k = cur_attrs.range(..).next().cloned();
+                    }
+                }
+            }
+            max_h = max_h.max(cur_h);
+            for &a in &rem_on_day[i] {
+                if let Some((h, s, e, i)) = attr_last_k {
+                    let a_last_k = (h, s, e, i);
+                    if a_last_k <= a {
+                        // attr_last_k will be second last
+                        cur_h -= a.0;
+                        cur_attrs.remove(&a);
+                        attr_last_k = cur_attrs.range(..a_last_k).next_back().cloned();
+                        if let Some((h, _, _, _)) = attr_last_k {
+                            cur_h += h;
+                        }
                     } else {
-                        std::usize::MAX
-                    };
-                    right.min(left)
+                        cur_attrs.remove(&a);
+                    }
+                } else {
+                    cur_h -= a.0;
+                    cur_attrs.remove(&a);
                 }
             }
         }
-        println!("Case #{}: {}", case_number, dist);
+        println!("Case #{}: {}", case_number, max_h);
     }
 }
 

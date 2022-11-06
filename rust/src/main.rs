@@ -4,81 +4,39 @@ use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
 };
 
-fn get_visited(v: u16, i: usize) -> bool {
-    (v & (1 << i)) > 0
-}
-
-fn set_visited(v: u16, i: usize) -> u16 {
-    v | 1 << i
-}
-
-fn count(
-    score: usize,
-    v: u16,
-    k: usize,
-    n: usize,
-    rooms: &[(usize, usize, usize)],
-    connected: &[Vec<bool>],
-    mem: &mut HashMap<(usize, u16), usize>,
-) -> usize {
-    if let Some(&c) = mem.get(&(score, v)) {
-        return c;
-    }
-    if score > k {
-        return 0;
-    }
-    if score == k {
-        return 1;
-    }
-    let mut c = 0;
-    for i in 0..n {
-        for j in 0..n {
-            if get_visited(v, j)
-                && !get_visited(v, i)
-                && connected[j][i]
-                && rooms[i].0 <= score
-                && score <= rooms[i].1
-            {
-                let v = set_visited(v, i);
-                c += count(score + rooms[i].2, v, k, n, rooms, connected, mem);
-                break;
+fn solve(sc: &mut Scanner) -> &str {
+    let _n = sc.next::<usize>();
+    let mut d = sc.next::<u128>();
+    let mut c = sc.next::<u128>();
+    let m = sc.next::<u128>();
+    let animals = sc.next_line().into_bytes();
+    let mut animals = animals.into_iter();
+    for a in animals.by_ref() {
+        match a {
+            b'C' => {
+                if c > 0 {
+                    c -= 1;
+                } else {
+                    break;
+                }
             }
+            b'D' => {
+                if d > 0 {
+                    d -= 1;
+                    c += m;
+                } else {
+                    return "NO";
+                }
+            }
+            _ => panic!(),
         }
     }
-    mem.insert((score, v), c);
-    c
-}
-
-fn solve(sc: &mut Scanner) -> usize {
-    let n = sc.next::<usize>();
-    let m = sc.next::<usize>();
-    let k = sc.next::<usize>();
-    let mut rooms = Vec::with_capacity(n);
-    for _ in 0..n {
-        rooms.push((sc.next::<usize>(), sc.next::<usize>(), sc.next::<usize>()));
+    for a in animals {
+        if a == b'D' {
+            return "NO";
+        }
     }
-    let mut connected = vec![vec![false; n]; n];
-    for _ in 0..m {
-        let x = sc.next::<usize>();
-        let y = sc.next::<usize>();
-        connected[x][y] = true;
-        connected[y][x] = true;
-    }
-    let mut c = 0;
-    let v = 0;
-    let mut mem = HashMap::new();
-    for i in 0..n {
-        c += count(
-            rooms[i].2,
-            set_visited(v, i),
-            k,
-            n,
-            &rooms,
-            &connected,
-            &mut mem,
-        );
-    }
-    c
+    "YES"
 }
 
 fn main() {

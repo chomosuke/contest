@@ -9,47 +9,25 @@ use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
 };
 
-fn solve(sc: &mut Scanner) -> i128 {
+fn solve(sc: &mut Scanner) -> Option<Vec<(usize, usize)>> {
     let n = sc.next::<usize>();
-    let k = sc.next::<usize>();
-    let mut b_sum = Vec::with_capacity(n + 1);
-    let mut bs = Vec::with_capacity(n);
-    let mut sum = 0;
-    b_sum.push(sum);
-    for _ in 0..n {
-        let b = sc.next::<usize>();
-        bs.push(b);
-        sum += b;
-        b_sum.push(sum);
+    let a = sc.next::<usize>();
+    if n - 2 > a {
+        return None;
     }
-
-    let mut shortest_fst = vec![std::usize::MAX; k + 1];
-
-    let mut min_t = std::usize::MAX;
-    for fst_end in 0..=n {
-        for fst_start in (0..=fst_end).rev() {
-            let sum = b_sum[fst_end] - b_sum[fst_start];
-            let len = fst_end - fst_start;
-            if sum > k {
-                break;
-            }
-            shortest_fst[sum] = shortest_fst[sum].min(len);
-        }
-        let snd_start = fst_end;
-        for snd_end in snd_start..=n {
-            let sum = b_sum[snd_end] - b_sum[snd_start];
-            let len = snd_end - snd_start;
-            if k >= sum && shortest_fst[k - sum] != std::usize::MAX {
-                min_t = min_t.min(shortest_fst[k - sum] + len);
-            }
+    let excess = 2 + a - n;
+    let mut vs = vec![(0, 0); n];
+    vs[1] = (0, excess + 1);
+    for i in 2..n {
+        if i - 2 < (n - 2) / 2 {
+            // top vertex
+            vs[i] = (i - 1, 1 + (i % 2 * 10));
+        } else {
+            // bottom vertex
+            vs[i] = (n - i, (n - i - 1) % 2 * 10);
         }
     }
-
-    if min_t == std::usize::MAX {
-        -1
-    } else {
-        min_t as i128
-    }
+    Some(vs)
 }
 
 fn main() {
@@ -57,7 +35,14 @@ fn main() {
     let test_cases = sc.next::<usize>();
     for case_number in 1..=test_cases {
         let ans = solve(&mut sc);
-        println!("Case #{}: {}", case_number, ans);
+        if let Some(vs) = ans {
+            println!("Case #{}: POSSIBLE", case_number);
+            for &v in &vs {
+                println!("{} {}", v.0, v.1);
+            }
+        } else {
+            println!("Case #{}: IMPOSSIBLE", case_number);
+        }
     }
 }
 

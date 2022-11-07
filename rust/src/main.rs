@@ -9,25 +9,27 @@ use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
 };
 
-fn solve(sc: &mut Scanner) -> Option<Vec<(usize, usize)>> {
-    let n = sc.next::<usize>();
-    let a = sc.next::<usize>();
-    if n - 2 > a {
-        return None;
+fn solve(sc: &mut Scanner) -> usize {
+    let s = sc.next_line().into_bytes().into_iter().map(|c| (c - b'a') as usize).collect::<Vec<_>>();
+    let f = sc.next_line().into_bytes().into_iter().map(|c| (c - b'a') as usize).collect::<Vec<_>>();
+    let mut fav = vec![false; 26];
+    for c in f {
+        fav[c] = true;
     }
-    let excess = 2 + a - n;
-    let mut vs = vec![(0, 0); n];
-    vs[1] = (0, excess + 1);
-    for i in 2..n {
-        if i - 2 < (n - 2) / 2 {
-            // top vertex
-            vs[i] = (i - 1, 1 + (i % 2 * 10));
-        } else {
-            // bottom vertex
-            vs[i] = (n - i, (n - i - 1) % 2 * 10);
+    let mut count = 0;
+    for c in s {
+        let mut f_next = c;
+        let mut f_last = c;
+        while !fav[f_next] && !fav[f_last] {
+            f_next += 1;
+            f_last -= 1;
+            f_next %= 26;
+            f_last += 26;
+            f_last %= 26;
+            count += 1;
         }
     }
-    Some(vs)
+    count
 }
 
 fn main() {
@@ -35,14 +37,7 @@ fn main() {
     let test_cases = sc.next::<usize>();
     for case_number in 1..=test_cases {
         let ans = solve(&mut sc);
-        if let Some(vs) = ans {
-            println!("Case #{}: POSSIBLE", case_number);
-            for &v in &vs {
-                println!("{} {}", v.0, v.1);
-            }
-        } else {
-            println!("Case #{}: IMPOSSIBLE", case_number);
-        }
+        println!("Case #{}: {}", case_number, ans);
     }
 }
 

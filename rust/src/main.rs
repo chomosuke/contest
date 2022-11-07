@@ -1,49 +1,68 @@
-#![allow(unused_imports, dead_code, clippy::needless_range_loop)]
+#![allow(
+    unused_imports,
+    dead_code,
+    clippy::needless_range_loop,
+    clippy::comparison_chain
+)]
 use std::{
     cmp::Ordering,
     collections::{BTreeMap, BTreeSet, HashMap},
 };
 
-fn solve(sc: &mut Scanner) -> &str {
-    let _n = sc.next::<usize>();
-    let mut d = sc.next::<u128>();
-    let mut c = sc.next::<u128>();
-    let m = sc.next::<u128>();
-    let animals = sc.next_line().into_bytes();
-    let mut animals = animals.into_iter();
-    for a in animals.by_ref() {
-        match a {
-            b'C' => {
-                if c > 0 {
-                    c -= 1;
-                } else {
-                    break;
-                }
+fn solve(sc: &mut Scanner) -> i128 {
+    let n = sc.next::<usize>();
+    let k = sc.next::<usize>();
+    let mut b_sum = Vec::with_capacity(n + 1);
+    let mut sum = 0;
+    for _ in 0..n {
+        b_sum.push(sum);
+        sum += sc.next::<usize>();
+    }
+    b_sum.push(sum);
+    let mut sectionss = vec![Vec::new(); k + 1];
+    for i in 0..n {
+        for j in i + 1..=n {
+            let sum = b_sum[j] - b_sum[i];
+            if sum > k {
+                break;
             }
-            b'D' => {
-                if d > 0 {
-                    d -= 1;
-                    c += m;
-                } else {
-                    return "NO";
-                }
+            if b_sum[i + 1] - b_sum[i] > 0 && b_sum[j] - b_sum[j - 1] > 0 {
+                sectionss[sum].push((i, j));
             }
-            _ => panic!(),
         }
     }
-    for a in animals {
-        if a == b'D' {
-            return "NO";
+    for i in 0..=k {
+        sectionss[i].sort();
+    }
+    let mut min_t = std::usize::MAX;
+    for sum in 1..=k {
+        let target = k - sum;
+        if target == 0 {
+            min_t = min_t.min(sectionss[sum].iter().map(|&(i, j)| j - i).min().unwrap_or(min_t));
+        }
+        for section2 in &sectionss[target] {
+            for section1 in &sectionss[sum] {
+                let (start1, end1) = section1;
+                let (start2, end2) = section2;
+                if end1 <= start2 || end2 <= start1 {
+                    min_t = min_t.min(end1 - start1 + end2 - start2);
+                }
+            }
         }
     }
-    "YES"
+    if min_t == std::usize::MAX {
+        -1
+    } else {
+        min_t as i128
+    }
 }
 
 fn main() {
     let mut sc = Scanner::new();
     let test_cases = sc.next::<usize>();
     for case_number in 1..=test_cases {
-        println!("Case #{}: {}", case_number, solve(&mut sc));
+        let ans = solve(&mut sc);
+        println!("Case #{}: {}", case_number, ans);
     }
 }
 

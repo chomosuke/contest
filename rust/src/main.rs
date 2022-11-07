@@ -13,43 +13,38 @@ fn solve(sc: &mut Scanner) -> i128 {
     let n = sc.next::<usize>();
     let k = sc.next::<usize>();
     let mut b_sum = Vec::with_capacity(n + 1);
+    let mut bs = Vec::with_capacity(n);
     let mut sum = 0;
-    for _ in 0..n {
-        b_sum.push(sum);
-        sum += sc.next::<usize>();
-    }
     b_sum.push(sum);
-    let mut sectionss = vec![Vec::new(); k + 1];
-    for i in 0..n {
-        for j in i + 1..=n {
-            let sum = b_sum[j] - b_sum[i];
+    for _ in 0..n {
+        let b = sc.next::<usize>();
+        bs.push(b);
+        sum += b;
+        b_sum.push(sum);
+    }
+
+    let mut shortest_fst = vec![std::usize::MAX; k + 1];
+
+    let mut min_t = std::usize::MAX;
+    for fst_end in 0..=n {
+        for fst_start in (0..=fst_end).rev() {
+            let sum = b_sum[fst_end] - b_sum[fst_start];
+            let len = fst_end - fst_start;
             if sum > k {
                 break;
             }
-            if b_sum[i + 1] - b_sum[i] > 0 && b_sum[j] - b_sum[j - 1] > 0 {
-                sectionss[sum].push((i, j));
+            shortest_fst[sum] = shortest_fst[sum].min(len);
+        }
+        let snd_start = fst_end;
+        for snd_end in snd_start..=n {
+            let sum = b_sum[snd_end] - b_sum[snd_start];
+            let len = snd_end - snd_start;
+            if k >= sum && shortest_fst[k - sum] != std::usize::MAX {
+                min_t = min_t.min(shortest_fst[k - sum] + len);
             }
         }
     }
-    for i in 0..=k {
-        sectionss[i].sort();
-    }
-    let mut min_t = std::usize::MAX;
-    for sum in 1..=k {
-        let target = k - sum;
-        if target == 0 {
-            min_t = min_t.min(sectionss[sum].iter().map(|&(i, j)| j - i).min().unwrap_or(min_t));
-        }
-        for section2 in &sectionss[target] {
-            for section1 in &sectionss[sum] {
-                let (start1, end1) = section1;
-                let (start2, end2) = section2;
-                if end1 <= start2 || end2 <= start1 {
-                    min_t = min_t.min(end1 - start1 + end2 - start2);
-                }
-            }
-        }
-    }
+
     if min_t == std::usize::MAX {
         -1
     } else {

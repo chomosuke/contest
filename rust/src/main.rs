@@ -10,26 +10,54 @@ use std::{
 };
 
 fn solve(sc: &mut Scanner) -> usize {
-    let s = sc.next_line().into_bytes().into_iter().map(|c| (c - b'a') as usize).collect::<Vec<_>>();
-    let f = sc.next_line().into_bytes().into_iter().map(|c| (c - b'a') as usize).collect::<Vec<_>>();
-    let mut fav = vec![false; 26];
-    for c in f {
-        fav[c] = true;
-    }
-    let mut count = 0;
-    for c in s {
-        let mut f_next = c;
-        let mut f_last = c;
-        while !fav[f_next] && !fav[f_last] {
-            f_next += 1;
-            f_last -= 1;
-            f_next %= 26;
-            f_last += 26;
-            f_last %= 26;
-            count += 1;
+    sc.next::<usize>();
+    let p = sc.next_line().into_bytes();
+    let mut red = vec![false; p.len()];
+    let mut blue = vec![false; p.len()];
+    let mut yellow = vec![false; p.len()];
+    for (i, c) in p.into_iter().enumerate() {
+        match c {
+            b'U' => {}
+            b'R' => red[i] = true,
+            b'Y' => yellow[i] = true,
+            b'B' => blue[i] = true,
+            b'O' => {
+                red[i] = true;
+                yellow[i] = true;
+            }
+            b'P' => {
+                red[i] = true;
+                blue[i] = true;
+            }
+            b'G' => {
+                yellow[i] = true;
+                blue[i] = true;
+            }
+            b'A' => {
+                red[i] = true;
+                yellow[i] = true;
+                blue[i] = true;
+            }
+            _ => panic!(),
         }
     }
-    count
+    let mut stroke = 0;
+    for i in 0..red.len() {
+        if i == 0 && red[i] || i > 0 && !red[i - 1] && red[i] {
+            stroke += 1;
+        }
+    }
+    for i in 0..yellow.len() {
+        if i == 0 && yellow[i] || i > 0 && !yellow[i - 1] && yellow[i] {
+            stroke += 1;
+        }
+    }
+    for i in 0..blue.len() {
+        if i == 0 && blue[i] || i > 0 && !blue[i - 1] && blue[i] {
+            stroke += 1;
+        }
+    }
+    stroke
 }
 
 fn main() {

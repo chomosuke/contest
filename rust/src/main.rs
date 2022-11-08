@@ -9,55 +9,95 @@ use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
 };
 
-fn solve(sc: &mut Scanner) -> usize {
+fn solve(sc: &mut Scanner) -> String {
     sc.next::<usize>();
-    let p = sc.next_line().into_bytes();
-    let mut red = vec![false; p.len()];
-    let mut blue = vec![false; p.len()];
-    let mut yellow = vec![false; p.len()];
-    for (i, c) in p.into_iter().enumerate() {
-        match c {
-            b'U' => {}
-            b'R' => red[i] = true,
-            b'Y' => yellow[i] = true,
-            b'B' => blue[i] = true,
-            b'O' => {
-                red[i] = true;
-                yellow[i] = true;
-            }
-            b'P' => {
-                red[i] = true;
-                blue[i] = true;
-            }
-            b'G' => {
-                yellow[i] = true;
-                blue[i] = true;
-            }
-            b'A' => {
-                red[i] = true;
-                yellow[i] = true;
-                blue[i] = true;
-            }
-            _ => panic!(),
-        }
+    let mut s = sc
+        .next_line()
+        .into_bytes()
+        .iter()
+        .map(|c| c - b'0')
+        .collect::<Vec<_>>();
+    let mut prev = Vec::with_capacity(s.len());
+    prev.push(None);
+    for i in 0..s.len() - 1 {
+        prev.push(Some(i));
     }
-    let mut stroke = 0;
-    for i in 0..red.len() {
-        if i == 0 && red[i] || i > 0 && !red[i - 1] && red[i] {
-            stroke += 1;
-        }
+    let mut next = Vec::with_capacity(s.len());
+    for i in 1..s.len() {
+        next.push(Some(i));
     }
-    for i in 0..yellow.len() {
-        if i == 0 && yellow[i] || i > 0 && !yellow[i - 1] && yellow[i] {
-            stroke += 1;
+    next.push(None);
+    let mut head = 0;
+    let mut tail = s.len() - 1;
+    // let mut merged = vec![false; s.len()];
+    let mut last_modified = (0..s.len()).collect::<Vec<_>>();
+    let mut modified = Vec::new();
+    while !last_modified.is_empty() {
+        for fst in 0..10 {
+            let snd = (fst + 1) % 10;
+            let new = (snd + 1) % 10;
+            for &n in &last_modified {
+                if let Some(prev_n) = prev[n] {
+                    if s[prev_n] == fst && s[n] == snd {
+                        // merge
+
+                        // remove prev_n from linked list
+                        if let Some(prev_prev_n) = prev[prev_n] {
+                            prev[n] = Some(prev_prev_n);
+                            next[prev_prev_n] = Some(n);
+                        } else {
+                            assert_eq!(prev_n, head);
+                            prev[n] = None;
+                            head = n;
+                        }
+
+                        // prevent it from being merged again
+                        next[prev_n] = None;
+                        prev[prev_n] = None;
+
+                        s[n] = new;
+                        modified.push(n);
+                    }
+                } else {
+                    assert!(next[n].is_none() || head == n);
+                }
+
+                if let Some(next_n) = next[n] {
+                    if s[n] == fst && s[next_n] == snd {
+                        // merge
+
+                        // remove next_n from linked list
+                        if let Some(next_next_n) = next[next_n] {
+                            next[n] = Some(next_next_n);
+                            prev[next_next_n] = Some(n);
+                        } else {
+                            assert_eq!(next_n, tail);
+                            next[n] = None;
+                            tail = n;
+                        }
+
+                        // prevent it from being merged again
+                        next[next_n] = None;
+                        prev[next_n] = None;
+
+                        s[n] = new;
+                        modified.push(n);
+                    }
+                } else {
+                    assert!(prev[n].is_none() || tail == n);
+                }
+            }
         }
+        last_modified = modified;
+        modified = Vec::new();
     }
-    for i in 0..blue.len() {
-        if i == 0 && blue[i] || i > 0 && !blue[i - 1] && blue[i] {
-            stroke += 1;
-        }
+    let mut result = Vec::new();
+    let mut node = Some(head);
+    while let Some(n) = node {
+        result.push(s[n] + b'0');
+        node = next[n];
     }
-    stroke
+    String::from_utf8(result).unwrap()
 }
 
 fn main() {

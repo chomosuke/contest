@@ -9,103 +9,31 @@ use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
 };
 
-fn solve(sc: &mut Scanner) -> String {
-    sc.next::<usize>();
-    let mut s = sc
-        .next_line()
-        .into_bytes()
-        .iter()
-        .map(|c| c - b'0')
-        .collect::<Vec<_>>();
-    let mut prev = Vec::with_capacity(s.len());
-    prev.push(None);
-    for i in 0..s.len() - 1 {
-        prev.push(Some(i));
-    }
-    let mut next = Vec::with_capacity(s.len());
-    for i in 1..s.len() {
-        next.push(Some(i));
-    }
-    next.push(None);
-    let mut head = 0;
-    let mut tail = s.len() - 1;
-    // let mut merged = vec![false; s.len()];
-    let mut last_modified = (0..s.len()).collect::<Vec<_>>();
-    let mut modified = Vec::new();
-    while !last_modified.is_empty() {
-        for fst in 0..10 {
-            let snd = (fst + 1) % 10;
-            let new = (snd + 1) % 10;
-            for &n in &last_modified {
-                if let Some(prev_n) = prev[n] {
-                    if s[prev_n] == fst && s[n] == snd {
-                        // merge
-
-                        // remove prev_n from linked list
-                        if let Some(prev_prev_n) = prev[prev_n] {
-                            prev[n] = Some(prev_prev_n);
-                            next[prev_prev_n] = Some(n);
-                        } else {
-                            assert_eq!(prev_n, head);
-                            prev[n] = None;
-                            head = n;
-                        }
-
-                        // prevent it from being merged again
-                        next[prev_n] = None;
-                        prev[prev_n] = None;
-
-                        s[n] = new;
-                        modified.push(n);
-                    }
-                } else {
-                    assert!(next[n].is_none() || head == n);
-                }
-
-                if let Some(next_n) = next[n] {
-                    if s[n] == fst && s[next_n] == snd {
-                        // merge
-
-                        // remove next_n from linked list
-                        if let Some(next_next_n) = next[next_n] {
-                            next[n] = Some(next_next_n);
-                            prev[next_next_n] = Some(n);
-                        } else {
-                            assert_eq!(next_n, tail);
-                            next[n] = None;
-                            tail = n;
-                        }
-
-                        // prevent it from being merged again
-                        next[next_n] = None;
-                        prev[next_n] = None;
-
-                        s[n] = new;
-                        modified.push(n);
-                    }
-                } else {
-                    assert!(prev[n].is_none() || tail == n);
-                }
-            }
+fn solve(sc: &mut Scanner) {
+    let i = sc.next_line().into_bytes();
+    let p = sc.next_line().into_bytes();
+    let mut ii = 0;
+    let mut count = 0;
+    for pi in p {
+        if ii < i.len() && i[ii] == pi {
+            ii += 1;
+        } else {
+            count += 1;
         }
-        last_modified = modified;
-        modified = Vec::new();
     }
-    let mut result = Vec::new();
-    let mut node = Some(head);
-    while let Some(n) = node {
-        result.push(s[n] + b'0');
-        node = next[n];
+    if ii == i.len() {
+        println!(" {}", count);
+    } else {
+        println!(" IMPOSSIBLE");
     }
-    String::from_utf8(result).unwrap()
 }
 
 fn main() {
     let mut sc = Scanner::new();
     let test_cases = sc.next::<usize>();
     for case_number in 1..=test_cases {
-        let ans = solve(&mut sc);
-        println!("Case #{}: {}", case_number, ans);
+        print!("Case #{}:", case_number);
+        solve(&mut sc);
     }
 }
 
@@ -395,6 +323,11 @@ mod math {
         Some(pow(x, get_smaller_coprimes_count(m) - 1, m))
     }
 
+    /// O(log(m))
+    pub fn mod_inv_prime(x: i128, m: i128) -> i128 {
+        pow(x, m - 2, m)
+    }
+
     /// O(log(x))
     pub fn solve_ax_by_c(a: i128, b: i128, c: i128) -> Option<(i128, i128)> {
         let mut rn = a; // r0 = a
@@ -531,6 +464,7 @@ mod math {
 use math::*;
 
 mod collections {
+    use std::cell::RefCell;
     use std::collections::{hash_map, HashMap};
     use std::hash::Hash;
 

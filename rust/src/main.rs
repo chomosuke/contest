@@ -10,22 +10,43 @@ use std::{
 };
 
 fn solve(sc: &mut Scanner) {
-    let i = sc.next_line().into_bytes();
-    let p = sc.next_line().into_bytes();
-    let mut ii = 0;
-    let mut count = 0;
-    for pi in p {
-        if ii < i.len() && i[ii] == pi {
-            ii += 1;
+    let n = sc
+        .next_line()
+        .into_bytes()
+        .into_iter()
+        .map(|b| b - b'0')
+        .collect::<Vec<_>>();
+    let mut sum = 0usize;
+    for &d in &n {
+        sum += d as usize;
+        sum %= 9;
+    }
+    let new_d = (9 - sum) as u8 % 9;
+    let n_len = n.len();
+    let mut it = n.into_iter();
+    let mut new_n = Vec::with_capacity(n_len + 1);
+    if new_d == 0 {
+        new_n.push(it.next().unwrap());
+    }
+    for d in it.by_ref() {
+        if new_d >= d {
+            new_n.push(d);
         } else {
-            count += 1;
+            new_n.push(new_d);
+            new_n.push(d);
+            break;
         }
     }
-    if ii == i.len() {
-        println!(" {}", count);
-    } else {
-        println!(" IMPOSSIBLE");
+    for d in it {
+        new_n.push(d);
     }
+    if new_n.len() == n_len {
+        new_n.push(new_d);
+    }
+    println!(
+        " {}",
+        String::from_utf8(new_n.into_iter().map(|d| d + b'0').collect()).unwrap()
+    )
 }
 
 fn main() {

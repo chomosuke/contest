@@ -9,32 +9,25 @@ use std::{
     collections::{BTreeMap, BTreeSet, HashMap, HashSet},
 };
 
-fn get_min(b: usize, l: usize, n: usize, mem: &mut HashMap<(usize, usize ,usize), usize>) -> usize {
-    let key = (b, l, n);
-    if let Some(&m) = mem.get(&key) {
+fn get_min(b: usize, mem: &mut [Option<usize>]) -> usize {
+    if let &Some(m) = &mem[b] {
         return m;
     }
-    if l == 0 {
-        return 0;
+    let mut min = b;
+    for div in 2..b/2 {
+        min = min.min(get_min(b / div, mem) + 4 + 2 * (div - 1) + b % div);
     }
-    let mut min = get_min(b + 1, l - 1, n, mem) + 1;
-    if b != n {
-        min = min.min(get_min(b, l, b, mem) + 4);
-    }
-    if n != 0 && n <= l{
-        min = min.min(get_min(b + n, l - n, n, mem) + 2);
-    }
-    mem.insert(key, min);
+    mem[b] = Some(min);
     min
 }
 
 fn main() {
     let mut sc = Scanner::new();
     let test_cases = sc.next::<usize>();
-    let mut mem = HashMap::new();
     for case_number in 1..=test_cases {
         let l = sc.next::<usize>();
-        println!("Case #{}: {}", case_number, get_min(0, l, 0, &mut mem));
+        let mut mem = vec![None; l + 1];
+        println!("Case #{}: {}", case_number, get_min(l, &mut mem));
     }
 }
 

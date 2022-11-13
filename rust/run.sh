@@ -1,3 +1,2 @@
 #!/bin/bash
-export RUST_BACKTRACE=0
 cargo +1.41.1 run

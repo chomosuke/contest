@@ -14,34 +14,88 @@ import java.util.stream.*;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
+class SinglyLinkedListNode {
+    public int data;
+    public SinglyLinkedListNode next;
+
+    public SinglyLinkedListNode(int nodeData) {
+        this.data = nodeData;
+        this.next = null;
+    }
+}
+
+class SinglyLinkedList {
+    public SinglyLinkedListNode head;
+    public SinglyLinkedListNode tail;
+
+    public SinglyLinkedList() {
+        this.head = null;
+        this.tail = null;
+    }
+
+    public void insertNode(int nodeData) {
+        SinglyLinkedListNode node = new SinglyLinkedListNode(nodeData);
+
+        if (this.head == null) {
+            this.head = node;
+        } else {
+            this.tail.next = node;
+        }
+
+        this.tail = node;
+    }
+}
+
+class SinglyLinkedListPrintHelper {
+    public static void printList(SinglyLinkedListNode node, String sep, BufferedWriter bufferedWriter) throws IOException {
+        while (node != null) {
+            bufferedWriter.write(String.valueOf(node.data));
+
+            node = node.next;
+
+            if (node != null) {
+                bufferedWriter.write(sep);
+            }
+        }
+    }
+}
+
+
+
 class Result {
 
     /*
-     * Complete the 'findNumOfPairs' function below.
+     * Complete the 'deleteEven' function below.
      *
-     * The function is expected to return an INTEGER.
-     * The function accepts following parameters:
-     * 1. INTEGER_ARRAY a
-     * 2. INTEGER_ARRAY b
+     * The function is expected to return an INTEGER_SINGLY_LINKED_LIST.
+     * The function accepts INTEGER_SINGLY_LINKED_LIST listHead as parameter.
      */
 
-    public static int findNumOfPairs(List<Integer> a, List<Integer> b) {
-        int[] as = a.stream().mapToInt(Integer::intValue).toArray();
-        int[] bs = b.stream().mapToInt(Integer::intValue).toArray();
-        Arrays.sort(as);
-        Arrays.sort(bs);
+    /*
+     * For your reference:
+     *
+     * SinglyLinkedListNode {
+     *     int data;
+     *     SinglyLinkedListNode next;
+     * }
+     *
+     */
 
-        int count = 0;
-        for (int ai = 0, bi=0; ai < as.length && bi < bs.length;) {
-            if (as[ai] > bs[bi]) {
-                count++;
-                ai++;
-                bi++;
-            } else {
-                ai++;
-            }
+    public static SinglyLinkedListNode deleteEven(SinglyLinkedListNode listHead) {
+        while (listHead != null && listHead.data % 2 == 0) {
+            listHead = listHead.next;
         }
-        return count;
+        if (listHead == null) {
+            return null;
+        }
+        SinglyLinkedListNode node = listHead;
+        while (node != null) {
+            while (node.next != null && node.next.data % 2 == 0) {
+                node.next = node.next.next;
+            }
+            node = node.next;
+        }
+        return listHead;
     }
 
 }
@@ -51,35 +105,23 @@ public class Solution {
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
         BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(System.getenv("OUTPUT_PATH")));
 
-        int aCount = Integer.parseInt(bufferedReader.readLine().trim());
+        SinglyLinkedList listHead = new SinglyLinkedList();
 
-        List<Integer> a = IntStream.range(0, aCount).mapToObj(i -> {
+        int listHeadCount = Integer.parseInt(bufferedReader.readLine().trim());
+
+        IntStream.range(0, listHeadCount).forEach(i -> {
             try {
-                return bufferedReader.readLine().replaceAll("\\s+$", "");
+                int listHeadItem = Integer.parseInt(bufferedReader.readLine().trim());
+
+                listHead.insertNode(listHeadItem);
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
             }
-        })
-                .map(String::trim)
-                .map(Integer::parseInt)
-                .collect(toList());
+        });
 
-        int bCount = Integer.parseInt(bufferedReader.readLine().trim());
+        SinglyLinkedListNode result = Result.deleteEven(listHead.head);
 
-        List<Integer> b = IntStream.range(0, bCount).mapToObj(i -> {
-            try {
-                return bufferedReader.readLine().replaceAll("\\s+$", "");
-            } catch (IOException ex) {
-                throw new RuntimeException(ex);
-            }
-        })
-                .map(String::trim)
-                .map(Integer::parseInt)
-                .collect(toList());
-
-        int result = Result.findNumOfPairs(a, b);
-
-        bufferedWriter.write(String.valueOf(result));
+        SinglyLinkedListPrintHelper.printList(result, "\n", bufferedWriter);
         bufferedWriter.newLine();
 
         bufferedReader.close();

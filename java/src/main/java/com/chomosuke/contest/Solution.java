@@ -17,28 +17,31 @@ import static java.util.stream.Collectors.toList;
 class Result {
 
     /*
-     * Complete the 'countTeams' function below.
+     * Complete the 'findNumOfPairs' function below.
      *
-     * The function is expected to return an INTEGER_ARRAY.
+     * The function is expected to return an INTEGER.
      * The function accepts following parameters:
-     * 1. INTEGER_ARRAY rating
-     * 2. 2D_INTEGER_ARRAY queries
+     * 1. INTEGER_ARRAY a
+     * 2. INTEGER_ARRAY b
      */
 
-    public static List<Integer> countTeams(List<Integer> ratings, List<List<Integer>> queries) {
-        ArrayList<Integer> groupCounts = new ArrayList<>();
-        for (List<Integer> query : queries) {
-            HashMap<Integer, Integer> ratingCounts = new HashMap<>();
-            for (int i = query.get(0) - 1; i < query.get(1); i++) {
-                ratingCounts.put(ratings.get(i), ratingCounts.getOrDefault(ratings.get(i), 0) + 1);
+    public static int findNumOfPairs(List<Integer> a, List<Integer> b) {
+        int[] as = a.stream().mapToInt(Integer::intValue).toArray();
+        int[] bs = b.stream().mapToInt(Integer::intValue).toArray();
+        Arrays.sort(as);
+        Arrays.sort(bs);
+
+        int count = 0;
+        for (int ai = 0, bi=0; ai < as.length && bi < bs.length;) {
+            if (as[ai] > bs[bi]) {
+                count++;
+                ai++;
+                bi++;
+            } else {
+                ai++;
             }
-            Integer groupCount = 0;
-            for (Integer groups : ratingCounts.values()) {
-                groupCount += groups / 2;
-            }
-            groupCounts.add(groupCount);
         }
-        return groupCounts;
+        return count;
     }
 
 }
@@ -48,9 +51,9 @@ public class Solution {
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
         BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(System.getenv("OUTPUT_PATH")));
 
-        int ratingCount = Integer.parseInt(bufferedReader.readLine().trim());
+        int aCount = Integer.parseInt(bufferedReader.readLine().trim());
 
-        List<Integer> rating = IntStream.range(0, ratingCount).mapToObj(i -> {
+        List<Integer> a = IntStream.range(0, aCount).mapToObj(i -> {
             try {
                 return bufferedReader.readLine().replaceAll("\\s+$", "");
             } catch (IOException ex) {
@@ -61,29 +64,23 @@ public class Solution {
                 .map(Integer::parseInt)
                 .collect(toList());
 
-        int queriesRows = Integer.parseInt(bufferedReader.readLine().trim());
-        int queriesColumns = Integer.parseInt(bufferedReader.readLine().trim());
+        int bCount = Integer.parseInt(bufferedReader.readLine().trim());
 
-        List<List<Integer>> queries = new ArrayList<>();
-
-        IntStream.range(0, queriesRows).forEach(i -> {
+        List<Integer> b = IntStream.range(0, bCount).mapToObj(i -> {
             try {
-                queries.add(
-                        Stream.of(bufferedReader.readLine().replaceAll("\\s+$", "").split(" "))
-                                .map(Integer::parseInt)
-                                .collect(toList()));
+                return bufferedReader.readLine().replaceAll("\\s+$", "");
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
             }
-        });
+        })
+                .map(String::trim)
+                .map(Integer::parseInt)
+                .collect(toList());
 
-        List<Integer> result = Result.countTeams(rating, queries);
+        int result = Result.findNumOfPairs(a, b);
 
-        bufferedWriter.write(
-                result.stream()
-                        .map(Object::toString)
-                        .collect(joining("\n"))
-                        + "\n");
+        bufferedWriter.write(String.valueOf(result));
+        bufferedWriter.newLine();
 
         bufferedReader.close();
         bufferedWriter.close();

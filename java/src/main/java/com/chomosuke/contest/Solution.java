@@ -14,88 +14,62 @@ import java.util.stream.*;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
-class SinglyLinkedListNode {
-    public int data;
-    public SinglyLinkedListNode next;
-
-    public SinglyLinkedListNode(int nodeData) {
-        this.data = nodeData;
-        this.next = null;
-    }
-}
-
-class SinglyLinkedList {
-    public SinglyLinkedListNode head;
-    public SinglyLinkedListNode tail;
-
-    public SinglyLinkedList() {
-        this.head = null;
-        this.tail = null;
-    }
-
-    public void insertNode(int nodeData) {
-        SinglyLinkedListNode node = new SinglyLinkedListNode(nodeData);
-
-        if (this.head == null) {
-            this.head = node;
-        } else {
-            this.tail.next = node;
-        }
-
-        this.tail = node;
-    }
-}
-
-class SinglyLinkedListPrintHelper {
-    public static void printList(SinglyLinkedListNode node, String sep, BufferedWriter bufferedWriter) throws IOException {
-        while (node != null) {
-            bufferedWriter.write(String.valueOf(node.data));
-
-            node = node.next;
-
-            if (node != null) {
-                bufferedWriter.write(sep);
-            }
-        }
-    }
-}
-
-
-
 class Result {
 
     /*
-     * Complete the 'deleteEven' function below.
+     * Complete the 'getGreatestElements' function below.
      *
-     * The function is expected to return an INTEGER_SINGLY_LINKED_LIST.
-     * The function accepts INTEGER_SINGLY_LINKED_LIST listHead as parameter.
+     * The function is expected to return an INTEGER_ARRAY.
+     * The function accepts following parameters:
+     * 1. INTEGER_ARRAY arr
+     * 2. INTEGER k
      */
 
-    /*
-     * For your reference:
-     *
-     * SinglyLinkedListNode {
-     *     int data;
-     *     SinglyLinkedListNode next;
-     * }
-     *
-     */
+    public static List<Integer> getGreatestElements(List<Integer> list, int k) {
+        ArrayList<Integer> kGreatests = new ArrayList<>();
+        int[] nums = list.stream()
+                .mapToInt(Integer::intValue)
+                .toArray();
 
-    public static SinglyLinkedListNode deleteEven(SinglyLinkedListNode listHead) {
-        while (listHead != null && listHead.data % 2 == 0) {
-            listHead = listHead.next;
+        // reverse index of arr
+        int[] indexOfNum = new int[nums.length + 1];
+        for (int i = 0; i < nums.length; i++) {
+            indexOfNum[nums[i]] = i;
         }
-        if (listHead == null) {
-            return null;
-        }
-        SinglyLinkedListNode node = listHead;
-        while (node != null) {
-            while (node.next != null && node.next.data % 2 == 0) {
-                node.next = node.next.next;
+
+        // point towards the next greatest in arr
+        // -1 mean null
+        int[] nextGreatestIndex = new int[nums.length];
+        int[] prevGreatestIndex = new int[nums.length];
+        // populate the index for the whole array
+        for (int num = 1; num < nums.length + 1; num++) {
+            if (num - 1 > 0) {
+                nextGreatestIndex[indexOfNum[num]] = indexOfNum[num - 1];
+            } else {
+                nextGreatestIndex[indexOfNum[num]] = -1;
             }
-            node = node.next;
+            if (num + 1 < indexOfNum.length) {
+                prevGreatestIndex[indexOfNum[num]] = indexOfNum[num + 1];
+            } else {
+                prevGreatestIndex[indexOfNum[num]] = -1;
+            }
         }
-        return listHead;
+
+        int kGreatestI = indexOfNum[nums.length - k + 1];
+        for (int i = nums.length - 1; i >= k - 1; i--) {
+            kGreatests.add(nums[kGreatestI]);
+            // take away the ith num
+            int numIndex = indexOfNum[nums[i]];
+            if (prevGreatestIndex[numIndex] != -1)
+                nextGreatestIndex[prevGreatestIndex[numIndex]] = nextGreatestIndex[numIndex];
+            if (nextGreatestIndex[numIndex] != -1)
+                prevGreatestIndex[nextGreatestIndex[numIndex]] = prevGreatestIndex[numIndex];
+            // update kGreatest
+            if (nums[i] >= nums[kGreatestI]) {
+                kGreatestI = nextGreatestIndex[kGreatestI];
+            }
+        }
+        return kGreatests;
     }
 
 }
@@ -103,26 +77,30 @@ class Result {
 public class Solution {
     public static void main(String[] args) throws IOException {
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
-        BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(System.getenv("OUTPUT_PATH")));
+        BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 
-        SinglyLinkedList listHead = new SinglyLinkedList();
+        int arrCount = Integer.parseInt(bufferedReader.readLine().trim());
 
-        int listHeadCount = Integer.parseInt(bufferedReader.readLine().trim());
-
-        IntStream.range(0, listHeadCount).forEach(i -> {
+        List<Integer> arr = IntStream.range(0, arrCount).mapToObj(i -> {
             try {
-                int listHeadItem = Integer.parseInt(bufferedReader.readLine().trim());
-
-                listHead.insertNode(listHeadItem);
+                return bufferedReader.readLine().replaceAll("\\s+$", "");
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
             }
-        });
+        })
+                .map(String::trim)
+                .map(Integer::parseInt)
+                .collect(toList());
 
-        SinglyLinkedListNode result = Result.deleteEven(listHead.head);
+        int k = Integer.parseInt(bufferedReader.readLine().trim());
 
-        SinglyLinkedListPrintHelper.printList(result, "\n", bufferedWriter);
-        bufferedWriter.newLine();
+        List<Integer> result = Result.getGreatestElements(arr, k);
+
+        bufferedWriter.write(
+                result.stream()
+                        .map(Object::toString)
+                        .collect(joining("\n"))
+                        + "\n");
 
         bufferedReader.close();
         bufferedWriter.close();

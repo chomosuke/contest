@@ -1,213 +1,160 @@
-#include <bits/stdc++.h>
+#include <algorithm>
+#include <bitset>
+#include <cmath>
+#include <cstdint>
+#include <iostream>
+#include <map>
+#include <queue>
+#include <tuple>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
+namespace hash_tuple {
+template <typename TT> struct hash {
+    size_t operator()(TT const &tt) const { return std::hash<TT>()(tt); }
+};
+namespace {
+
+template <class T> inline void hash_combine(std::size_t &seed, T const &v) {
+    seed ^= hash_tuple::hash<T>()(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+}
+
+template <class Tuple, size_t Index = std::tuple_size<Tuple>::value - 1>
+struct HashValueImpl {
+    static void apply(size_t &seed, Tuple const &tuple) {
+        HashValueImpl<Tuple, Index - 1>::apply(seed, tuple);
+        hash_combine(seed, std::get<Index>(tuple));
+    }
+};
+
+template <class Tuple> struct HashValueImpl<Tuple, 0> {
+    static void apply(size_t &seed, Tuple const &tuple) {
+        hash_combine(seed, std::get<0>(tuple));
+    }
+};
+} // namespace
+
+template <typename... TT> struct hash<std::tuple<TT...>> {
+    size_t operator()(std::tuple<TT...> const &tt) const {
+        size_t seed = 0;
+        HashValueImpl<std::tuple<TT...>>::apply(seed, tt);
+        return seed;
+    }
+};
+} // namespace hash_tuple
+
+// unordered_map<tuple<Int, Float>, Int, hash_tuple::hash<tuple<Int, Float>>>
+//     memoize;
 
 using namespace std;
 
-string ltrim(const string &);
-string rtrim(const string &);
+typedef int64_t Int;
+const Int Int_max = INT64_MAX;
+const Int Int_min = INT64_MIN;
+typedef long double Float;
 
-/*
- * Complete the 'closestStraightCity' function below.
- *
- * The function is expected to return a STRING_ARRAY.
- * The function accepts following parameters:
- *  1. STRING_ARRAY c
- *  2. INTEGER_ARRAY x
- *  3. INTEGER_ARRAY y
- *  4. STRING_ARRAY q
- */
-
-struct City {
-    int x;
-    int y;
-    string name;
+struct CycleLenCount {
+    Int len;
+    Int count;
 };
 
-struct Neighbour {
-    int distance;
-    string name;
-};
+unordered_map<tuple<Int, Int>, Int, hash_tuple::hash<tuple<Int, Int>>> memoize;
 
-vector<string> closestStraightCity(vector<string> c, vector<int> x,
-                                   vector<int> y, vector<string> q) {
-    vector<City> cities;
-
-    for (size_t i = 0; i < c.size(); i++) {
-        cities.push_back({.x = x[i], .y = y[i], .name = c[i]});
+// how many swap do we need if only cycle_len_counts[i, end) can be used
+Int count_swaps(vector<CycleLenCount> const &cycle_len_counts, Int i,
+                Int const target) {
+    if (memoize.find(tuple(i, target)) != memoize.end()) {
+        return memoize[tuple(i, target)];
     }
-
-    unordered_map<int, vector<City>> citiesWithY;
-    unordered_map<int, vector<City>> citiesWithX;
-    for (size_t i = 0; i < cities.size(); i++) {
-        citiesWithX[cities[i].x].push_back(cities[i]);
-        citiesWithY[cities[i].y].push_back(cities[i]);
+    Int swaps = Int_max / 2;
+    if (i >= cycle_len_counts.size()) {
+        return swaps;
     }
-    for (auto it = citiesWithX.begin(); it != citiesWithX.end(); it++) {
-        sort(it->second.begin(), it->second.end(),
-             [](City a, City b) { return a.x < b.x; });
-    }
-    for (auto it = citiesWithY.begin(); it != citiesWithY.end(); it++) {
-        sort(it->second.begin(), it->second.end(),
-             [](City a, City b) { return a.y < b.y; });
-    }
-
-    unordered_map<string, City> cityWithName;
-    for (size_t i = 0; i < cities.size(); i++) {
-        cityWithName[cities[i].name] = cities[i];
-    }
-
-    vector<string> anss;
-    for (size_t i = 0; i < q.size(); i++) {
-        City city = cityWithName[q[i]];
-        vector<Neighbour> neighbours;
-        if (citiesWithY[city.y].size() > 1) {
-            vector<City> cities = citiesWithY[city.y];
-            size_t index =
-                distance(cities.begin(),
-                         lower_bound(cities.begin(), cities.end(), city));
-            if (index - 1 >= 0) {
-                neighbours.push_back(
-                    {.distance = abs(cities[index - 1].x - cities[index].x),
-                     .name = cities[index - 1].name});
-            }
-            if (index + 1 < cities.size()) {
-                neighbours.push_back(
-                    {.distance = abs(cities[index + 1].x - cities[index].x),
-                     .name = cities[index + 1].name});
-            }
-        }
-
-        if (citiesWithX[city.x].size() > 1) {
-            vector<City> cities = citiesWithX[city.x];
-            size_t index =
-                distance(cities.begin(),
-                         lower_bound(cities.begin(), cities.end(), city));
-            if (index - 1 >= 0) {
-                neighbours.push_back(
-                    {.distance = abs(cities[index - 1].y - cities[index].y),
-                     .name = cities[index - 1].name});
-            }
-            if (index + 1 < cities.size()) {
-                neighbours.push_back(
-                    {.distance = abs(cities[index + 1].y - cities[index].y),
-                     .name = cities[index + 1].name});
-            }
-        }
-
-        sort(neighbours.begin(), neighbours.end(),
-             [](Neighbour a, Neighbour b) {
-                 if (a.distance < b.distance) {
-                     return true;
-                 } else if (b.distance < a.distance) {
-                     return false;
-                 } else {
-                     return a.name.compare(b.name) < 0;
-                 }
-             });
-
-        if (neighbours.empty()) {
-            anss.push_back("NONE");
+    for (Int include = 0; include <= cycle_len_counts[i].count; include++) {
+        if (target - include * cycle_len_counts[i].len > 0) {
+            swaps =
+                min(swaps,
+                    include + count_swaps(
+                                  cycle_len_counts, i + 1,
+                                  target - include * cycle_len_counts[i].len));
+        } else if (target - include * cycle_len_counts[i].len == 0) {
+            swaps = min(swaps, include - 1);
         } else {
-            anss.push_back(neighbours[0].name);
+            break;
         }
     }
-
-    return anss;
+    memoize[tuple(i, target)] = swaps;
+    return swaps;
 }
+
 int main() {
-    ofstream fout(getenv("OUTPUT_PATH"));
+    Int case_count;
+    cin >> case_count;
+    for (Int case_number = 1; case_number <= case_count; case_number++) {
+        memoize.clear();
 
-    string c_count_temp;
-    getline(cin, c_count_temp);
-
-    int c_count = stoi(ltrim(rtrim(c_count_temp)));
-
-    vector<string> c(c_count);
-
-    for (int i = 0; i < c_count; i++) {
-        string c_item;
-        getline(cin, c_item);
-
-        c[i] = c_item;
-    }
-
-    string x_count_temp;
-    getline(cin, x_count_temp);
-
-    int x_count = stoi(ltrim(rtrim(x_count_temp)));
-
-    vector<int> x(x_count);
-
-    for (int i = 0; i < x_count; i++) {
-        string x_item_temp;
-        getline(cin, x_item_temp);
-
-        int x_item = stoi(ltrim(rtrim(x_item_temp)));
-
-        x[i] = x_item;
-    }
-
-    string y_count_temp;
-    getline(cin, y_count_temp);
-
-    int y_count = stoi(ltrim(rtrim(y_count_temp)));
-
-    vector<int> y(y_count);
-
-    for (int i = 0; i < y_count; i++) {
-        string y_item_temp;
-        getline(cin, y_item_temp);
-
-        int y_item = stoi(ltrim(rtrim(y_item_temp)));
-
-        y[i] = y_item;
-    }
-
-    string q_count_temp;
-    getline(cin, q_count_temp);
-
-    int q_count = stoi(ltrim(rtrim(q_count_temp)));
-
-    vector<string> q(q_count);
-
-    for (int i = 0; i < q_count; i++) {
-        string q_item;
-        getline(cin, q_item);
-
-        q[i] = q_item;
-    }
-
-    vector<string> result = closestStraightCity(c, x, y, q);
-
-    for (size_t i = 0; i < result.size(); i++) {
-        fout << result[i];
-
-        if (i != result.size() - 1) {
-            fout << "\n";
+        Int n;
+        cin >> n;
+        Int *ps = new Int[n];
+        for (Int i = 0; i < n; i++) {
+            Int p;
+            cin >> p;
+            ps[i] = p - 1;
         }
+
+        bool *visited = new bool[n];
+        for (int i = 0; i < n; i++) {
+            visited[i] = false;
+        }
+        unordered_map<Int, Int> cycle_counts;
+        Int i = 0;
+        while (i < n) {
+            visited[i] = true;
+            Int j = ps[i];
+            Int length = 1;
+            while (j != i) {
+                length++;
+                visited[j] = true;
+                j = ps[j];
+            }
+            cycle_counts[length]++;
+            while (i < n && visited[i]) {
+                i++;
+            }
+        }
+
+        vector<CycleLenCount> cycle_len_counts;
+        for (auto it = cycle_counts.begin(); it != cycle_counts.end(); it++) {
+            cycle_len_counts.push_back({.len = it->first, .count = it->second});
+        }
+
+        sort(cycle_len_counts.begin(), cycle_len_counts.end(),
+             [](CycleLenCount a, CycleLenCount b) { return a.len > b.len; });
+
+        cout << "Case #" << case_number << ":";
+
+        for (Int target = 1; target <= n; target++) {
+            // two senario
+            // 1. n biggest cycle add together and cut one to form the target =
+            // n + 1
+            Int sum = 0;
+            Int swaps = 0;
+            for (Int i = 0; true; i++) {
+                if (sum + cycle_len_counts[i].len * cycle_len_counts[i].count >=
+                    target) {
+                    swaps +=
+                        ceil((double)(target - sum) / cycle_len_counts[i].len);
+                    break;
+                } else {
+                    sum += cycle_len_counts[i].len * cycle_len_counts[i].count;
+                    swaps += cycle_len_counts[i].count;
+                }
+            }
+            // 2. n cycle add together to form the target = n
+            swaps = min(swaps, count_swaps(cycle_len_counts, 0, target));
+            cout << " " << swaps;
+        }
+        cout << endl;
     }
-
-    fout << "\n";
-
-    fout.close();
-
-    return 0;
-}
-
-string ltrim(const string &str) {
-    string s(str);
-
-    s.erase(s.begin(),
-            find_if(s.begin(), s.end(), not1(ptr_fun<int, int>(isspace))));
-
-    return s;
-}
-
-string rtrim(const string &str) {
-    string s(str);
-
-    s.erase(
-        find_if(s.rbegin(), s.rend(), not1(ptr_fun<int, int>(isspace))).base(),
-        s.end());
-
-    return s;
 }

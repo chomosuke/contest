@@ -1,49 +1,57 @@
 #![allow(unused_imports, dead_code)]
 use std::{
-    cmp::{Ordering, min},
+    cmp::{min, Ordering},
     collections::{BTreeMap, BTreeSet, HashMap, HashSet},
 };
 
-fn main() {
-    let mut sc = Scanner::new();
-    let n = sc.next();
-    let mut arr = Vec::with_capacity(n);
-    for _ in 0..n {
-        arr.push(sc.next::<usize>() - 1);
-    }
-    println!("{}", solve(&arr));
+trait MostPopular {
+    fn increase_popularity(&mut self, content_id: u64);
+    fn most_popular(&self) -> u64;
+    fn decrease_popularity(&mut self, content_id: u64);
 }
 
-fn solve(arr: &[usize]) -> f64 {
-    // For each unique element in the array.
-    // We find the chance of a randomly selected segment contains one of that specific element.
-    // Adding all the chance together and we have the expected number of unique elements in a
-    // randomly selected segment.
-
-    let mut count = HashMap::<usize, usize>::with_capacity(arr.len());
-    for a in arr {
-        count.insert(min(*a, arr.len() - 1), *count.get(a).unwrap_or(&0) + 1);
-    }
-
-    let mut chance_since_0 = Vec::with_capacity(arr.len() + 1);
-    chance_since_0.push(0);
-    for i in 1..=arr.len() {
-        let last = chance_since_0[i - 1];
-        chance_since_0.push(last + count.get(&(i - 1)).unwrap_or(&0));
-    }
-
-    let mut pre_indexes = HashMap::<usize, i32>::with_capacity(arr.len());
-    let mut sum_uniq = 0;
-    for (i, a) in arr.iter().enumerate() {
-        // read and update pre_index
-        let pre_index = pre_indexes.get(a).unwrap_or(&-1).clone();
-        pre_indexes.insert(*a, i as i32);
-        sum_uniq += (chance_since_0[i + 1] - chance_since_0[(pre_index + 1) as usize])
-            * (chance_since_0[arr.len()] - chance_since_0[i])
-            * 2;
-    }
-    return sum_uniq as f64 / (arr.len() as f64).powi(2);
+struct PopularitySorter {
+    // (popularity, content_id)
+    map: BTreeSet<(u64, u64)>,
+    // key: id, value: popularity
+    pop_map: HashMap<u64, u64>,
 }
+
+impl MostPopular for PopularitySorter {
+    fn increase_popularity(&mut self, content_id: u64) {
+        let mut popularity = self.pop_map.get(&content_id);
+        if popularity.is_none() {
+            self.pop_map.insert(content_id, 0);
+            popularity = Some(&0);
+        } else {
+            self.map.remove(&(*popularity.unwrap(), content_id));
+        }
+        let popularity = *popularity.unwrap() + 1;
+        self.pop_map.insert(content_id, popularity);
+        self.map.insert((popularity, content_id));
+    }
+
+    fn most_popular(&self) -> u64 {
+        self.map.last().map(|e| e.1).unwrap_or(0)
+    }
+
+    fn decrease_popularity(&mut self, content_id: u64) {
+        let mut popularity = self.pop_map.get(&content_id);
+        if popularity.is_none() {
+            self.pop_map.insert(content_id, 0);
+            popularity = Some(&0);
+        } else {
+            self.map.remove(&(*popularity.unwrap(), content_id));
+        }
+        let popularity = *popularity.unwrap();
+        if popularity <= 1 {
+            self.pop_map.insert(content_id, popularity - 1);
+            self.map.insert((popularity - 1, content_id));
+        }
+    }
+}
+
+fn main() {}
 
 #[cfg(test)]
 mod test {
@@ -51,12 +59,24 @@ mod test {
 
     #[test]
     fn test1() {
-        assert_eq!(solve(&[0, 1]), 1.5);
-    }
-
-    #[test]
-    fn test2() {
-        assert_eq!(solve(&[1, 1]), 1.0);
+        let mut popularity_tracker = PopularitySorter {
+            map: BTreeSet::new(),
+            pop_map: HashMap::new(),
+        };
+        popularity_tracker.increase_popularity(7);
+        popularity_tracker.increase_popularity(7);
+        popularity_tracker.increase_popularity(8);
+        assert_eq!(popularity_tracker.most_popular(), 7); // returns 7
+        popularity_tracker.increase_popularity(8);
+        popularity_tracker.increase_popularity(8);
+        assert_eq!(popularity_tracker.most_popular(), 8); // returns 8
+        popularity_tracker.decrease_popularity(8);
+        popularity_tracker.decrease_popularity(8);
+        assert_eq!(popularity_tracker.most_popular(), 7); // returns 7
+        popularity_tracker.decrease_popularity(7);
+        popularity_tracker.decrease_popularity(7);
+        popularity_tracker.decrease_popularity(8);
+        assert_eq!(popularity_tracker.most_popular(), 0); // returns -1 since there is no content with popularity greater than 0
     }
 }
 

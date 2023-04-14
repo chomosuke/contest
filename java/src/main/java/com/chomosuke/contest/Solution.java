@@ -1,7 +1,5 @@
 package com.chomosuke.contest;
 
-// BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(System.getenv("OUTPUT_PATH")));
-
 import java.io.*;
 import java.math.*;
 import java.security.*;
@@ -17,59 +15,28 @@ import static java.util.stream.Collectors.toList;
 class Result {
 
     /*
-     * Complete the 'getGreatestElements' function below.
+     * Complete the 'minimize' function below.
      *
-     * The function is expected to return an INTEGER_ARRAY.
+     * The function is expected to return an INTEGER.
      * The function accepts following parameters:
-     * 1. INTEGER_ARRAY arr
+     * 1. INTEGER_ARRAY point
      * 2. INTEGER k
      */
 
-    public static List<Integer> getGreatestElements(List<Integer> list, int k) {
-        ArrayList<Integer> kGreatests = new ArrayList<>();
-        int[] nums = list.stream()
-                .mapToInt(Integer::intValue)
-                .toArray();
-
-        // reverse index of arr
-        int[] indexOfNum = new int[nums.length + 1];
-        for (int i = 0; i < nums.length; i++) {
-            indexOfNum[nums[i]] = i;
+    public static int minimize(List<Integer> points, int k) {
+        Collections.sort(points);
+        Integer[] ps = points.toArray(new Integer[0]);
+        for (int i = 0; i < ps.length; i++) {
+            ps[i] -= k;
         }
-
-        // point towards the next greatest in arr
-        // -1 mean null
-        int[] nextGreatestIndex = new int[nums.length];
-        int[] prevGreatestIndex = new int[nums.length];
-        // populate the index for the whole array
-        for (int num = 1; num < nums.length + 1; num++) {
-            if (num - 1 > 0) {
-                nextGreatestIndex[indexOfNum[num]] = indexOfNum[num - 1];
-            } else {
-                nextGreatestIndex[indexOfNum[num]] = -1;
-            }
-            if (num + 1 < indexOfNum.length) {
-                prevGreatestIndex[indexOfNum[num]] = indexOfNum[num + 1];
-            } else {
-                prevGreatestIndex[indexOfNum[num]] = -1;
-            }
+        int max = ps[ps.length - 1];
+        int minDiff = max - ps[0];
+        for (int i = 0; i < ps.length - 1; i++) {
+            max = Math.max(ps[i] + 2 * k, max);
+            int min = Math.min(ps[0] + 2 * k, ps[i + 1]);
+            minDiff = Math.min(minDiff, max - min);
         }
-
-        int kGreatestI = indexOfNum[nums.length - k + 1];
-        for (int i = nums.length - 1; i >= k - 1; i--) {
-            kGreatests.add(nums[kGreatestI]);
-            // take away the ith num
-            int numIndex = indexOfNum[nums[i]];
-            if (prevGreatestIndex[numIndex] != -1)
-                nextGreatestIndex[prevGreatestIndex[numIndex]] = nextGreatestIndex[numIndex];
-            if (nextGreatestIndex[numIndex] != -1)
-                prevGreatestIndex[nextGreatestIndex[numIndex]] = prevGreatestIndex[numIndex];
-            // update kGreatest
-            if (nums[i] >= nums[kGreatestI]) {
-                kGreatestI = nextGreatestIndex[kGreatestI];
-            }
-        }
-        return kGreatests;
+        return minDiff;
     }
 
 }
@@ -77,11 +44,11 @@ class Result {
 public class Solution {
     public static void main(String[] args) throws IOException {
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
-        BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(System.out));
+        BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(System.getenv("OUTPUT_PATH")));
 
-        int arrCount = Integer.parseInt(bufferedReader.readLine().trim());
+        int pointCount = Integer.parseInt(bufferedReader.readLine().trim());
 
-        List<Integer> arr = IntStream.range(0, arrCount).mapToObj(i -> {
+        List<Integer> point = IntStream.range(0, pointCount).mapToObj(i -> {
             try {
                 return bufferedReader.readLine().replaceAll("\\s+$", "");
             } catch (IOException ex) {
@@ -94,13 +61,10 @@ public class Solution {
 
         int k = Integer.parseInt(bufferedReader.readLine().trim());
 
-        List<Integer> result = Result.getGreatestElements(arr, k);
+        int result = Result.minimize(point, k);
 
-        bufferedWriter.write(
-                result.stream()
-                        .map(Object::toString)
-                        .collect(joining("\n"))
-                        + "\n");
+        bufferedWriter.write(String.valueOf(result));
+        bufferedWriter.newLine();
 
         bufferedReader.close();
         bufferedWriter.close();

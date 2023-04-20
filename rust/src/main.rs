@@ -1,73 +1,20 @@
 #![allow(unused_imports, dead_code)]
 use std::{
-    cmp::{min, Ordering},
+    cmp::{max, min, Ordering},
     collections::{BTreeMap, BTreeSet, HashMap, HashSet},
 };
 
 fn main() {
-    println!("{}", ps(100_000_000));
-}
-
-/// # Examples
-///
-/// ```
-/// println!("Hello world!");
-/// let x = 10;
-/// assert!(x == 10);
-/// fn fun(n: usize) -> usize {
-///     if n > 1 {
-///         fun(n - 1);
-///     } else {
-///         return n;
-///     }
-/// }
-/// ```
-fn ps(n: usize) -> usize {
-    let mut end_fac = if n < 50_000_000 { 20 } else { 30 };
-    loop {
-        let end = n * end_fac;
-        let mut is_prime = vec![true; end + 1];
-        is_prime[0] = false;
-        is_prime[1] = false;
-        for i in 2..end {
-            if is_prime[i] {
-                let mut j = 2 * i;
-                while j <= end {
-                    is_prime[j] = false;
-                    j += i;
-                }
-            }
-        }
-
-        let r = is_prime
-            .into_iter()
-            .zip(0..=end)
-            .filter(|&(i, _)| i)
-            .map(|(_, p)| p)
-            .nth(n);
-        if let Some(r) = r {
-            return r;
-        }
-        end_fac *= 2;
+    let mut sc = Scanner::new();
+    let p = (sc.next::<i32>(), sc.next::<i32>());
+    let v = (sc.next::<i32>(), sc.next::<i32>());
+    if p.0 + p.1 <= max(v.0, v.1) || (p.0 <= v.0 && p.1 <= v.1) {
+        // Polycarp get to (0, 0) first
+        println!("Polycarp");
+    } else {
+        println!("Vasiliy");
     }
 }
-
-// let mut primes = Vec::<usize>::with_capacity(n);
-// primes.push(2);
-// let mut c = 3;
-// while primes.len() <= n {
-//     let mut is_prime = true;
-//     for p in primes.iter().take_while(|&&p| p * p <= c) {
-//         if c % p == 0 {
-//             is_prime = false;
-//             break;
-//         }
-//     }
-//     if is_prime {
-//         primes.push(c);
-//     }
-//     c += 1;
-// }
 
 mod scanner {
     use std::collections::{HashSet, VecDeque};

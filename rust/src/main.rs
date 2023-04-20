@@ -4,81 +4,70 @@ use std::{
     collections::{BTreeMap, BTreeSet, HashMap, HashSet},
 };
 
-trait MostPopular {
-    fn increase_popularity(&mut self, content_id: u64);
-    fn most_popular(&self) -> u64;
-    fn decrease_popularity(&mut self, content_id: u64);
+fn main() {
+    println!("{}", ps(100_000_000));
 }
 
-struct PopularitySorter {
-    // (popularity, content_id)
-    map: BTreeSet<(u64, u64)>,
-    // key: id, value: popularity
-    pop_map: HashMap<u64, u64>,
-}
-
-impl MostPopular for PopularitySorter {
-    fn increase_popularity(&mut self, content_id: u64) {
-        let mut popularity = self.pop_map.get(&content_id);
-        if popularity.is_none() {
-            self.pop_map.insert(content_id, 0);
-            popularity = Some(&0);
-        } else {
-            self.map.remove(&(*popularity.unwrap(), content_id));
+/// # Examples
+///
+/// ```
+/// println!("Hello world!");
+/// let x = 10;
+/// assert!(x == 10);
+/// fn fun(n: usize) -> usize {
+///     if n > 1 {
+///         fun(n - 1);
+///     } else {
+///         return n;
+///     }
+/// }
+/// ```
+fn ps(n: usize) -> usize {
+    let mut end_fac = if n < 50_000_000 { 20 } else { 30 };
+    loop {
+        let end = n * end_fac;
+        let mut is_prime = vec![true; end + 1];
+        is_prime[0] = false;
+        is_prime[1] = false;
+        for i in 2..end {
+            if is_prime[i] {
+                let mut j = 2 * i;
+                while j <= end {
+                    is_prime[j] = false;
+                    j += i;
+                }
+            }
         }
-        let popularity = *popularity.unwrap() + 1;
-        self.pop_map.insert(content_id, popularity);
-        self.map.insert((popularity, content_id));
-    }
 
-    fn most_popular(&self) -> u64 {
-        self.map.last().map(|e| e.1).unwrap_or(0)
-    }
-
-    fn decrease_popularity(&mut self, content_id: u64) {
-        let mut popularity = self.pop_map.get(&content_id);
-        if popularity.is_none() {
-            self.pop_map.insert(content_id, 0);
-            popularity = Some(&0);
-        } else {
-            self.map.remove(&(*popularity.unwrap(), content_id));
+        let r = is_prime
+            .into_iter()
+            .zip(0..=end)
+            .filter(|&(i, _)| i)
+            .map(|(_, p)| p)
+            .nth(n);
+        if let Some(r) = r {
+            return r;
         }
-        let popularity = *popularity.unwrap();
-        if popularity <= 1 {
-            self.pop_map.insert(content_id, popularity - 1);
-            self.map.insert((popularity - 1, content_id));
-        }
+        end_fac *= 2;
     }
 }
 
-fn main() {}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test1() {
-        let mut popularity_tracker = PopularitySorter {
-            map: BTreeSet::new(),
-            pop_map: HashMap::new(),
-        };
-        popularity_tracker.increase_popularity(7);
-        popularity_tracker.increase_popularity(7);
-        popularity_tracker.increase_popularity(8);
-        assert_eq!(popularity_tracker.most_popular(), 7); // returns 7
-        popularity_tracker.increase_popularity(8);
-        popularity_tracker.increase_popularity(8);
-        assert_eq!(popularity_tracker.most_popular(), 8); // returns 8
-        popularity_tracker.decrease_popularity(8);
-        popularity_tracker.decrease_popularity(8);
-        assert_eq!(popularity_tracker.most_popular(), 7); // returns 7
-        popularity_tracker.decrease_popularity(7);
-        popularity_tracker.decrease_popularity(7);
-        popularity_tracker.decrease_popularity(8);
-        assert_eq!(popularity_tracker.most_popular(), 0); // returns -1 since there is no content with popularity greater than 0
-    }
-}
+// let mut primes = Vec::<usize>::with_capacity(n);
+// primes.push(2);
+// let mut c = 3;
+// while primes.len() <= n {
+//     let mut is_prime = true;
+//     for p in primes.iter().take_while(|&&p| p * p <= c) {
+//         if c % p == 0 {
+//             is_prime = false;
+//             break;
+//         }
+//     }
+//     if is_prime {
+//         primes.push(c);
+//     }
+//     c += 1;
+// }
 
 mod scanner {
     use std::collections::{HashSet, VecDeque};

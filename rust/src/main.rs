@@ -18,32 +18,24 @@ type Value = u64;
 type Weight = u64;
 
 pub fn knapsack_01(items: &[(Value, Weight)], max_w: u64) -> Value {
-    _knapsack_01(items, 0, max_w, &mut HashMap::new())
-}
-
-fn _knapsack_01(
-    items: &[(Value, Weight)],
-    processed: usize,
-    rem_w: Weight,
-    mem: &mut HashMap<(usize, Weight), Value>,
-) -> Value {
-    if processed >= items.len() {
-        return 0;
+    // BFS but prune weight > max_w
+    let mut weight_maxv = HashMap::new();
+    weight_maxv.insert(0, 0);
+    for &(v, w) in items {
+        let mut next_weight_maxv = HashMap::new();
+        for (weight, maxv) in weight_maxv {
+            // exclude
+            let next_maxv = next_weight_maxv.entry(weight).or_default();
+            *next_maxv = max(*next_maxv, maxv);
+            if weight + w <= max_w {
+                // include
+                let next_maxv = next_weight_maxv.entry(weight + w).or_default();
+                *next_maxv = max(*next_maxv, maxv + v);
+            }
+        }
+        weight_maxv = next_weight_maxv;
     }
-    let key = (processed, rem_w);
-    if mem.get(&key).is_none() {
-        let item = items[processed];
-        let max_v = if rem_w >= item.1 {
-            max(
-                _knapsack_01(items, processed + 1, rem_w, mem),
-                _knapsack_01(items, processed + 1, rem_w - item.1, mem) + item.0,
-            )
-        } else {
-            _knapsack_01(items, processed + 1, rem_w, mem)
-        };
-        mem.insert(key, max_v);
-    }
-    mem[&key]
+    *weight_maxv.values().max().unwrap()
 }
 
 fn main() {
@@ -61,6 +53,8 @@ fn main() {
             cs.push(sc.next::<u64>());
         }
 
+        let &max_b = bs.iter().max().unwrap();
+
         // BFS all ks
         let mut ops = HashMap::<u64, u64>::new();
         let mut to_fill = bs.iter().collect::<HashSet<_>>();
@@ -72,7 +66,7 @@ fn main() {
             let node = to_explore.pop_front().unwrap();
             let next_nodes = next_nodes(node);
             for next_node in next_nodes {
-                if ops.get(&next_node).is_none() {
+                if ops.get(&next_node).is_none() && next_node <= max_b {
                     ops.insert(next_node, ops[&node] + 1);
                     to_explore.push_back(next_node);
                     to_fill.remove(&next_node);

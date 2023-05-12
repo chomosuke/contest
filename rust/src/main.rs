@@ -4,80 +4,31 @@ use std::{
     collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
 };
 
-fn next_nodes(node: u64) -> Vec<u64> {
-    let mut res = HashSet::new();
-    let sq = (node as f64).sqrt() as u64;
-    for x in 1..=sq {
-        res.insert(node + node / x);
-        res.insert(node + x);
-    }
-    res.into_iter().collect::<Vec<_>>()
-}
-
-type Value = u64;
-type Weight = u64;
-
-pub fn knapsack_01(items: &[(Value, Weight)], max_w: u64) -> Value {
-    // BFS but prune weight > max_w
-    let mut weight_maxv = HashMap::new();
-    weight_maxv.insert(0, 0);
-    for &(v, w) in items {
-        let mut next_weight_maxv = HashMap::new();
-        for (weight, maxv) in weight_maxv {
-            // exclude
-            let next_maxv = next_weight_maxv.entry(weight).or_default();
-            *next_maxv = max(*next_maxv, maxv);
-            if weight + w <= max_w {
-                // include
-                let next_maxv = next_weight_maxv.entry(weight + w).or_default();
-                *next_maxv = max(*next_maxv, maxv + v);
-            }
-        }
-        weight_maxv = next_weight_maxv;
-    }
-    *weight_maxv.values().max().unwrap()
-}
-
 fn main() {
     let mut sc = Scanner::new();
-    let test_case = sc.next::<usize>();
-    for _ in 0..test_case {
-        let n = sc.next::<usize>();
-        let k = sc.next::<usize>();
-        let mut bs = Vec::with_capacity(n);
-        for _ in 0..n {
-            bs.push(sc.next::<u64>());
-        }
-        let mut cs = Vec::with_capacity(n);
-        for _ in 0..n {
-            cs.push(sc.next::<u64>());
-        }
+    let n = sc.next::<i128>();
+    let m = sc.next::<i128>();
+    let k = sc.next::<i128>();
+    let m = m - n;
+    let l = n - k;
+    let r = k - 1;
+    let mut x = (m as f64).sqrt() as i128;
 
-        let &max_b = bs.iter().max().unwrap();
-
-        // BFS all ks
-        let mut ops = HashMap::<u64, u64>::new();
-        let mut to_fill = bs.iter().collect::<HashSet<_>>();
-        let mut to_explore = VecDeque::<u64>::new();
-        ops.insert(1, 0);
-        to_explore.push_back(1);
-        to_fill.remove(&1);
-        while !to_fill.is_empty() {
-            let node = to_explore.pop_front().unwrap();
-            let next_nodes = next_nodes(node);
-            for next_node in next_nodes {
-                if ops.get(&next_node).is_none() && next_node <= max_b {
-                    ops.insert(next_node, ops[&node] + 1);
-                    to_explore.push_back(next_node);
-                    to_fill.remove(&next_node);
-                }
-            }
-        }
-
-        // Knapsack
-        let ops = bs.iter().map(|b| ops[&b]).collect::<Vec<_>>();
-        println!("{}", knapsack_01(&cs.into_iter().zip(ops.into_iter()).collect::<Vec<_>>(), k as u64));
+    let s = min(r, l) as f64;
+    let a = 0.5;
+    let b = s + 0.5;
+    let c = -(m as f64) - s * (s + 1.0) / 2.0;
+    let x_s = (-b + (b*b - 4.0*a*c).sqrt()) / 2.0 / a;
+    if s <= x_s {
+        x = x_s as i128;
     }
+
+    let x_rl = (m + l * (l + 1) / 2 + r * (r + 1) / 2) / n;
+    if l <= x_rl && r <= x_rl {
+        x = x_rl;
+    }
+
+    println!("{}", x + 1);
 }
 
 mod scanner {

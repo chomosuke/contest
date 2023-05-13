@@ -14,29 +14,67 @@ import static java.util.stream.Collectors.toList;
 
 class Result {
 
+    private static int findRep(int[] parent, int i) {
+        while (parent[i] != i) {
+            i = parent[i];
+        }
+        return i;
+    }
+
     /*
-     * Complete the 'minimize' function below.
+     * Complete the 'getTheGroups' function below.
      *
-     * The function is expected to return an INTEGER.
+     * The function is expected to return an INTEGER_ARRAY.
      * The function accepts following parameters:
-     * 1. INTEGER_ARRAY point
-     * 2. INTEGER k
+     * 1. INTEGER n
+     * 2. STRING_ARRAY queryType
+     * 3. INTEGER_ARRAY students1
+     * 4. INTEGER_ARRAY students2
      */
 
-    public static int minimize(List<Integer> points, int k) {
-        Collections.sort(points);
-        Integer[] ps = points.toArray(new Integer[0]);
-        for (int i = 0; i < ps.length; i++) {
-            ps[i] -= k;
+    public static List<Integer> getTheGroups(int n, List<String> queryType, List<Integer> students1,
+            List<Integer> students2) {
+
+        // creating union find
+        int[] parent = new int[n];
+        int[] sizes = new int[n]; // index must be representatives
+        for (int i = 0; i < n; i++) {
+            parent[i] = i; // at first everyone is in their own group
+            sizes[i] = 1;
         }
-        int max = ps[ps.length - 1];
-        int minDiff = max - ps[0];
-        for (int i = 0; i < ps.length - 1; i++) {
-            max = Math.max(ps[i] + 2 * k, max);
-            int min = Math.min(ps[0] + 2 * k, ps[i + 1]);
-            minDiff = Math.min(minDiff, max - min);
+        int[] sArr1 = new int[students1.size()];
+        int[] sArr2 = new int[students2.size()];
+        for (int i = 0; i < sArr1.length; i++) {
+            sArr1[i] = students1.get(i) - 1; // zero based index
+            sArr2[i] = students2.get(i) - 1;
         }
-        return minDiff;
+        ArrayList<Integer> results = new ArrayList<>();
+
+        for (int j = 0; j < queryType.size(); j++) {
+            int rep1 = findRep(parent, sArr1[j]);
+            int rep2 = findRep(parent, sArr2[j]);
+            if (queryType.get(j).equals("Friend")) {
+                if (rep1 != rep2) {
+                    if (sizes[rep1] < sizes[rep2]) {
+                        // rep1 smaller than rep2
+                        // point rep1 to rep2
+                        parent[rep1] = rep2;
+                        sizes[rep2] += sizes[rep1];
+                    } else {
+                        parent[rep2] = rep1;
+                        sizes[rep1] += sizes[rep2];
+                    }
+                }
+            } else {
+                if (rep1 == rep2) {
+                    results.add(sizes[rep1]);
+                } else {
+                    results.add(sizes[rep1] + sizes[rep2]);
+                }
+            }
+        }
+
+        return results;
     }
 
 }
@@ -46,9 +84,22 @@ public class Solution {
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
         BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(System.getenv("OUTPUT_PATH")));
 
-        int pointCount = Integer.parseInt(bufferedReader.readLine().trim());
+        int n = Integer.parseInt(bufferedReader.readLine().trim());
 
-        List<Integer> point = IntStream.range(0, pointCount).mapToObj(i -> {
+        int queryTypeCount = Integer.parseInt(bufferedReader.readLine().trim());
+
+        List<String> queryType = IntStream.range(0, queryTypeCount).mapToObj(i -> {
+            try {
+                return bufferedReader.readLine();
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        })
+                .collect(toList());
+
+        int students1Count = Integer.parseInt(bufferedReader.readLine().trim());
+
+        List<Integer> students1 = IntStream.range(0, students1Count).mapToObj(i -> {
             try {
                 return bufferedReader.readLine().replaceAll("\\s+$", "");
             } catch (IOException ex) {
@@ -59,12 +110,26 @@ public class Solution {
                 .map(Integer::parseInt)
                 .collect(toList());
 
-        int k = Integer.parseInt(bufferedReader.readLine().trim());
+        int students2Count = Integer.parseInt(bufferedReader.readLine().trim());
 
-        int result = Result.minimize(point, k);
+        List<Integer> students2 = IntStream.range(0, students2Count).mapToObj(i -> {
+            try {
+                return bufferedReader.readLine().replaceAll("\\s+$", "");
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        })
+                .map(String::trim)
+                .map(Integer::parseInt)
+                .collect(toList());
 
-        bufferedWriter.write(String.valueOf(result));
-        bufferedWriter.newLine();
+        List<Integer> result = Result.getTheGroups(n, queryType, students1, students2);
+
+        bufferedWriter.write(
+                result.stream()
+                        .map(Object::toString)
+                        .collect(joining("\n"))
+                        + "\n");
 
         bufferedReader.close();
         bufferedWriter.close();

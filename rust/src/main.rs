@@ -6,29 +6,20 @@ use std::{
 
 fn main() {
     let mut sc = Scanner::new();
-    let n = sc.next::<i128>();
-    let m = sc.next::<i128>();
-    let k = sc.next::<i128>();
-    let m = m - n;
-    let l = n - k;
-    let r = k - 1;
-    let mut x = (m as f64).sqrt() as i128;
-
-    let s = min(r, l) as f64;
-    let a = 0.5;
-    let b = s + 0.5;
-    let c = -(m as f64) - s * (s + 1.0) / 2.0;
-    let x_s = (-b + (b*b - 4.0*a*c).sqrt()) / 2.0 / a;
-    if s <= x_s {
-        x = x_s as i128;
+    let n = sc.next::<u64>();
+    if n < 6 {
+        println!("-1");
+    } else {
+        println!("1 2");
+        println!("1 3");
+        println!("1 4");
+        for i in 5..=n {
+            println!("2 {}", i);
+        }
     }
-
-    let x_rl = (m + l * (l + 1) / 2 + r * (r + 1) / 2) / n;
-    if l <= x_rl && r <= x_rl {
-        x = x_rl;
+    for i in 2..=n {
+        println!("{} {}", i-1, i);
     }
-
-    println!("{}", x + 1);
 }
 
 mod scanner {

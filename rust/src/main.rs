@@ -3,60 +3,69 @@ use std::{
     cmp::{max, min, Ordering},
     collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
     fs,
-    io::BufReader,
+    io::{BufReader, stdin},
 };
 
-fn dist((x1, y1): (u64, u64), (x2, y2): (u64, u64)) -> u64 {
-    ((x1 as i128 - x2 as i128).abs() + (y1 as i128 - y2 as i128).abs()) as u64
-}
-
 fn main() {
-    let mut sc = Scanner::new(fs::File::open("input.txt").unwrap());
-    let n = sc.next::<u64>();
-    let m = sc.next::<u64>();
-    let k = sc.next::<usize>();
-    let mut bs = Vec::with_capacity(k);
-    for _ in 0..k {
-        let x = sc.next::<u64>();
-        let y = sc.next::<u64>();
-        bs.push((x, y));
-    }
-    let mut max_dist = 0;
-    let mut max_dist_xy = bs[0];
-    for x in 1..=n {
-        for y in 1..=m {
-            let mut min_dist = m + n;
-            for b in &bs {
-                let dist = dist(*b, (x, y));
-                if dist < min_dist {
-                    min_dist = dist;
-                }
-            }
-            if min_dist > max_dist {
-                max_dist_xy = (x, y);
-                max_dist = min_dist;
-            }
+    let mut sc = Scanner::new(stdin());
+    let aboves = sc.next_line().into_bytes().into_iter().map(|b| b == b'+').collect::<Vec<_>>();
+
+    // construct linked list
+    let mut next = Vec::new();
+    let mut prev = Vec::new();
+    for i in 0..aboves.len() {
+        if i == 0 {
+            prev.push(None);
+        } else {
+            prev.push(Some(i - 1));
+        }
+        if i == aboves.len() - 1 {
+            next.push(None);
+        } else {
+            next.push(Some(i + 1));
         }
     }
-    fs::write("output.txt", format!("{} {}", max_dist_xy.0, max_dist_xy.1)).unwrap();
+
+    let mut walk = 0;
+    while let Some(walk2) = next[walk] {
+        if aboves[walk] == aboves[walk2] {
+            if let Some(p) = prev[walk] {
+                next[p] = next[walk2];
+            }
+            if let Some(n) = next[walk2] {
+                prev[n] = prev[walk];
+            }
+            if let Some(p) = prev[walk] {
+                walk = p;
+            } else if let Some(n) = next[walk2] {
+                walk = n;
+            } else {
+                println!("Yes");
+                return;
+            }
+        } else {
+            walk = walk2;
+        }
+    }
+    println!("No");
 }
 
 mod scanner {
     use std::collections::{HashSet, VecDeque};
-    use std::io::{BufReader, Read};
+    use std::io::{BufReader, Read, Lines};
     use std::{any::type_name, io::BufRead, str::FromStr};
 
     pub struct Scanner<R: Read> {
         tokens: VecDeque<String>,
         delimiters: Option<HashSet<char>>,
-        source: BufReader<R>,
+        lines: Lines<BufReader<R>>,
     }
     impl<R: Read> Scanner<R> {
         pub fn new(source: R) -> Self {
             Self {
                 tokens: VecDeque::new(),
                 delimiters: None,
-                source: BufReader::new(source),
+                lines: BufReader::new(source).lines(),
             }
         }
 
@@ -64,7 +73,7 @@ mod scanner {
             Self {
                 tokens: VecDeque::new(),
                 delimiters: Some(delimiters.iter().copied().collect()),
-                source: BufReader::new(source),
+                lines: BufReader::new(source).lines(),
             }
         }
 
@@ -83,15 +92,12 @@ mod scanner {
 
         pub fn next_line(&mut self) -> String {
             assert!(self.tokens.is_empty(), "You have unprocessed token");
-            let mut line = String::new();
-            self.source.read_line(&mut line).expect("Failed to read.");
-            line.pop();
+            let line = self.lines.next().and_then(|e| e.ok()).expect("Failed to read.");
             line
         }
 
         fn receive_input(&mut self) {
-            let mut line = String::new();
-            self.source.read_line(&mut line).expect("Failed to read.");
+            let line = self.lines.next().and_then(|e| e.ok()).expect("Failed to read.");
             if let Some(delimiters) = &self.delimiters {
                 for token in line.split(|c| delimiters.contains(&c)) {
                     self.tokens.push_back(token.to_string());

@@ -6,54 +6,44 @@ use std::{
     io::{BufReader, stdin},
 };
 
-fn get_diff(s1: &[u8], s2: &[u8]) -> Vec<usize> {
-    let mut diff = Vec::new();
-    for (i, (c1, c2)) in s1.iter().zip(s2.iter()).enumerate() {
-        if c1 != c2 {
-            diff.push(i);
-        }
+fn get_max_good(
+    start: u64,
+    i: usize,
+    arr: &[u64],
+    mem: &mut HashMap<(u64, usize), u64>,
+    l: u64,
+    r: u64,
+    h: u64,
+) -> u64 {
+    if i >= arr.len() {
+        return 0;
     }
-    diff
+    let k = (start, i);
+    if !mem.contains_key(&k) {
+        let start1 = (start + arr[i]) % h;
+        let good1 = if l <= start1 && start1 <= r { 1 } else { 0 };
+        let start2 = (start + arr[i] - 1) % h;
+        let good2 = if l <= start2 && start2 <= r { 1 } else { 0 };
+        let max_good = max(
+            get_max_good(start1, i + 1, arr, mem, l, r, h) + good1,
+            get_max_good(start2, i + 1, arr, mem, l, r, h) + good2,
+        );
+        mem.insert(k, max_good);
+    }
+    *mem.get(&k).unwrap()
 }
 
 fn main() {
     let mut sc = Scanner::new(stdin());
-    let test_cases = sc.next::<usize>();
-    'outer: for _ in 0..test_cases {
-        let n = sc.next::<usize>();
-        sc.next::<usize>();
-        let mut strs = Vec::with_capacity(n);
-        for _ in 0..n {
-            strs.push(sc.next_line().into_bytes());
-        }
-        let top = strs.pop().unwrap();
-        if strs.iter().any(|s| get_diff(s, &top).len() > 2) {
-            println!("-1");
-            continue 'outer;
-        }
-        let diff2 = strs.iter().filter_map(|s| {
-            let diff = get_diff(s, &top);
-            if diff.len() == 2 {
-                Some((diff, s))
-            } else {
-                None
-            }
-        }).next();
-        if diff2.is_none() {
-            println!("{}", String::from_utf8(top).unwrap());
-            continue 'outer;
-        }
-        let (d, diff2) = diff2.unwrap();
-        for d in d {
-            let mut cand = top.clone();
-            cand[d] = diff2[d];
-            if strs.iter().all(|s| get_diff(s, &cand).len() < 2) {
-                println!("{}", String::from_utf8(cand).unwrap());
-                continue 'outer;
-            }
-        }
-        println!("-1");
+    let n = sc.next::<usize>();
+    let h = sc.next::<u64>();
+    let l = sc.next::<u64>();
+    let r = sc.next::<u64>();
+    let mut arr = Vec::with_capacity(n);
+    for _ in 0..n {
+        arr.push(sc.next::<u64>());
     }
+    println!("{}", get_max_good(0, 0, &arr, &mut HashMap::new(), l, r, h))
 }
 
 mod scanner {

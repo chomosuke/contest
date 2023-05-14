@@ -6,70 +6,67 @@ use std::{
     io::{BufReader, stdin},
 };
 
+fn valid_x(x: u32, counts: &mut BTreeMap<u32, usize>) -> Option<Vec<(u32, u32)>> {
+    let max = if let Some(mut max) = counts.last_entry() {
+        if *max.get() > 1 {
+            *max.get_mut() -= 1;
+            *max.key()
+        } else {
+            max.remove_entry().0
+        }
+    } else {
+        return Some(Vec::new());
+    };
+
+    if max > x || !counts.contains_key(&(x - max)) {
+        *counts.entry(max).or_default() += 1;
+        return None;
+    }
+
+    let b = x - max;
+    let b_count = *counts.get(&(x - max)).unwrap();
+    if b_count > 1 {
+        counts.insert(b, b_count - 1);
+    } else {
+        counts.remove(&b);
+    }
+
+    if let Some(mut pairs) = valid_x(max, counts) {
+        pairs.push((max, b));
+        return Some(pairs);
+    } else {
+        *counts.entry(max).or_default() += 1;
+        *counts.entry(b).or_default() += 1;
+        return None;
+    }
+}
+
 fn main() {
     let mut sc = Scanner::new(stdin());
-    let n = sc.next::<usize>();
-    let mut costs = Vec::with_capacity(n);
-    for _ in 0..n {
-        costs.push(sc.next::<u64>());
-    }
-    let m = sc.next::<usize>();
-    let mut edges = Vec::with_capacity(m);
-    for _ in 0..m {
-        edges.push((sc.next::<usize>() - 1, sc.next::<usize>() - 1));
-    }
-    let mut adj_nodes = vec![Vec::new(); n];
-    let mut rev_adj_n = vec![Vec::new(); n];
-    for (u, v) in edges {
-        adj_nodes[u].push(v);
-        rev_adj_n[v].push(u);
-    }
-
-    // To find the strongly connected components, we want to always start at the
-    // end of the DAG produced by collapsing all components.
-    //
-    // If we do a dfs and then start from the leafs, we'll find all strongly connect components
-    let mut visited = vec![false; n];
-    let mut finish_order = Vec::new();
-    fn dfs(node: usize, adj_nodes: &[Vec<usize>], visited: &mut [bool], finish_order: &mut Vec<usize>) {
-        assert!(!visited[node]);
-        visited[node] = true;
-        for &adj_node in &adj_nodes[node] {
-            if !visited[adj_node] {
-                dfs(adj_node, adj_nodes, visited, finish_order);
+    let test_cases = sc.next::<usize>();
+    'outer: for _ in 0..test_cases {
+        let n = sc.next::<usize>();
+        let mut counts = BTreeMap::<u32, usize>::new();
+        for _ in 0..(2*n) {
+            *counts.entry(sc.next::<u32>()).or_default() += 1;
+        }
+        let mut arr = counts.iter().map(|(&k, _)| k).collect::<Vec<_>>();
+        let max = arr.pop().unwrap();
+        if *counts.get(&max).unwrap() > 1 {
+            arr.push(max);
+        }
+        for a in arr {
+            if let Some(pairs) = valid_x(a + max, &mut counts) {
+                println!("YES");
+                println!("{}", a + max);
+                for (x, y) in pairs.into_iter().rev() {
+                    println!("{} {}", x, y);
+                }
+                continue 'outer;
             }
         }
-        finish_order.push(node);
+        println!("NO");
     }
-    for i in 0..n {
-        if !visited[i] {
-            dfs(i, &adj_nodes, &mut visited, &mut finish_order);
-        }
-    }
-
-    let mut visited = vec![false; n];
-    let mut sccs = Vec::new();
-    for node in finish_order.into_iter().rev() {
-        if !visited[node] {
-            let mut scc = Vec::new();
-            dfs(node, &rev_adj_n, &mut visited, &mut scc);
-            sccs.push(scc);
-        }
-    }
-
-    let costs = sccs.into_iter().map(|scc| {
-        let costs = scc.into_iter().map(|n| costs[n]).collect::<Vec<_>>();
-        let min = costs.iter().min().unwrap();
-        (*min, costs.iter().filter(|&c| c == min).count())
-    }).collect::<Vec<_>>();
-
-    let cost: u64 = costs.iter().map(|&(c, _)| c).sum();
-    let mut ways = 1;
-    for (_, w) in costs {
-        ways *= w;
-        ways %= 1000000007;
-    }
-    println!("{cost} {ways}");
 }
 
 mod scanner {

@@ -8,40 +8,68 @@ use std::{
 
 fn main() {
     let mut sc = Scanner::new(stdin());
-    let l = sc.next::<u128>();
-    let r = sc.next::<u128>();
-    let mut resl = 0;
-    let mut resr = 0;
-    for i in (0..64).rev() {
-        let bit: u128 = 1 << i;
-        let l1 = (resl | bit) & !(bit - 1);
-        let r1 = (resr | bit) & !(bit - 1);
-        let l0 = (resl & !bit) | (bit - 1);
-        let r0 = (resr & !bit) | (bit - 1);
-        if r1 <= r && l0 >= l {
-            // resr can set to 1 and resl can set to 0
-            resr = resr | bit;
-            resl = resl & !bit;
-        } else if l1 <= r && r0 >= l {
-            // resr can set to 0 and resl can set to 1
-            resr = resr & !bit;
-            resl = resl | bit;
-        } else {
-            // they have to be the same
-            if r1 > r {
-                // has to both be 0
-                resr = resr & !bit;
-                resl = resl & !bit;
-            } else if l0 < l {
-                // has to both be 1
-                resr = resr | bit;
-                resl = resl | bit;
-            } else {
-                panic!();
+    let n = sc.next::<usize>();
+    let mut costs = Vec::with_capacity(n);
+    for _ in 0..n {
+        costs.push(sc.next::<u64>());
+    }
+    let m = sc.next::<usize>();
+    let mut edges = Vec::with_capacity(m);
+    for _ in 0..m {
+        edges.push((sc.next::<usize>() - 1, sc.next::<usize>() - 1));
+    }
+    let mut adj_nodes = vec![Vec::new(); n];
+    let mut rev_adj_n = vec![Vec::new(); n];
+    for (u, v) in edges {
+        adj_nodes[u].push(v);
+        rev_adj_n[v].push(u);
+    }
+
+    // To find the strongly connected components, we want to always start at the
+    // end of the DAG produced by collapsing all components.
+    //
+    // If we do a dfs and then start from the leafs, we'll find all strongly connect components
+    let mut visited = vec![false; n];
+    let mut finish_order = Vec::new();
+    fn dfs(node: usize, adj_nodes: &[Vec<usize>], visited: &mut [bool], finish_order: &mut Vec<usize>) {
+        assert!(!visited[node]);
+        visited[node] = true;
+        for &adj_node in &adj_nodes[node] {
+            if !visited[adj_node] {
+                dfs(adj_node, adj_nodes, visited, finish_order);
             }
         }
+        finish_order.push(node);
     }
-    println!("{}", resl ^ resr);
+    for i in 0..n {
+        if !visited[i] {
+            dfs(i, &adj_nodes, &mut visited, &mut finish_order);
+        }
+    }
+
+    let mut visited = vec![false; n];
+    let mut sccs = Vec::new();
+    for node in finish_order.into_iter().rev() {
+        if !visited[node] {
+            let mut scc = Vec::new();
+            dfs(node, &rev_adj_n, &mut visited, &mut scc);
+            sccs.push(scc);
+        }
+    }
+
+    let costs = sccs.into_iter().map(|scc| {
+        let costs = scc.into_iter().map(|n| costs[n]).collect::<Vec<_>>();
+        let min = costs.iter().min().unwrap();
+        (*min, costs.iter().filter(|&c| c == min).count())
+    }).collect::<Vec<_>>();
+
+    let cost: u64 = costs.iter().map(|&(c, _)| c).sum();
+    let mut ways = 1;
+    for (_, w) in costs {
+        ways *= w;
+        ways %= 1000000007;
+    }
+    println!("{cost} {ways}");
 }
 
 mod scanner {

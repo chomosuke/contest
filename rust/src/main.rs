@@ -6,44 +6,34 @@ use std::{
     io::{BufReader, stdin},
 };
 
-fn get_max_good(
-    start: u64,
-    i: usize,
-    arr: &[u64],
-    mem: &mut HashMap<(u64, usize), u64>,
-    l: u64,
-    r: u64,
-    h: u64,
-) -> u64 {
-    if i >= arr.len() {
-        return 0;
-    }
-    let k = (start, i);
-    if !mem.contains_key(&k) {
-        let start1 = (start + arr[i]) % h;
-        let good1 = if l <= start1 && start1 <= r { 1 } else { 0 };
-        let start2 = (start + arr[i] - 1) % h;
-        let good2 = if l <= start2 && start2 <= r { 1 } else { 0 };
-        let max_good = max(
-            get_max_good(start1, i + 1, arr, mem, l, r, h) + good1,
-            get_max_good(start2, i + 1, arr, mem, l, r, h) + good2,
-        );
-        mem.insert(k, max_good);
-    }
-    *mem.get(&k).unwrap()
-}
-
 fn main() {
     let mut sc = Scanner::new(stdin());
     let n = sc.next::<usize>();
-    let h = sc.next::<u64>();
-    let l = sc.next::<u64>();
-    let r = sc.next::<u64>();
-    let mut arr = Vec::with_capacity(n);
-    for _ in 0..n {
-        arr.push(sc.next::<u64>());
+    let p = sc.next::<usize>() - 1;
+    let str = sc.next_line().into_bytes();
+    let mut flips = Vec::new();
+    let mut presses = 0;
+    for i in 0..(n/2) {
+        let c1 = (str[i] - b'a') as i8;
+        let c2 = (str[n - i - 1] - b'a') as i8;
+        if c1 != c2 {
+            flips.push(i);
+            presses += (c1 - c2).abs().min(c1 + 26 - c2).min(c2 + 26 - c1) as u64;
+        }
     }
-    println!("{}", get_max_good(0, 0, &arr, &mut HashMap::new(), l, r, h))
+
+    if presses == 0 {
+        println!("0");
+        return;
+    }
+
+    let p = p.min(n - p - 1) as i128;
+    let last = flips.len() - 1;
+    let last = flips[last] as i128;
+    let first = flips[0] as i128;
+    presses += (p - last).abs().min((p - first).abs()) as u64;
+    presses += (last - first) as u64;
+    println!("{presses}");
 }
 
 mod scanner {

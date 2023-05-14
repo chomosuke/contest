@@ -6,39 +6,14 @@ use std::{
     io::{BufReader, stdin},
 };
 
-fn valid_x(x: u32, counts: &mut BTreeMap<u32, usize>) -> Option<Vec<(u32, u32)>> {
-    let max = if let Some(mut max) = counts.last_entry() {
-        if *max.get() > 1 {
-            *max.get_mut() -= 1;
-            *max.key()
-        } else {
-            max.remove_entry().0
+fn get_diff(s1: &[u8], s2: &[u8]) -> Vec<usize> {
+    let mut diff = Vec::new();
+    for (i, (c1, c2)) in s1.iter().zip(s2.iter()).enumerate() {
+        if c1 != c2 {
+            diff.push(i);
         }
-    } else {
-        return Some(Vec::new());
-    };
-
-    if max > x || !counts.contains_key(&(x - max)) {
-        *counts.entry(max).or_default() += 1;
-        return None;
     }
-
-    let b = x - max;
-    let b_count = *counts.get(&(x - max)).unwrap();
-    if b_count > 1 {
-        counts.insert(b, b_count - 1);
-    } else {
-        counts.remove(&b);
-    }
-
-    if let Some(mut pairs) = valid_x(max, counts) {
-        pairs.push((max, b));
-        return Some(pairs);
-    } else {
-        *counts.entry(max).or_default() += 1;
-        *counts.entry(b).or_default() += 1;
-        return None;
-    }
+    diff
 }
 
 fn main() {
@@ -46,26 +21,38 @@ fn main() {
     let test_cases = sc.next::<usize>();
     'outer: for _ in 0..test_cases {
         let n = sc.next::<usize>();
-        let mut counts = BTreeMap::<u32, usize>::new();
-        for _ in 0..(2*n) {
-            *counts.entry(sc.next::<u32>()).or_default() += 1;
+        sc.next::<usize>();
+        let mut strs = Vec::with_capacity(n);
+        for _ in 0..n {
+            strs.push(sc.next_line().into_bytes());
         }
-        let mut arr = counts.iter().map(|(&k, _)| k).collect::<Vec<_>>();
-        let max = arr.pop().unwrap();
-        if *counts.get(&max).unwrap() > 1 {
-            arr.push(max);
+        let top = strs.pop().unwrap();
+        if strs.iter().any(|s| get_diff(s, &top).len() > 2) {
+            println!("-1");
+            continue 'outer;
         }
-        for a in arr {
-            if let Some(pairs) = valid_x(a + max, &mut counts) {
-                println!("YES");
-                println!("{}", a + max);
-                for (x, y) in pairs.into_iter().rev() {
-                    println!("{} {}", x, y);
-                }
+        let diff2 = strs.iter().filter_map(|s| {
+            let diff = get_diff(s, &top);
+            if diff.len() == 2 {
+                Some((diff, s))
+            } else {
+                None
+            }
+        }).next();
+        if diff2.is_none() {
+            println!("{}", String::from_utf8(top).unwrap());
+            continue 'outer;
+        }
+        let (d, diff2) = diff2.unwrap();
+        for d in d {
+            let mut cand = top.clone();
+            cand[d] = diff2[d];
+            if strs.iter().all(|s| get_diff(s, &cand).len() < 2) {
+                println!("{}", String::from_utf8(cand).unwrap());
                 continue 'outer;
             }
         }
-        println!("NO");
+        println!("-1");
     }
 }
 

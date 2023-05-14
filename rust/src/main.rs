@@ -8,46 +8,40 @@ use std::{
 
 fn main() {
     let mut sc = Scanner::new(stdin());
-    let aboves = sc.next_line().into_bytes().into_iter().map(|b| b == b'+').collect::<Vec<_>>();
-
-    // construct linked list
-    let mut next = Vec::new();
-    let mut prev = Vec::new();
-    for i in 0..aboves.len() {
-        if i == 0 {
-            prev.push(None);
+    let l = sc.next::<u128>();
+    let r = sc.next::<u128>();
+    let mut resl = 0;
+    let mut resr = 0;
+    for i in (0..64).rev() {
+        let bit: u128 = 1 << i;
+        let l1 = (resl | bit) & !(bit - 1);
+        let r1 = (resr | bit) & !(bit - 1);
+        let l0 = (resl & !bit) | (bit - 1);
+        let r0 = (resr & !bit) | (bit - 1);
+        if r1 <= r && l0 >= l {
+            // resr can set to 1 and resl can set to 0
+            resr = resr | bit;
+            resl = resl & !bit;
+        } else if l1 <= r && r0 >= l {
+            // resr can set to 0 and resl can set to 1
+            resr = resr & !bit;
+            resl = resl | bit;
         } else {
-            prev.push(Some(i - 1));
-        }
-        if i == aboves.len() - 1 {
-            next.push(None);
-        } else {
-            next.push(Some(i + 1));
-        }
-    }
-
-    let mut walk = 0;
-    while let Some(walk2) = next[walk] {
-        if aboves[walk] == aboves[walk2] {
-            if let Some(p) = prev[walk] {
-                next[p] = next[walk2];
-            }
-            if let Some(n) = next[walk2] {
-                prev[n] = prev[walk];
-            }
-            if let Some(p) = prev[walk] {
-                walk = p;
-            } else if let Some(n) = next[walk2] {
-                walk = n;
+            // they have to be the same
+            if r1 > r {
+                // has to both be 0
+                resr = resr & !bit;
+                resl = resl & !bit;
+            } else if l0 < l {
+                // has to both be 1
+                resr = resr | bit;
+                resl = resl | bit;
             } else {
-                println!("Yes");
-                return;
+                panic!();
             }
-        } else {
-            walk = walk2;
         }
     }
-    println!("No");
+    println!("{}", resl ^ resr);
 }
 
 mod scanner {

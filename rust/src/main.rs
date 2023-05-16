@@ -8,32 +8,35 @@ use std::{
 
 fn main() {
     let mut sc = Scanner::new(stdin());
-    let n = sc.next::<usize>();
-    let p = sc.next::<usize>() - 1;
-    let str = sc.next_line().into_bytes();
-    let mut flips = Vec::new();
-    let mut presses = 0;
-    for i in 0..(n/2) {
-        let c1 = (str[i] - b'a') as i8;
-        let c2 = (str[n - i - 1] - b'a') as i8;
-        if c1 != c2 {
-            flips.push(i);
-            presses += (c1 - c2).abs().min(c1 + 26 - c2).min(c2 + 26 - c1) as u64;
+    let test_cases = sc.next::<usize>();
+    'outer: for _ in 0..test_cases {
+        let _n = sc.next::<usize>();
+        let a = sc.next_line().into_bytes();
+        let b = sc.next_line().into_bytes();
+        let mut counts = vec![vec![false; 20]; 20];
+        for (a, b) in a.into_iter().zip(b.into_iter()) {
+            let a = a - b'a';
+            let b = b - b'a';
+            if a > b {
+                println!("-1");
+                continue 'outer;
+            }
+            if a < b {
+                counts[a as usize][b as usize] = true;
+            }
         }
+        let mut moves = 0;
+        for a in 0..20 {
+            let min_b = counts[a].iter().position(|&t| t);
+            if let Some(min_b) = min_b {
+                for b in (min_b + 1)..20 {
+                    counts[min_b][b] = counts[min_b][b] || counts[a][b];
+                }
+                moves += 1;
+            }
+        }
+        println!("{moves}");
     }
-
-    if presses == 0 {
-        println!("0");
-        return;
-    }
-
-    let p = p.min(n - p - 1) as i128;
-    let last = flips.len() - 1;
-    let last = flips[last] as i128;
-    let first = flips[0] as i128;
-    presses += (p - last).abs().min((p - first).abs()) as u64;
-    presses += (last - first) as u64;
-    println!("{presses}");
 }
 
 mod scanner {

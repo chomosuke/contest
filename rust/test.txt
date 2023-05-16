@@ -1,18 +1,16 @@
 5
-2 4
-abac
-zbab
-2 4
-aaaa
-bbbb
-3 3
-baa
-aaa
+3
 aab
-2 2
-ab
-bb
-3 1
-a
-b
-c
+bcc
+4
+cabc
+abcb
+3
+abc
+tsr
+4
+aabd
+cccd
+5
+abcbd
+bcdda

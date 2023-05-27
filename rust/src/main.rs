@@ -8,34 +8,21 @@ use std::{
 
 fn main() {
     let mut sc = Scanner::new(stdin());
-    let n = sc.next::<usize>();
-    let mut adj_mat = Vec::with_capacity(n);
-    for _ in 0..n {
-        let adj_row = sc.next_n::<u64>(n).collect::<Vec<_>>();
-        adj_mat.push(adj_row);
-    }
-    let delete = sc.next_n::<usize>(n).map(|v| v - 1).collect::<Vec<_>>();
-    let mut sums = Vec::with_capacity(n);
-    for (i, &ni) in delete.iter().rev().enumerate() {
-        for n1 in 0..n {
-            for n2 in 0..n {
-                adj_mat[n1][n2] = min(adj_mat[n1][ni] + adj_mat[ni][n2], adj_mat[n1][n2]);
+    let test_cases = sc.next::<usize>();
+    for _ in 0..test_cases {
+        let n = sc.next::<u64>();
+        if n % 2 != 0 {
+            println!("Bob");
+        } else if n.count_ones() == 1 {
+            if n.trailing_zeros() % 2 != 0 {
+                println!("Bob");
+            } else {
+                println!("Alice");
             }
+        } else {
+            println!("Alice");
         }
-        let contained = &delete[(n - i - 1)..];
-        let mut sum = 0;
-        for &n1 in contained {
-            for &n2 in contained {
-                sum += adj_mat[n1][n2];
-            }
-        }
-        sums.push(sum);
     }
-    print!("{}", sums.pop().unwrap());
-    for s in sums.into_iter().rev() {
-        print!(" {s}");
-    }
-    println!();
 }
 
 mod scanner {

@@ -8,21 +8,31 @@ use std::{
 
 fn main() {
     let mut sc = Scanner::new(stdin());
-    let test_cases = sc.next::<usize>();
-    for _ in 0..test_cases {
-        let n = sc.next::<u64>();
-        if n % 2 != 0 {
-            println!("Bob");
-        } else if n.count_ones() == 1 {
-            if n.trailing_zeros() % 2 != 0 {
-                println!("Bob");
-            } else {
-                println!("Alice");
-            }
-        } else {
-            println!("Alice");
-        }
+    let u = sc.next::<u64>();
+    let v = sc.next::<u64>();
+    if u > v || v % 2 != u % 2 {
+        println!("-1");
+        return;
     }
+    if v == 0 {
+        println!("0");
+        return;
+    }
+    let v = v - u;
+    let v = v / 2;
+    let nums = if v == 0 {
+        vec![u]
+    } else if u ^ v == u + v {
+        vec![u + v, v]
+    } else {
+        vec![u, v, v]
+    };
+    println!("{}", nums.len());
+    print!("{}", nums[0]);
+    for n in nums.into_iter().skip(1) {
+        print!(" {n}");
+    }
+    println!();
 }
 
 mod scanner {

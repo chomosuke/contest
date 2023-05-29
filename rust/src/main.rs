@@ -6,24 +6,48 @@ use std::{
     io::{stdin, BufReader},
 };
 
-fn main() {
-    let mut sc = Scanner::new(stdin());
-    let n = sc.next::<usize>();
-    let m = sc.next::<usize>();
-    let mut arr = sc.next_n(n).collect::<Vec<usize>>();
-    if m < n {
-        println!("0");
-        return;
+fn get_bs(
+    node: usize,
+    parent: usize,
+    adj: &[Vec<usize>],
+    ranges: &[(usize, usize)],
+) -> (usize, usize) {
+    let mut bss = Vec::with_capacity(adj[node].len());
+    let children = adj[node].iter().filter(|&&n| n != parent);
+    for &nn in children.clone() {
+        bss.push(get_bs(nn, node, adj, ranges));
     }
-    arr.sort();
-    let mut res = 1;
-    for i in 0..(n - 1) {
-        for j in (i + 1)..n {
-            res *= arr[j] - arr[i];
-            res %= m;
+    let ars = [ranges[node].0, ranges[node].1];
+    let mut bs = [0, 0];
+    for (i, a) in ars.into_iter().enumerate() {
+        for (j, &c) in children.clone().enumerate() {
+            let range = ranges[c];
+            let cbs = bss[j];
+            bs[i] += max(range.0.abs_diff(a) + cbs.0, range.1.abs_diff(a) + cbs.1);
         }
     }
-    println!("{res}");
+    (bs[0], bs[1])
+}
+
+fn main() {
+    let mut sc = Scanner::new(stdin());
+    let test_cases = sc.next::<u64>();
+    for _ in 0..test_cases {
+        let n = sc.next::<usize>();
+        let mut ranges = Vec::with_capacity(n);
+        for _ in 0..n {
+            ranges.push((sc.next::<usize>(), sc.next::<usize>()));
+        }
+        let mut adj = vec![Vec::new(); n];
+        for _ in 0..(n - 1) {
+            let v = sc.next::<usize>() - 1;
+            let u = sc.next::<usize>() - 1;
+            adj[v].push(u);
+            adj[u].push(v);
+        }
+        let bs = get_bs(0, 0, &adj, &ranges);
+        println!("{}", max(bs.0, bs.1));
+    }
 }
 
 mod scanner {

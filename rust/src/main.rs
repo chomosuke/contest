@@ -8,18 +8,30 @@ use std::{
 
 fn main() {
     let mut sc = Scanner::new(stdin());
-    let test_cases = sc.next::<u32>();
-    for _ in 0..test_cases {
-        let n = sc.next::<usize>();
-        let arr = sc.next_n(n).collect::<Vec<usize>>();
-        let mut counts = HashMap::<usize, usize>::new();
-        let mut weight = 0;
-        for (i, &a) in arr.iter().enumerate() {
-            weight += (arr.len() - i) * *counts.entry(a).or_default();
-            *counts.entry(a).or_default() += i + 1;
-        }
-        println!("{weight}");
+    let n: usize = sc.next();
+    let arr: Vec<u64> = sc.next_n(n).collect();
+    let mut occur = HashSet::new();
+    for &i in &arr {
+        occur.insert(i);
     }
+
+    let mut brr = Vec::with_capacity(n);
+    let mut next = 0;
+    let mut i = 0;
+    while i < arr.len() {
+        while occur.contains(&next) {
+            next += 1;
+        }
+        brr.push(next);
+        next += 1;
+        i += 1;
+
+        while i != 0 && i < arr.len() && arr[i - 1] != arr[i] {
+            brr.push(arr[i - 1]);
+            i += 1;
+        }
+    }
+    print_iter(brr.into_iter());
 }
 
 mod scanner {

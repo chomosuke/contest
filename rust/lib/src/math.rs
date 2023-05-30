@@ -114,6 +114,7 @@ pub fn multinomial(n: i128, rs: &[i128], m: i128) -> i128 {
 }
 
 /// O(sqrt(x))
+/// Most of the time O(log(x))
 pub fn get_prime_facts(mut x: i128) -> Vec<(i128, usize)> {
     let mut result = Vec::new();
     let mut n = 2;

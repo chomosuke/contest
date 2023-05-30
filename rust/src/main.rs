@@ -6,52 +6,52 @@ use std::{
     io::{stdin, BufReader},
 };
 
-fn get_bs(
-    node: usize,
-    parent: usize,
-    adj: &[Vec<usize>],
-    ranges: &[(usize, usize)],
-) -> (usize, usize) {
-    let mut bss = Vec::with_capacity(adj[node].len());
-    let children = adj[node].iter().filter(|&&n| n != parent);
-    for &nn in children.clone() {
-        bss.push(get_bs(nn, node, adj, ranges));
-    }
-    let ars = [ranges[node].0, ranges[node].1];
-    let mut bs = [0, 0];
-    for (i, a) in ars.into_iter().enumerate() {
-        for (j, &c) in children.clone().enumerate() {
-            let range = ranges[c];
-            let cbs = bss[j];
-            bs[i] += max(range.0.abs_diff(a) + cbs.0, range.1.abs_diff(a) + cbs.1);
+/// O(sqrt(x))
+/// most of the time O(log(x))
+pub fn get_prime_facts(mut x: i128) -> Vec<(i128, usize)> {
+    let mut result = Vec::new();
+    let mut n = 2;
+    while n * n <= x {
+        if x % n == 0 {
+            x /= n;
+            let mut count = 1;
+            while x % n == 0 {
+                x /= n;
+                count += 1;
+            }
+            result.push((n, count));
         }
+        n += 1;
     }
-    (bs[0], bs[1])
+    if x != 1 {
+        result.push((x, 1));
+    }
+    result
 }
 
 fn main() {
     let mut sc = Scanner::new(stdin());
-    let test_cases = sc.next::<u64>();
-    for _ in 0..test_cases {
-        let n = sc.next::<usize>();
-        let mut ranges = Vec::with_capacity(n);
-        for _ in 0..n {
-            ranges.push((sc.next::<usize>(), sc.next::<usize>()));
+    let n = sc.next::<u64>();
+    let prime_factors = get_prime_facts(n as i128)
+        .into_iter()
+        .map(|(prime_fact, _count)| prime_fact as u64)
+        .collect::<Vec<_>>();
+    let mut prod = 1;
+    let mut arr = Vec::new();
+    for i in 1..n {
+        if prime_factors.iter().all(|&f| i % f != 0) {
+            arr.push(i);
+            prod *= i;
+            prod %= n;
         }
-        let mut adj = vec![Vec::new(); n];
-        for _ in 0..(n - 1) {
-            let v = sc.next::<usize>() - 1;
-            let u = sc.next::<usize>() - 1;
-            adj[v].push(u);
-            adj[u].push(v);
-        }
-        let bs = get_bs(0, 0, &adj, &ranges);
-        println!("{}", max(bs.0, bs.1));
     }
+    println!("{}", if prod == 1 { arr.len() } else { arr.len() - 1 });
+    print_iter(arr.into_iter().filter(|&a| prod == 1 || a != prod));
 }
 
 mod scanner {
     use std::collections::{HashSet, VecDeque};
+    use std::fmt::Display;
     use std::io::{BufReader, Lines, Read};
     use std::marker::PhantomData;
     use std::{any::type_name, io::BufRead, str::FromStr};
@@ -142,6 +142,16 @@ mod scanner {
                 }
             }
         }
+    }
+
+    pub fn print_iter(mut iter: impl Iterator<Item = impl Display>) {
+        if let Some(e) = iter.next() {
+            print!("{e}");
+            for e in iter {
+                print!(" {e}");
+            }
+        }
+        println!();
     }
 }
 #[allow(unused_imports)]

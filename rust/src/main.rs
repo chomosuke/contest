@@ -9,47 +9,16 @@ use std::{
 fn main() {
     let mut sc = Scanner::new(stdin());
     let test_cases = sc.next::<u32>();
-    'outer: for _ in 0..test_cases {
+    for _ in 0..test_cases {
         let n = sc.next::<usize>();
-        let same = sc
-            .next_line()
-            .into_bytes()
-            .into_iter()
-            .map(|b| b == b'1')
-            .collect::<Vec<_>>();
-        let len_1 = same.iter().filter(|&&s| s).count();
-        if !same[0] || !same[same.len() - 1] || len_1 % 2 != 0 {
-            println!("NO");
-            continue 'outer;
+        let arr = sc.next_n(n).collect::<Vec<usize>>();
+        let mut counts = HashMap::<usize, usize>::new();
+        let mut weight = 0;
+        for (i, &a) in arr.iter().enumerate() {
+            weight += (arr.len() - i) * *counts.entry(a).or_default();
+            *counts.entry(a).or_default() += i + 1;
         }
-        let mut a = Vec::with_capacity(n);
-        let mut b = Vec::with_capacity(n);
-        let mut s_count = 0;
-        let mut d_count = 0;
-        for same in same {
-            if same {
-                if s_count < len_1 / 2 {
-                    a.push(b'(');
-                    b.push(b'(');
-                } else {
-                    a.push(b')');
-                    b.push(b')');
-                }
-                s_count += 1;
-            } else {
-                if d_count % 2 == 0 {
-                    a.push(b'(');
-                    b.push(b')');
-                } else {
-                    a.push(b')');
-                    b.push(b'(');
-                }
-                d_count += 1;
-            }
-        }
-        println!("YES");
-        println!("{}", String::from_utf8(a).unwrap());
-        println!("{}", String::from_utf8(b).unwrap());
+        println!("{weight}");
     }
 }
 

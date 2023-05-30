@@ -6,47 +6,51 @@ use std::{
     io::{stdin, BufReader},
 };
 
-/// O(sqrt(x))
-/// most of the time O(log(x))
-pub fn get_prime_facts(mut x: i128) -> Vec<(i128, usize)> {
-    let mut result = Vec::new();
-    let mut n = 2;
-    while n * n <= x {
-        if x % n == 0 {
-            x /= n;
-            let mut count = 1;
-            while x % n == 0 {
-                x /= n;
-                count += 1;
-            }
-            result.push((n, count));
-        }
-        n += 1;
-    }
-    if x != 1 {
-        result.push((x, 1));
-    }
-    result
-}
-
 fn main() {
     let mut sc = Scanner::new(stdin());
-    let n = sc.next::<u64>();
-    let prime_factors = get_prime_facts(n as i128)
-        .into_iter()
-        .map(|(prime_fact, _count)| prime_fact as u64)
-        .collect::<Vec<_>>();
-    let mut prod = 1;
-    let mut arr = Vec::new();
-    for i in 1..n {
-        if prime_factors.iter().all(|&f| i % f != 0) {
-            arr.push(i);
-            prod *= i;
-            prod %= n;
+    let test_cases = sc.next::<u32>();
+    'outer: for _ in 0..test_cases {
+        let n = sc.next::<usize>();
+        let same = sc
+            .next_line()
+            .into_bytes()
+            .into_iter()
+            .map(|b| b == b'1')
+            .collect::<Vec<_>>();
+        let len_1 = same.iter().filter(|&&s| s).count();
+        if !same[0] || !same[same.len() - 1] || len_1 % 2 != 0 {
+            println!("NO");
+            continue 'outer;
         }
+        let mut a = Vec::with_capacity(n);
+        let mut b = Vec::with_capacity(n);
+        let mut s_count = 0;
+        let mut d_count = 0;
+        for same in same {
+            if same {
+                if s_count < len_1 / 2 {
+                    a.push(b'(');
+                    b.push(b'(');
+                } else {
+                    a.push(b')');
+                    b.push(b')');
+                }
+                s_count += 1;
+            } else {
+                if d_count % 2 == 0 {
+                    a.push(b'(');
+                    b.push(b')');
+                } else {
+                    a.push(b')');
+                    b.push(b'(');
+                }
+                d_count += 1;
+            }
+        }
+        println!("YES");
+        println!("{}", String::from_utf8(a).unwrap());
+        println!("{}", String::from_utf8(b).unwrap());
     }
-    println!("{}", if prod == 1 { arr.len() } else { arr.len() - 1 });
-    print_iter(arr.into_iter().filter(|&a| prod == 1 || a != prod));
 }
 
 mod scanner {

@@ -8,30 +8,47 @@ use std::{
 
 fn main() {
     let mut sc = Scanner::new(stdin());
-    let n: usize = sc.next();
-    let arr: Vec<u64> = sc.next_n(n).collect();
-    let mut occur = HashSet::new();
-    for &i in &arr {
-        occur.insert(i);
-    }
-
-    let mut brr = Vec::with_capacity(n);
-    let mut next = 0;
-    let mut i = 0;
-    while i < arr.len() {
-        while occur.contains(&next) {
-            next += 1;
+    let test_cases = sc.next::<u8>();
+    'next_test: for _ in 0..test_cases {
+        let s = sc
+            .next_line()
+            .into_bytes()
+            .into_iter()
+            .map(|c| c - b'a')
+            .collect::<Vec<_>>();
+        let t = sc
+            .next_line()
+            .into_bytes()
+            .into_iter()
+            .map(|c| c - b'a')
+            .collect::<Vec<_>>();
+        let mut next_in_s = vec![vec![s.len(); 26]; s.len() + 1];
+        for (i, c) in s.into_iter().enumerate().rev() {
+            for j in 0..26 {
+                next_in_s[i][j] = next_in_s[i+1][j];
+            }
+            next_in_s[i][c as usize] = i;
         }
-        brr.push(next);
-        next += 1;
-        i += 1;
-
-        while i != 0 && i < arr.len() && arr[i - 1] != arr[i] {
-            brr.push(arr[i - 1]);
-            i += 1;
+        let mut i = 0;
+        let mut ops = 0;
+        while i < t.len() {
+            let mut j = 0;
+            let prev_i = i;
+            while i < t.len() {
+                j = next_in_s[j][t[i] as usize] + 1;
+                if j == next_in_s.len() {
+                    break;
+                }
+                i += 1;
+            }
+            if prev_i == i {
+                println!("-1");
+                continue 'next_test;
+            }
+            ops += 1;
         }
+        println!("{ops}");
     }
-    print_iter(brr.into_iter());
 }
 
 mod scanner {

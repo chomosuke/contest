@@ -8,38 +8,16 @@ use std::{
 
 fn main() {
     let mut sc = Scanner::new(stdin());
-    let n = sc.next();
-    let arr = sc.next_n(n).collect::<Vec<u64>>();
-
-    let mut inc_til = vec![1usize; arr.len()];
-    for i in 1..arr.len() {
-        if arr[i - 1] < arr[i] {
-            inc_til[i] = inc_til[i - 1] + 1;
-        }
+    let n = sc.next::<usize>();
+    let arr = sc.next_n(n).collect::<Vec<usize>>();
+    let &max = arr.iter().max().unwrap();
+    let sat_rounds = arr.iter().map(|a| max - a).sum::<usize>();
+    if sat_rounds >= max {
+        println!("{max}");
+    } else {
+        let rounds_full = max - sat_rounds;
+        println!("{}", sat_rounds + ((rounds_full * n) as f64 / (n - 1) as f64).ceil() as usize);
     }
-    let inc_til = inc_til;
-
-    let mut inc_from = vec![1usize; arr.len()];
-    for i in (0..(arr.len() - 1)).rev() {
-        if arr[i] < arr[i + 1] {
-            inc_from[i] = inc_from[i + 1] + 1;
-        }
-    }
-
-    let mut longest = 1;
-    for i in 0..arr.len() {
-        if i > 0 && i + 1 < arr.len() && arr[i - 1] + 1 < arr[i + 1] {
-            longest = longest.max(inc_til[i - 1] + inc_from[i + 1] + 1);
-        }
-        if i > 0 {
-            longest = longest.max(inc_til[i - 1] + 1);
-        }
-        if i + 1 < arr.len() {
-            longest = longest.max(inc_from[i + 1] + 1);
-        }
-    }
-
-    println!("{longest}");
 }
 
 mod scanner {

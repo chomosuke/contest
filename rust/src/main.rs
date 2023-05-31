@@ -8,47 +8,48 @@ use std::{
 
 fn main() {
     let mut sc = Scanner::new(stdin());
-    let test_cases = sc.next::<u8>();
-    'next_test: for _ in 0..test_cases {
-        let s = sc
-            .next_line()
-            .into_bytes()
-            .into_iter()
-            .map(|c| c - b'a')
-            .collect::<Vec<_>>();
-        let t = sc
-            .next_line()
-            .into_bytes()
-            .into_iter()
-            .map(|c| c - b'a')
-            .collect::<Vec<_>>();
-        let mut next_in_s = vec![vec![s.len(); 26]; s.len() + 1];
-        for (i, c) in s.into_iter().enumerate().rev() {
-            for j in 0..26 {
-                next_in_s[i][j] = next_in_s[i+1][j];
-            }
-            next_in_s[i][c as usize] = i;
-        }
+    let n = sc.next();
+    let mut arr = sc.next_n(n).collect::<Vec<u64>>();
+    // start with no violation.
+    // once violation is encountered, record it.
+    // once second violation is encountered, this is one subsegment.
+    // subsegment restarted from the first and second violation is recorded as the first.
+    let mut longest = 0;
+    for _ in 0..2 {
+        let mut start = 0;
         let mut i = 0;
-        let mut ops = 0;
-        while i < t.len() {
-            let mut j = 0;
-            let prev_i = i;
-            while i < t.len() {
-                j = next_in_s[j][t[i] as usize] + 1;
-                if j == next_in_s.len() {
-                    break;
-                }
-                i += 1;
+        loop {
+            i += 1;
+            if i >= arr.len() {
+                break;
             }
-            if prev_i == i {
-                println!("-1");
-                continue 'next_test;
+            if arr[i - 1] + 1 > arr[i] {
+                break;
             }
-            ops += 1;
         }
-        println!("{ops}");
+        let mut violation = i;
+        i += 1;
+        while i < arr.len() {
+            if arr[i - 1] + 1 > arr[i] {
+                longest = longest.max(i - start);
+                start = violation;
+                violation = i;
+            } else if i >= 2 && arr[i - 2] + 2 > arr[i] {
+                longest = longest.max(i - start);
+                start = i - 2;
+            }
+            i += 1;
+        }
+        longest = longest.max(arr.len() - start);
+
+        arr = arr
+            .into_iter()
+            .rev()
+            .map(|a| u64::MAX / 2 - a)
+            .collect::<Vec<_>>();
     }
+
+    println!("{longest}");
 }
 
 mod scanner {

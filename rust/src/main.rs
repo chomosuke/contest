@@ -9,44 +9,34 @@ use std::{
 fn main() {
     let mut sc = Scanner::new(stdin());
     let n = sc.next();
-    let mut arr = sc.next_n(n).collect::<Vec<u64>>();
-    // start with no violation.
-    // once violation is encountered, record it.
-    // once second violation is encountered, this is one subsegment.
-    // subsegment restarted from the first and second violation is recorded as the first.
-    let mut longest = 0;
-    for _ in 0..2 {
-        let mut start = 0;
-        let mut i = 0;
-        loop {
-            i += 1;
-            if i >= arr.len() {
-                break;
-            }
-            if arr[i - 1] + 1 > arr[i] {
-                break;
-            }
-        }
-        let mut violation = i;
-        i += 1;
-        while i < arr.len() {
-            if arr[i - 1] + 1 > arr[i] {
-                longest = longest.max(i - start);
-                start = violation;
-                violation = i;
-            } else if i >= 2 && arr[i - 2] + 2 > arr[i] {
-                longest = longest.max(i - start);
-                start = i - 2;
-            }
-            i += 1;
-        }
-        longest = longest.max(arr.len() - start);
+    let arr = sc.next_n(n).collect::<Vec<u64>>();
 
-        arr = arr
-            .into_iter()
-            .rev()
-            .map(|a| u64::MAX / 2 - a)
-            .collect::<Vec<_>>();
+    let mut inc_til = vec![1usize; arr.len()];
+    for i in 1..arr.len() {
+        if arr[i - 1] < arr[i] {
+            inc_til[i] = inc_til[i - 1] + 1;
+        }
+    }
+    let inc_til = inc_til;
+
+    let mut inc_from = vec![1usize; arr.len()];
+    for i in (0..(arr.len() - 1)).rev() {
+        if arr[i] < arr[i + 1] {
+            inc_from[i] = inc_from[i + 1] + 1;
+        }
+    }
+
+    let mut longest = 1;
+    for i in 0..arr.len() {
+        if i > 0 && i + 1 < arr.len() && arr[i - 1] + 1 < arr[i + 1] {
+            longest = longest.max(inc_til[i - 1] + inc_from[i + 1] + 1);
+        }
+        if i > 0 {
+            longest = longest.max(inc_til[i - 1] + 1);
+        }
+        if i + 1 < arr.len() {
+            longest = longest.max(inc_from[i + 1] + 1);
+        }
     }
 
     println!("{longest}");

@@ -1,3 +1,5 @@
+use std::cmp::min;
+
 const USIZE_BITS: u32 = 64;
 
 /// O(1)
@@ -55,8 +57,10 @@ pub fn binomial(n: i128, r: i128, m: i128) -> i128 {
     if (r - n / 2).abs() < n / 4 || n > std::usize::MAX as i128 || r > std::usize::MAX as i128 {
         multinomial(n, &[r], m)
     } else {
+        // pascal's triangle rotated left by 45 degree.
         let r = r as usize;
         let n = n as usize;
+        let r = min(r, n - r);
         let mut row = vec![1; r as usize + 1];
         for _i in 0..(n - r) {
             for j in 1..=r {
@@ -315,6 +319,7 @@ mod test {
         assert_eq!(highest_one_bit(127), 7);
         assert_eq!(factorial(10, 1007), 579);
         assert_eq!(permutations(100, 66, 1000007), 188297);
+        assert_eq!(binomial(100, 10, 1000007), 285124);
         assert_eq!(binomial(100, 66, 1000007), 754526);
         assert_eq!(binomial_mod_inv(100, 66, 1000007), None);
         assert_eq!(binomial_mod_inv(100, 66, 100000007), Some(39929235));

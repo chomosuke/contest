@@ -1,4 +1,4 @@
-#![allow(unused_imports, dead_code)]
+#![allow(unused_imports, dead_code, clippy::needless_range_loop)]
 use std::{
     cmp::{max, min, Ordering},
     collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
@@ -7,28 +7,42 @@ use std::{
 };
 
 fn main() {
-    let modu = 1_000_000_007u64;
-    let mut brr = vec![1; 10];
-    for i in 10..=200_100 {
-        brr.push((brr[i - 10] + brr[i - 9]) % modu);
-    }
-
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
+    let modu = 1_000_000_007;
     for _ in 0..test_cases {
-        let n = sc
-            .next::<String>()
-            .into_bytes()
-            .into_iter()
-            .map(|d| (d - b'0') as usize);
-        let m = sc.next::<usize>();
-        let mut len = 0;
-        for d in n {
-            len += brr[m + d];
-            len %= modu;
+        let n = sc.next::<usize>();
+        let k = sc.next::<usize>();
+        let mut arr = sc.next_n(n).collect::<Vec<u16>>();
+        arr.sort();
+        let b = arr[n - k];
+        let mut choose = 0usize;
+        for i in n - k..n {
+            if arr[i] == b {
+                choose += 1;
+            } else {
+                break;
+            }
         }
-        pt.println(&len);
+        let mut from = choose;
+        for i in (0..n - k).rev() {
+            if arr[i] == b {
+                from += 1;
+            } else {
+                break;
+            }
+        }
+
+        let r = min(choose, from - choose);
+        let mut row = vec![1; r + 1];
+        for _i in 0..(from - r) {
+            for j in 1..=r {
+                row[j] += row[j - 1];
+                row[j] %= modu;
+            }
+        }
+        pt.println(&row[r]);
     }
 }
 

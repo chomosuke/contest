@@ -151,15 +151,17 @@ mod io {
             }
         }
 
-        pub fn print(&mut self, s: &impl Display) {
-            self.writer.write_all(s.to_string().as_bytes()).unwrap();
+        pub fn print(&mut self, s: &(impl Display + ?Sized)) {
+            self.writer
+                .write_all(s.to_string().as_bytes())
+                .expect("print failed.");
         }
 
         pub fn print_bytes(&mut self, b: &[u8]) {
-            self.writer.write_all(b).unwrap();
+            self.writer.write_all(b).expect("print_bytes failed.");
         }
 
-        pub fn println(&mut self, s: &impl Display) {
+        pub fn println(&mut self, s: &(impl Display + ?Sized)) {
             self.print(s);
             self.print_bytes(&[b'\n']);
         }
@@ -173,6 +175,13 @@ mod io {
                 }
             }
             self.print_bytes(&[b'\n']);
+        }
+    }
+    impl<W: Write> Drop for Printer<W> {
+        fn drop(&mut self) {
+            self.writer
+                .flush()
+                .expect("flush failed when dropping Printer.");
         }
     }
 }

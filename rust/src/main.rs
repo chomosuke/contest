@@ -10,39 +10,28 @@ fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
-    let modu = 1_000_000_007;
     for _ in 0..test_cases {
         let n = sc.next::<usize>();
-        let k = sc.next::<usize>();
-        let mut arr = sc.next_n(n).collect::<Vec<u16>>();
-        arr.sort();
-        let b = arr[n - k];
-        let mut choose = 0usize;
-        for i in n - k..n {
-            if arr[i] == b {
-                choose += 1;
+        let q = sc.next::<u64>();
+        let arr = sc.next_n(n).collect::<Vec<u64>>();
+        let mut qe = 0;
+        let mut brr = Vec::with_capacity(n);
+        for a in arr.into_iter().rev() {
+            if qe == q {
+                if a > q {
+                    brr.push(b'0');
+                } else {
+                    brr.push(b'1');
+                }
             } else {
-                break;
+                if a > qe {
+                    qe += 1;
+                }
+                brr.push(b'1');
             }
         }
-        let mut from = choose;
-        for i in (0..n - k).rev() {
-            if arr[i] == b {
-                from += 1;
-            } else {
-                break;
-            }
-        }
-
-        let r = min(choose, from - choose);
-        let mut row = vec![1; r + 1];
-        for _i in 0..(from - r) {
-            for j in 1..=r {
-                row[j] += row[j - 1];
-                row[j] %= modu;
-            }
-        }
-        pt.println(&row[r]);
+        pt.print_bytes(&brr.into_iter().rev().collect::<Vec<_>>());
+        pt.println("");
     }
 }
 

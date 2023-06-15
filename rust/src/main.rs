@@ -10,28 +10,45 @@ fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
-    for _ in 0..test_cases {
-        let n = sc.next::<usize>();
-        let q = sc.next::<u64>();
-        let arr = sc.next_n(n).collect::<Vec<u64>>();
-        let mut qe = 0;
-        let mut brr = Vec::with_capacity(n);
-        for a in arr.into_iter().rev() {
-            if qe == q {
-                if a > q {
-                    brr.push(b'0');
-                } else {
-                    brr.push(b'1');
-                }
+    'outer: for _ in 0..test_cases {
+        let s = sc.next_line().into_bytes();
+        let mut keys = VecDeque::with_capacity(26);
+        let mut pushed = vec![false; 26];
+        keys.push_back(s[0]);
+        pushed[(s[0] - b'a') as usize] = true;
+        let mut i = 0;
+        for c in s.into_iter().skip(1) {
+            if i > 0 && c == keys[i - 1] {
+                i -= 1;
+            } else if i < keys.len() - 1 && c == keys[i + 1] {
+                i += 1;
             } else {
-                if a > qe {
-                    qe += 1;
+                if i == keys.len() - 1 {
+                    i += 1;
+                    keys.push_back(c);
+                } else if i == 0 {
+                    keys.push_front(c);
+                } else {
+                    pt.println("NO");
+                    continue 'outer;
                 }
-                brr.push(b'1');
+
+                if pushed[(c - b'a') as usize] {
+                    pt.println("NO");
+                    continue 'outer;
+                } else {
+                    pushed[(c - b'a') as usize] = true;
+                }
             }
         }
-        pt.print_bytes(&brr.into_iter().rev().collect::<Vec<_>>());
-        pt.println("");
+        for (c, pushed) in pushed.into_iter().enumerate() {
+            if !pushed {
+                keys.push_back(c as u8 + b'a');
+            }
+        }
+        pt.println("YES");
+        pt.print_bytes(&keys.into_iter().collect::<Vec<_>>());
+        pt.newline();
     }
 }
 
@@ -152,6 +169,10 @@ mod io {
 
         pub fn println(&mut self, s: &(impl Display + ?Sized)) {
             self.print(s);
+            self.newline();
+        }
+
+        pub fn newline(&mut self) {
             self.print_bytes(&[b'\n']);
         }
 
@@ -163,7 +184,7 @@ mod io {
                     self.print(&e);
                 }
             }
-            self.print_bytes(&[b'\n']);
+            self.newline();
         }
     }
     impl<W: Write> Drop for Printer<W> {

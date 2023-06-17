@@ -9,31 +9,23 @@ use std::{
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    let test_cases = sc.next::<usize>();
-    for _ in 0..test_cases {
-        let n = sc.next::<usize>();
-        let arr = sc.next_n(n).skip(1).collect::<Vec<usize>>();
-        let mut layer_size = 1;
-        let mut i = 0;
-        let mut layer_count = 0;
-        while i < arr.len() {
-            let mut next_layer = 0;
-            for _ in 0..layer_size {
-                if i >= arr.len() {
-                    break;
-                }
-                while i + 1 < arr.len() && arr[i] < arr[i + 1] {
-                    i += 1;
-                    next_layer += 1;
-                }
-                i += 1;
-                next_layer += 1;
-            }
-            layer_size = next_layer;
-            layer_count += 1;
+    let n = sc.next::<usize>();
+    let mut s = sc.next_n::<u64>(n).collect::<Vec<_>>();
+    s.sort();
+    let (s1, s2) = s.split_at(n / 2);
+    let mut i1 = 0;
+    let mut i2 = 0;
+    let mut held = 0;
+    while i1 < s1.len() && i2 < s2.len() {
+        if s1[i1] * 2 <= s2[i2] {
+            held += 1;
+            i1 += 1;
+            i2 += 1;
+        } else {
+            i2 += 1;
         }
-        pt.println(&layer_count);
     }
+    pt.println(&(n - held));
 }
 
 mod io {

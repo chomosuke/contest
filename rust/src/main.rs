@@ -6,35 +6,34 @@ use std::{
     io::{stdin, stdout, BufReader},
 };
 
-fn binomial(n: usize, r: usize, m: usize) -> usize {
-    // pascal's triangle rotated left by 45 degree.
-    let r = min(r, n - r);
-    let mut row = vec![1; r + 1];
-    for _i in 0..(n - r) {
-        for j in 1..=r {
-            row[j] += row[j - 1];
-            row[j] %= m;
-        }
-    }
-    row[r]
-}
-
-fn mx_sum_n(m: usize, n: usize, modu: usize) -> usize {
-    binomial(n + m - 1, m - 1, modu)
-}
-
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    let n = sc.next::<usize>();
-    let m = sc.next::<usize>();
-    let modu = 1_000_000_007;
-    let mut count = 0;
-    for f in 0..n {
-        count += mx_sum_n(m, f, modu) * mx_sum_n(m + 1, n - f - 1, modu) % modu;
-        count %= modu;
+    let test_cases = sc.next::<usize>();
+    for _ in 0..test_cases {
+        let n = sc.next::<usize>();
+        let arr = sc.next_n(n).skip(1).collect::<Vec<usize>>();
+        let mut layer_size = 1;
+        let mut i = 0;
+        let mut layer_count = 0;
+        while i < arr.len() {
+            let mut next_layer = 0;
+            for _ in 0..layer_size {
+                if i >= arr.len() {
+                    break;
+                }
+                while i + 1 < arr.len() && arr[i] < arr[i + 1] {
+                    i += 1;
+                    next_layer += 1;
+                }
+                i += 1;
+                next_layer += 1;
+            }
+            layer_size = next_layer;
+            layer_count += 1;
+        }
+        pt.println(&layer_count);
     }
-    pt.println(&count);
 }
 
 mod io {

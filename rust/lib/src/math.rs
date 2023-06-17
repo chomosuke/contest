@@ -61,7 +61,7 @@ pub fn binomial(n: i128, r: i128, m: i128) -> i128 {
         let r = r as usize;
         let n = n as usize;
         let r = min(r, n - r);
-        let mut row = vec![1; r as usize + 1];
+        let mut row = vec![1; r + 1];
         for _i in 0..(n - r) {
             for j in 1..=r {
                 row[j] += row[j - 1];

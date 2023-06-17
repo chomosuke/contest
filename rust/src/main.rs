@@ -6,50 +6,35 @@ use std::{
     io::{stdin, stdout, BufReader},
 };
 
+fn binomial(n: usize, r: usize, m: usize) -> usize {
+    // pascal's triangle rotated left by 45 degree.
+    let r = min(r, n - r);
+    let mut row = vec![1; r + 1];
+    for _i in 0..(n - r) {
+        for j in 1..=r {
+            row[j] += row[j - 1];
+            row[j] %= m;
+        }
+    }
+    row[r]
+}
+
+fn mx_sum_n(m: usize, n: usize, modu: usize) -> usize {
+    binomial(n + m - 1, m - 1, modu)
+}
+
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    let test_cases = sc.next::<usize>();
-    'outer: for _ in 0..test_cases {
-        let s = sc.next_line().into_bytes();
-        let mut keys = VecDeque::with_capacity(26);
-        let mut pushed = vec![false; 26];
-        keys.push_back(s[0]);
-        pushed[(s[0] - b'a') as usize] = true;
-        let mut i = 0;
-        for c in s.into_iter().skip(1) {
-            if i > 0 && c == keys[i - 1] {
-                i -= 1;
-            } else if i < keys.len() - 1 && c == keys[i + 1] {
-                i += 1;
-            } else {
-                if i == keys.len() - 1 {
-                    i += 1;
-                    keys.push_back(c);
-                } else if i == 0 {
-                    keys.push_front(c);
-                } else {
-                    pt.println("NO");
-                    continue 'outer;
-                }
-
-                if pushed[(c - b'a') as usize] {
-                    pt.println("NO");
-                    continue 'outer;
-                } else {
-                    pushed[(c - b'a') as usize] = true;
-                }
-            }
-        }
-        for (c, pushed) in pushed.into_iter().enumerate() {
-            if !pushed {
-                keys.push_back(c as u8 + b'a');
-            }
-        }
-        pt.println("YES");
-        pt.print_bytes(&keys.into_iter().collect::<Vec<_>>());
-        pt.newline();
+    let n = sc.next::<usize>();
+    let m = sc.next::<usize>();
+    let modu = 1_000_000_007;
+    let mut count = 0;
+    for f in 0..n {
+        count += mx_sum_n(m, f, modu) * mx_sum_n(m + 1, n - f - 1, modu) % modu;
+        count %= modu;
     }
+    pt.println(&count);
 }
 
 mod io {

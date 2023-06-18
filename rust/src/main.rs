@@ -13,11 +13,49 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<u32>();
     'case: for _ in 0..test_cases {
-        let n = sc.next::<u64>();
+        let a = sc.next::<u32>();
+        let b = sc.next::<u32>();
+        let c = sc.next::<u32>();
         let k = sc.next::<u64>();
-        let g = sc.next::<u64>();
-        let max_round = n * ((g - 1) / 2);
-        pt.println(&min(max_round / g * g, k * g));
+        if c > max(a, b) + 1 || c < max(a, b) {
+            pt.println("-1");
+            continue 'case;
+        }
+        let min_a = 10_u64.pow(a - 1);
+        let max_a = 10_u64.pow(a) - 1;
+        let min_b = 10_u64.pow(b - 1);
+        let max_b = 10_u64.pow(b) - 1;
+        let min_c = 10_u64.pow(c - 1);
+        let max_c = 10_u64.pow(c) - 1;
+        let mut t = 1;
+        // determine a
+        let mut a1 = min_a.max(min_c - max_b.min(min_c));
+        while t <= k {
+            if a1 > max_a || a1 + min_b > max_c {
+                pt.println(&-1);
+                continue 'case;
+            }
+            let min_b = (min_c - a1.min(min_c)).max(min_b);
+            let max_b = (max_c - a1).min(max_b);
+            let bs = max_b - min_b + 1;
+            a1 += 1;
+            t += bs;
+        }
+        a1 -= 1;
+        let min_b = (min_c - a1.min(min_c)).max(min_b);
+        let max_b = (max_c - a1).min(max_b);
+        let bs = max_b - min_b + 1;
+        t -= bs;
+        // determine b
+        let mut b1 = min_b;
+
+        b1 += k - t;
+        // t += k - t;
+        if b1 > max_b {
+            pt.println(&-1);
+            continue 'case;
+        }
+        pt.println(&format!("{} + {} = {}", a1, b1, a1 + b1));
     }
 }
 

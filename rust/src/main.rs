@@ -8,55 +8,33 @@ use std::{
     mem,
 };
 
+fn count_p(t: u64, ts: &[u64], k: usize) -> u64 {
+    match ts.binary_search(&t) {
+        Ok(i) => 0,
+        Err(i) => {
+            let mut p = 0;
+            if i < k {
+                p += t;
+            } else {
+                
+            }
+            k
+        }
+    }
+}
+
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    let test_cases = sc.next::<u32>();
-    'case: for _ in 0..test_cases {
-        let a = sc.next::<u32>();
-        let b = sc.next::<u32>();
-        let c = sc.next::<u32>();
-        let k = sc.next::<u64>();
-        if c > max(a, b) + 1 || c < max(a, b) {
-            pt.println("-1");
-            continue 'case;
-        }
-        let min_a = 10_u64.pow(a - 1);
-        let max_a = 10_u64.pow(a) - 1;
-        let min_b = 10_u64.pow(b - 1);
-        let max_b = 10_u64.pow(b) - 1;
-        let min_c = 10_u64.pow(c - 1);
-        let max_c = 10_u64.pow(c) - 1;
-        let mut t = 1;
-        // determine a
-        let mut a1 = min_a.max(min_c - max_b.min(min_c));
-        while t <= k {
-            if a1 > max_a || a1 + min_b > max_c {
-                pt.println(&-1);
-                continue 'case;
-            }
-            let min_b = (min_c - a1.min(min_c)).max(min_b);
-            let max_b = (max_c - a1).min(max_b);
-            let bs = max_b - min_b + 1;
-            a1 += 1;
-            t += bs;
-        }
-        a1 -= 1;
-        let min_b = (min_c - a1.min(min_c)).max(min_b);
-        let max_b = (max_c - a1).min(max_b);
-        let bs = max_b - min_b + 1;
-        t -= bs;
-        // determine b
-        let mut b1 = min_b;
 
-        b1 += k - t;
-        // t += k - t;
-        if b1 > max_b {
-            pt.println(&-1);
-            continue 'case;
-        }
-        pt.println(&format!("{} + {} = {}", a1, b1, a1 + b1));
-    }
+    let n = sc.next::<usize>();
+    let m = sc.next::<u64>();
+    let k = sc.next::<usize>();
+    let mut ts = sc.next_n::<u64>(n).collect::<Vec<_>>();
+    ts.sort();
+    let mut max_t = 0;
+    let mut max_t_p = count_p(max_t, &ts, k);
+    for i in 0..ts.len() {}
 }
 
 mod io {

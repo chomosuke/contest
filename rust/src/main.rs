@@ -1,4 +1,4 @@
-#![allow(unused_imports, dead_code, clippy::needless_range_loop)]
+#![allow(unused_imports, dead_code, clippy::needless_range_loop, unused_labels)]
 use std::{
     arch::x86_64::_mm_testz_si128,
     cmp::{max, min, Ordering},
@@ -13,19 +13,11 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<u32>();
     'case: for _ in 0..test_cases {
-        let n = sc.next::<usize>();
-        let ls = sc.next_n::<usize>(n).collect::<Vec<_>>();
-        let mut count = vec![0; *ls.iter().max().unwrap() + 1];
-        for l in ls {
-            count[l] += 1;
-        }
-        for i in 1..count.len() {
-            if count[i - 1] < count[i] {
-                pt.println("NO");
-                continue 'case;
-            }
-        }
-        pt.println("YES");
+        let n = sc.next::<u64>();
+        let k = sc.next::<u64>();
+        let g = sc.next::<u64>();
+        let max_round = n * ((g - 1) / 2);
+        pt.println(&min(max_round / g * g, k * g));
     }
 }
 

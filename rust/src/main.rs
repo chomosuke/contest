@@ -12,27 +12,27 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     for _ in 0..test_cases {
-        let n = sc.next::<usize>();
-        let k = sc.next::<u32>();
-        let x = sc.next::<u32>();
-        if x == 1 {
-            if k >= 2 && n % 2 == 0 {
-                pt.println("YES");
-                pt.println(&(n / 2));
-                pt.print_iter(iter::repeat(2).take(n / 2));
-            } else if k >= 3 && n >= 3 {
-                pt.println("YES");
-                pt.println(&((n - 3) / 2 + 1));
-                pt.print("3 ");
-                pt.print_iter(iter::repeat(2).take((n - 3) / 2));
-            } else {
-                pt.println("NO");
-            }
+        let ax = sc.next::<i64>();
+        let ay = sc.next::<i64>();
+        let bx = sc.next::<i64>();
+        let by = sc.next::<i64>();
+        let cx = sc.next::<i64>();
+        let cy = sc.next::<i64>();
+        let bx = bx - ax;
+        let by = by - ay;
+        let cx = cx - ax;
+        let cy = cy - ay;
+        let x = if bx.signum() == cx.signum() {
+            bx.abs().min(cx.abs())
         } else {
-            pt.println("YES");
-            pt.println(&n);
-            pt.print_iter(iter::repeat(1).take(n));
-        }
+            0
+        } + 1;
+        let y = if by.signum() == cy.signum() {
+            by.abs().min(cy.abs())
+        } else {
+            0
+        };
+        pt.println(&(x + y));
     }
 }
 

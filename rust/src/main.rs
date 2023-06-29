@@ -4,35 +4,58 @@ use std::{
     collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
     fs,
     io::{stdin, stdout, BufReader},
-    iter, mem,
+    iter, mem, usize,
 };
 
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
-    for _ in 0..test_cases {
-        let ax = sc.next::<i64>();
-        let ay = sc.next::<i64>();
-        let bx = sc.next::<i64>();
-        let by = sc.next::<i64>();
-        let cx = sc.next::<i64>();
-        let cy = sc.next::<i64>();
-        let bx = bx - ax;
-        let by = by - ay;
-        let cx = cx - ax;
-        let cy = cy - ay;
-        let x = if bx.signum() == cx.signum() {
-            bx.abs().min(cx.abs())
-        } else {
-            0
-        } + 1;
-        let y = if by.signum() == cy.signum() {
-            by.abs().min(cy.abs())
-        } else {
-            0
-        };
-        pt.println(&(x + y));
+    'case: for _ in 0..test_cases {
+        let s = sc
+            .next_line()
+            .into_bytes()
+            .into_iter()
+            .map(|c| c - b'0')
+            .collect::<Vec<_>>();
+        let m = sc.next::<usize>();
+        let l = sc
+            .next_line()
+            .into_bytes()
+            .into_iter()
+            .map(|c| c - b'0')
+            .collect::<Vec<_>>();
+        let r = sc
+            .next_line()
+            .into_bytes()
+            .into_iter()
+            .map(|c| c - b'0')
+            .collect::<Vec<_>>();
+
+        let mut next_c = vec![vec![usize::MAX; 10]; s.len() + 1];
+        let mut nc = vec![usize::MAX; 10];
+        for i in (0..s.len()).rev() {
+            nc[s[i] as usize] = i;
+            next_c[i] = nc.clone();
+        }
+
+        let mut cur_c = 0;
+        for i in 0..m {
+            let mut farest_nc = r[i] as usize;
+            for j in l[i]..r[i] {
+                let j = j as usize;
+                if next_c[cur_c][j] > next_c[cur_c][farest_nc] {
+                    farest_nc = j;
+                }
+            }
+            cur_c = next_c[cur_c][farest_nc];
+            if cur_c > next_c.len() {
+                pt.println("YES");
+                continue 'case;
+            }
+            cur_c += 1;
+        }
+        pt.println("NO");
     }
 }
 

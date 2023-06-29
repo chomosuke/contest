@@ -1,40 +1,39 @@
 #![allow(unused_imports, dead_code, clippy::needless_range_loop, unused_labels)]
 use std::{
-    arch::x86_64::_mm_testz_si128,
     cmp::{max, min, Ordering},
     collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
     fs,
     io::{stdin, stdout, BufReader},
-    mem,
+    iter, mem,
 };
-
-fn count_p(t: u64, ts: &[u64], k: usize) -> u64 {
-    match ts.binary_search(&t) {
-        Ok(i) => 0,
-        Err(i) => {
-            let mut p = 0;
-            if i < k {
-                p += t;
-            } else {
-                
-            }
-            k
-        }
-    }
-}
 
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-
-    let n = sc.next::<usize>();
-    let m = sc.next::<u64>();
-    let k = sc.next::<usize>();
-    let mut ts = sc.next_n::<u64>(n).collect::<Vec<_>>();
-    ts.sort();
-    let mut max_t = 0;
-    let mut max_t_p = count_p(max_t, &ts, k);
-    for i in 0..ts.len() {}
+    let test_cases = sc.next::<usize>();
+    for _ in 0..test_cases {
+        let n = sc.next::<usize>();
+        let k = sc.next::<u32>();
+        let x = sc.next::<u32>();
+        if x == 1 {
+            if k >= 2 && n % 2 == 0 {
+                pt.println("YES");
+                pt.println(&(n / 2));
+                pt.print_iter(iter::repeat(2).take(n / 2));
+            } else if k >= 3 && n >= 3 {
+                pt.println("YES");
+                pt.println(&((n - 3) / 2 + 1));
+                pt.print("3 ");
+                pt.print_iter(iter::repeat(2).take((n - 3) / 2));
+            } else {
+                pt.println("NO");
+            }
+        } else {
+            pt.println("YES");
+            pt.println(&n);
+            pt.print_iter(iter::repeat(1).take(n));
+        }
+    }
 }
 
 mod io {

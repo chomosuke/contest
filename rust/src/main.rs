@@ -12,50 +12,35 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'case: for _ in 0..test_cases {
-        let s = sc
-            .next_line()
-            .into_bytes()
-            .into_iter()
-            .map(|c| c - b'0')
-            .collect::<Vec<_>>();
-        let m = sc.next::<usize>();
-        let l = sc
-            .next_line()
-            .into_bytes()
-            .into_iter()
-            .map(|c| c - b'0')
-            .collect::<Vec<_>>();
-        let r = sc
-            .next_line()
-            .into_bytes()
-            .into_iter()
-            .map(|c| c - b'0')
-            .collect::<Vec<_>>();
-
-        let mut next_c = vec![vec![usize::MAX; 10]; s.len() + 1];
-        let mut nc = vec![usize::MAX; 10];
-        for i in (0..s.len()).rev() {
-            nc[s[i] as usize] = i;
-            next_c[i] = nc.clone();
+        let n = sc.next::<usize>();
+        let arr_i = sc.next_n::<i128>(n).collect::<Vec<_>>();
+        let mut arr = vec![arr_i[0]];
+        for a in arr_i.into_iter().skip(1) {
+            let l = arr.len() - 1;
+            if arr[l].signum() == a.signum() {
+                arr[l] += a;
+            } else {
+                arr.push(a);
+            }
         }
 
-        let mut cur_c = 0;
-        for i in 0..m {
-            let mut farest_nc = r[i] as usize;
-            for j in l[i]..r[i] {
-                let j = j as usize;
-                if next_c[cur_c][j] > next_c[cur_c][farest_nc] {
-                    farest_nc = j;
-                }
-            }
-            cur_c = next_c[cur_c][farest_nc];
-            if cur_c > next_c.len() {
-                pt.println("YES");
-                continue 'case;
-            }
-            cur_c += 1;
+        let mut ratings = vec![0];
+        for a in arr {
+            let r = ratings[ratings.len() - 1];
+            ratings.push(r + a);
         }
-        pt.println("NO");
+
+        let mut lowest_point = ratings.pop().unwrap();
+        let mut k = lowest_point;
+        let mut max_inc = 0;
+        for r in ratings.into_iter().rev() {
+            if r - lowest_point > max_inc {
+                k = r;
+                max_inc = r - lowest_point;
+            }
+            lowest_point = lowest_point.min(r);
+        }
+        pt.println(&k);
     }
 }
 

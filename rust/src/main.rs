@@ -7,41 +7,28 @@ use std::{
     iter, mem, usize,
 };
 
+fn add_digits(mut n: u32) -> u32 {
+    while n > 9 {
+        n = n
+            .to_string()
+            .into_bytes()
+            .into_iter()
+            .map(|b| (b - b'0') as u32)
+            .sum();
+    }
+    n
+}
+
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    let test_cases = sc.next::<usize>();
-    'case: for _ in 0..test_cases {
-        let n = sc.next::<usize>();
-        let arr_i = sc.next_n::<i128>(n).collect::<Vec<_>>();
-        let mut arr = vec![arr_i[0]];
-        for a in arr_i.into_iter().skip(1) {
-            let l = arr.len() - 1;
-            if arr[l].signum() == a.signum() {
-                arr[l] += a;
-            } else {
-                arr.push(a);
-            }
+    let mut count = 0;
+    for i in 1..=2023 {
+        if add_digits(i) == 1 {
+            count += 1;
         }
-
-        let mut ratings = vec![0];
-        for a in arr {
-            let r = ratings[ratings.len() - 1];
-            ratings.push(r + a);
-        }
-
-        let mut lowest_point = ratings.pop().unwrap();
-        let mut k = lowest_point;
-        let mut max_inc = 0;
-        for r in ratings.into_iter().rev() {
-            if r - lowest_point > max_inc {
-                k = r;
-                max_inc = r - lowest_point;
-            }
-            lowest_point = lowest_point.min(r);
-        }
-        pt.println(&k);
     }
+    pt.println(&count);
 }
 
 mod io {

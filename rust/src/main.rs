@@ -4,31 +4,51 @@ use std::{
     collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
     fs,
     io::{stdin, stdout, BufReader},
-    iter, mem, usize,
+    iter,
+    mem::{self, swap},
+    usize,
 };
-
-fn add_digits(mut n: u32) -> u32 {
-    while n > 9 {
-        n = n
-            .to_string()
-            .into_bytes()
-            .into_iter()
-            .map(|b| (b - b'0') as u32)
-            .sum();
-    }
-    n
-}
 
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    let mut count = 0;
-    for i in 1..=2023 {
-        if add_digits(i) == 1 {
-            count += 1;
+    let test_cases = sc.next::<usize>();
+    'case: for _ in 0..test_cases {
+        let n = sc.next::<usize>();
+        let mut x = sc.next::<u32>();
+        let mut arr = sc.next_n::<u32>(n).collect::<Vec<_>>();
+
+        let mut i = arr.len() - 1;
+        let first_unsorted = loop {
+            if i < 1 {
+                pt.println(&0);
+                continue 'case;
+            }
+            if arr[i - 1] > arr[i] {
+                break i - 1;
+            }
+            i -= 1;
+        };
+
+        let mut count = 0;
+        for i in 0..(arr.len() - 1) {
+            if i > first_unsorted {
+                break;
+            }
+            if arr[i] > x {
+                swap(&mut arr[i], &mut x);
+                count += 1;
+            }
         }
+
+        for i in 1..arr.len() {
+            if arr[i - 1] > arr[i] {
+                count = -1;
+                break;
+            }
+        }
+        pt.println(&count);
     }
-    pt.println(&count);
 }
 
 mod io {

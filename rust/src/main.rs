@@ -9,46 +9,55 @@ use std::{
     usize,
 };
 
+pub fn binomial(n: usize, r: usize) -> usize {
+    let r = min(r, n - r);
+    let mut row = vec![1; r + 1];
+    for _i in 0..(n - r) {
+        for j in 1..=r {
+            row[j] += row[j - 1];
+        }
+    }
+    row[r]
+}
+
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    let test_cases = sc.next::<usize>();
-    'case: for _ in 0..test_cases {
-        let n = sc.next::<usize>();
-        let mut x = sc.next::<u32>();
-        let mut arr = sc.next_n::<u32>(n).collect::<Vec<_>>();
-
-        let mut i = arr.len() - 1;
-        let first_unsorted = loop {
-            if i < 1 {
-                pt.println(&0);
-                continue 'case;
-            }
-            if arr[i - 1] > arr[i] {
-                break i - 1;
-            }
-            i -= 1;
-        };
-
-        let mut count = 0;
-        for i in 0..(arr.len() - 1) {
-            if i > first_unsorted {
-                break;
-            }
-            if arr[i] > x {
-                swap(&mut arr[i], &mut x);
-                count += 1;
-            }
+    let k = sc.next::<usize>();
+    let s = sc.next_line().into_bytes();
+    let mut count = 1usize;
+    let mut opts = Vec::new();
+    for c in s {
+        if c == b'0' {
+            count += 1;
+        } else {
+            opts.push(count);
+            count = 1;
         }
+    }
+    opts.push(count);
 
-        for i in 1..arr.len() {
-            if arr[i - 1] > arr[i] {
-                count = -1;
-                break;
+    if opts.len() < 1 + k {
+        pt.println(&0);
+        return;
+    }
+
+    if k == 0 {
+        let mut count = 0usize;
+        for opt in opts {
+            if opt > 1 {
+                count += binomial(opt, 2);
             }
         }
         pt.println(&count);
+        return;
     }
+
+    let mut count = 0usize;
+    for i in 0..opts.len() - k {
+        count += opts[i] * opts[i + k];
+    }
+    pt.println(&count);
 }
 
 mod io {

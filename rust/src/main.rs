@@ -9,55 +9,42 @@ use std::{
     usize,
 };
 
-pub fn binomial(n: usize, r: usize) -> usize {
-    let r = min(r, n - r);
-    let mut row = vec![1; r + 1];
-    for _i in 0..(n - r) {
-        for j in 1..=r {
-            row[j] += row[j - 1];
-        }
+fn to_bits(x: u16) -> Vec<bool> {
+    let mut r = Vec::new();
+    for i in (0..9).rev() {
+        r.push(x & (1 << i) != 0);
     }
-    row[r]
+    r
+}
+
+// #[derive(Debug)]
+struct Node {
+    n1: Option<Box<Node>>,
+    n0: Option<Box<Node>>,
 }
 
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    let k = sc.next::<usize>();
-    let s = sc.next_line().into_bytes();
-    let mut count = 1usize;
-    let mut opts = Vec::new();
-    for c in s {
-        if c == b'0' {
-            count += 1;
-        } else {
-            opts.push(count);
-            count = 1;
-        }
-    }
-    opts.push(count);
-
-    if opts.len() < 1 + k {
-        pt.println(&0);
-        return;
-    }
-
-    if k == 0 {
-        let mut count = 0usize;
-        for opt in opts {
-            if opt > 1 {
-                count += binomial(opt, 2);
+    let n = sc.next::<usize>();
+    let m = sc.next::<usize>();
+    let arr = sc.next_n::<u16>(n).collect::<Vec<_>>();
+    let brr = sc.next_n::<u16>(m).collect::<Vec<_>>();
+    'c: for c in 0..2u16.pow(9) {
+        'a: for a in &arr {
+            for b in &brr {
+                if a & b | c == c {
+                    // this a is okay, go to next a
+                    continue 'a;
+                }
             }
+            // this a isn't okay, go to next c
+            continue 'c;
         }
-        pt.println(&count);
-        return;
+        // all a are okay, so this c is okay
+        pt.println(&c);
+        break;
     }
-
-    let mut count = 0usize;
-    for i in 0..opts.len() - k {
-        count += opts[i] * opts[i + k];
-    }
-    pt.println(&count);
 }
 
 mod io {

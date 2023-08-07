@@ -17,34 +17,38 @@ fn to_bits(x: u16) -> Vec<bool> {
     r
 }
 
-// #[derive(Debug)]
-struct Node {
-    n1: Option<Box<Node>>,
-    n0: Option<Box<Node>>,
-}
-
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let n = sc.next::<usize>();
     let m = sc.next::<usize>();
-    let arr = sc.next_n::<u16>(n).collect::<Vec<_>>();
-    let brr = sc.next_n::<u16>(m).collect::<Vec<_>>();
-    'c: for c in 0..2u16.pow(9) {
-        'a: for a in &arr {
-            for b in &brr {
-                if a & b | c == c {
-                    // this a is okay, go to next a
-                    continue 'a;
-                }
-            }
-            // this a isn't okay, go to next c
-            continue 'c;
-        }
-        // all a are okay, so this c is okay
-        pt.println(&c);
-        break;
+    let k = sc.next::<usize>();
+    let mut s = Vec::with_capacity(k);
+    for _ in 0..k {
+        s.push((sc.next::<usize>(), sc.next::<usize>()));
     }
+    let mut f = Vec::with_capacity(k);
+    for _ in 0..k {
+        f.push((sc.next::<usize>(), sc.next::<usize>()));
+    }
+    pt.println(n - 1 + m - 1 + n * m);
+    for _ in 0..m - 1 {
+        pt.print('L');
+    }
+    for _ in 0..n - 1 {
+        pt.print('U');
+    }
+    for i in 0..n {
+        for _ in 0..m - 1 {
+            if i % 2 == 0 {
+                pt.print('R');
+            } else {
+                pt.print('L');
+            }
+        }
+        pt.print('D');
+    }
+    pt.newline();
 }
 
 mod io {
@@ -152,7 +156,7 @@ mod io {
             }
         }
 
-        pub fn print(&mut self, s: &(impl Display + ?Sized)) {
+        pub fn print(&mut self, s: impl Display) {
             self.writer
                 .write_all(s.to_string().as_bytes())
                 .expect("print failed.");
@@ -162,7 +166,7 @@ mod io {
             self.writer.write_all(b).expect("print_bytes failed.");
         }
 
-        pub fn println(&mut self, s: &(impl Display + ?Sized)) {
+        pub fn println(&mut self, s: impl Display) {
             self.print(s);
             self.newline();
         }

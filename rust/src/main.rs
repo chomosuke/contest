@@ -9,46 +9,56 @@ use std::{
     usize,
 };
 
-fn to_bits(x: u16) -> Vec<bool> {
-    let mut r = Vec::new();
-    for i in (0..9).rev() {
-        r.push(x & (1 << i) != 0);
+pub fn get_prime_facts(mut x: u128) -> Vec<(u128, usize)> {
+    let mut result = Vec::new();
+    let mut n = 2;
+    while n * n <= x {
+        if x % n == 0 {
+            x /= n;
+            let mut count = 1;
+            while x % n == 0 {
+                x /= n;
+                count += 1;
+            }
+            result.push((n, count));
+        }
+        n += 1;
     }
-    r
+    if x != 1 {
+        result.push((x, 1));
+    }
+    result
 }
 
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    let n = sc.next::<usize>();
-    let m = sc.next::<usize>();
-    let k = sc.next::<usize>();
-    let mut s = Vec::with_capacity(k);
-    for _ in 0..k {
-        s.push((sc.next::<usize>(), sc.next::<usize>()));
-    }
-    let mut f = Vec::with_capacity(k);
-    for _ in 0..k {
-        f.push((sc.next::<usize>(), sc.next::<usize>()));
-    }
-    pt.println(n - 1 + m - 1 + n * m);
-    for _ in 0..m - 1 {
-        pt.print('L');
-    }
-    for _ in 0..n - 1 {
-        pt.print('U');
-    }
-    for i in 0..n {
-        for _ in 0..m - 1 {
-            if i % 2 == 0 {
-                pt.print('R');
-            } else {
-                pt.print('L');
+    let test_cases = sc.next::<usize>();
+    for _ in 0..test_cases {
+        let n = sc.next::<u128>();
+        let mut sum = 0;
+        let m = 1_000_000_007;
+        let mut prod = 1;
+        let mut pfactors = get_prime_facts(prod).into_iter().collect::<HashMap<_, _>>();
+        let mut i = 2;
+        while prod <= n {
+            let pfs = get_prime_facts(i);
+            let mut new_prod = prod;
+            for (pf, count) in pfs {
+                let existing_count = pfactors.entry(pf).or_insert(0);
+                if *existing_count < count {
+                    new_prod *= pf.pow((count - *existing_count) as u32);
+                    *existing_count = count;
+                }
             }
+
+            sum += (n / prod - n / new_prod) * i;
+            sum %= m;
+            prod = new_prod;
+            i += 1;
         }
-        pt.print('D');
+        pt.println(sum);
     }
-    pt.newline();
 }
 
 mod io {

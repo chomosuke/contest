@@ -20,18 +20,12 @@ let _next_line () =
   assert (!remaining_tokens = []);
   read_line ()
 
-let is_prime n =
-  let rec loop x n =
-    if Int64.mul x x > n then true
-    else if Int64.rem n x = Int64.zero then false
-    else loop (Int64.succ x) n
-  in
-  loop (Int64.of_int 2) n
-
 let () =
-  let n = _next Int64.of_string in
-  print_endline
-    (if is_prime n then "1"
-     else if Int64.rem n (Int64.of_int 2) = Int64.zero then "2"
-     else if is_prime (Int64.sub n (Int64.of_int 2)) then "2"
-     else "3")
+  let rec loop i n =
+    if i mod 3 <> 0 && i mod 5 <> 0 then print_int i;
+    if i mod 3 = 0 then print_string "Fizz";
+    if i mod 5 = 0 then print_string "Buzz";
+    print_newline ();
+    if i < n then loop (i + 1) n
+  in
+  loop 1 100

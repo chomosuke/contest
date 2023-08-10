@@ -12,18 +12,60 @@ use std::{
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    let test_cases = sc.next::<usize>();
-    for _ in 0..test_cases {
-        let x = sc.next::<u64>();
-        let y = sc.next::<u64>();
-        if y < x {
-            pt.println(x + y);
-        } else if x < y {
-            pt.println(y - (y % x / 2));
-        } else {
-            pt.println(x);
-        }
+    let s = String::from("ADOBECODEBANC");
+    let t = String::from("ABC");
+    let s = s.into_bytes();
+    let t = t.into_bytes();
+    let mut counts = HashMap::<u8, i64>::with_capacity(t.len());
+    for &c in &t {
+        *counts.entry(c).or_default() += 1;
     }
+    let mut j = 0;
+    let mut i = 0;
+
+    let mut min_win = &s[0..0];
+    let mut num_left = t.len();
+    'outer: loop {
+        while num_left > 0 {
+            if j >= s.len() {
+                break 'outer;
+            }
+            // advance j and include one more in the window
+            let count = counts.get_mut(&s[j]);
+            if let Some(count) = count {
+                if *count > 0 {
+                    num_left -= 1;
+                }
+                *count -= 1;
+            }
+            j += 1;
+        }
+        while {
+            if let Some(count) = counts.get_mut(&s[i]) {
+                // negative means excess included
+                if *count < 0 {
+                    *count += 1;
+                    true
+                } else {
+                    false
+                }
+            } else {
+                // Not a char we care about
+                true
+            }
+        } {
+            i += 1;
+        }
+        // valid window
+        if j - i < min_win.len() || min_win.is_empty() {
+            min_win = &s[i..j];
+        }
+        *counts.get_mut(&s[i]).unwrap() += 1;
+        num_left += 1;
+        i += 1;
+    }
+    let r = String::from_utf8(min_win.to_vec()).unwrap();
+    pt.println(r);
 }
 
 mod io {

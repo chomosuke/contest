@@ -15,19 +15,21 @@ fn main() {
     let test_cases = sc.next::<usize>();
     'outer: for _ in 0..test_cases {
         let n = sc.next::<usize>();
-        let a = sc.next_n::<u64>(n).collect::<Vec<_>>();
-        let &b = a.iter().min().unwrap();
-        let c = a.iter().copied().filter(|&a| a != b).collect::<Vec<_>>();
-        let b = a.iter().copied().filter(|&a| a == b).collect::<Vec<_>>();
-        if c.is_empty() {
-            pt.println(-1);
-        } else {
-            pt.print(b.len());
-            pt.print(' ');
-            pt.println(c.len());
-            pt.print_iter(b.into_iter());
-            pt.print_iter(c.into_iter());
+        let items = 1..=n;
+        let mut max = 0;
+        for swap_b in 0..n {
+            let ns = items.clone().take(swap_b).map(|i| i * i).chain(
+                items
+                    .clone()
+                    .skip(swap_b)
+                    .map(|i| i * (n - i + swap_b + 1)),
+            ).collect::<Vec<_>>();
+            let cur = ns.iter().sum::<usize>() - ns.iter().max().unwrap();
+            if max < cur {
+                max = cur;
+            }
         }
+        pt.println(max);
     }
 }
 
@@ -164,6 +166,10 @@ mod io {
                 }
             }
             self.newline();
+        }
+
+        pub fn flush(&mut self) {
+            self.writer.flush().expect("Printer flush failed.");
         }
     }
     impl<W: Write> Drop for Printer<W> {

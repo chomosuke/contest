@@ -14,20 +14,52 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     for _ in 0..test_cases {
-        let a = sc.next::<u64>();
-        let b = sc.next::<u64>();
-        let c = sc.next::<u64>();
-
-        let a = a + (c + 1) / 2;
-        let b = b + c / 2;
-        if a > b {
-            pt.println("First");
-        } else {
-            pt.println("Second");
+        let n = sc.next::<usize>();
+        let m = sc.next::<usize>();
+        let d = sc.next::<usize>();
+        let s = sc.next_n::<usize>(m).map(|s| s - 1).collect::<Vec<_>>();
+        let mut num = 0;
+        let mut ind = 0;
+        for i in 0..s.len() {
+            let last_eat = if i > 0 { s[i - 1] } else { 0 };
+            if (s[i] - last_eat) % d == 0 {
+                continue;
+            }
+            let next_eat = if i < s.len() - 1 { s[i + 1] } else { n };
+            let mut will_eat = (s[i] - last_eat - 1) / d;
+            if last_eat != s[i] {
+                will_eat += 1;
+            }
+            will_eat += (next_eat - s[i] - 1) / d;
+            if will_eat > (next_eat - last_eat - 1) / d {
+                num += 1;
+                ind = i;
+            }
         }
+        if num == 0 {
+            num = s.len();
+        }
+        let mut cookies = 1;
+        let mut last_eat = 0;
+        for (i, &s) in s.iter().enumerate() {
+            if s == 0 || i == ind {
+                continue;
+            }
+
+            // cookies eaten because no cookies for a while
+            cookies += (s - last_eat - 1) / d;
+
+            cookies += 1;
+
+            last_eat = s;
+        }
+        cookies += (n - last_eat - 1) / d;
+        pt.println(format!("{cookies} {}", num))
     }
 }
 
+#[allow(unused_imports)]
+use io::*;
 mod io {
     use std::collections::{HashSet, VecDeque};
     use std::fmt::Display;
@@ -171,5 +203,3 @@ mod io {
         }
     }
 }
-#[allow(unused_imports)]
-use io::*;

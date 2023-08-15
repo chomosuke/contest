@@ -9,52 +9,73 @@ use std::{
     usize,
 };
 
+enum Action {
+    Plus(u32),
+    Minus(Vec<u32>),
+}
+
 fn main() {
     let mut sc = Scanner::new(stdin());
-    let mut pt = Printer::new(stdout());
-    let test_cases = sc.next::<usize>();
-    for _ in 0..test_cases {
-        let n = sc.next::<usize>();
-        let m = sc.next::<usize>();
-        let d = sc.next::<usize>();
-        let s = sc.next_n::<usize>(m).map(|s| s - 1).collect::<Vec<_>>();
-        let mut num = 0;
-        let mut ind = 0;
-        for i in 0..s.len() {
-            let last_eat = if i > 0 { s[i - 1] } else { 0 };
-            if (s[i] - last_eat) % d == 0 {
-                continue;
+    // let mut pt = Printer::new(stdout());
+    let q = sc.next::<usize>();
+    let mut count_map = HashMap::<u32, usize>::new();
+    let mut actions = Vec::new();
+    let mut arr = Vec::new();
+    let mut count = 0;
+    for _ in 0..q {
+        let a = sc.next::<char>();
+        match a {
+            '+' => {
+                let n = sc.next();
+                if count_map.get(&n).is_none() {
+                    count += 1;
+                }
+                *count_map.entry(n).or_default() += 1;
+                actions.push(Action::Plus(n));
+                arr.push(n);
             }
-            let next_eat = if i < s.len() - 1 { s[i + 1] } else { n };
-            let mut will_eat = (s[i] - last_eat - 1) / d;
-            if last_eat != s[i] {
-                will_eat += 1;
-            }
-            will_eat += (next_eat - s[i] - 1) / d;
-            if will_eat > (next_eat - last_eat - 1) / d {
-                num += 1;
-                ind = i;
-            }
-        }
-        if num == 0 {
-            num = s.len();
-        }
-        let mut cookies = 1;
-        let mut last_eat = 0;
-        for (i, &s) in s.iter().enumerate() {
-            if s == 0 || i == ind {
-                continue;
-            }
+            '-' => {
+                let n = sc.next::<usize>();
+                let d = arr.len() - n;
 
-            // cookies eaten because no cookies for a while
-            cookies += (s - last_eat - 1) / d;
-
-            cookies += 1;
-
-            last_eat = s;
+                let removed = arr[d..].to_vec();
+                arr.truncate(d);
+                for r in &removed {
+                    *count_map.get_mut(r).unwrap() -= 1;
+                    if count_map[r] == 0 {
+                        count_map.remove(r);
+                        count -= 1;
+                    }
+                }
+                actions.push(Action::Minus(removed));
+            }
+            '?' => {
+                println!("{}", count);
+            }
+            '!' => {
+                let a = actions.pop().unwrap();
+                match a {
+                    Action::Plus(n) => {
+                        *count_map.get_mut(&n).unwrap() -= 1;
+                        if count_map[&n] == 0 {
+                            count_map.remove(&n);
+                            count -= 1;
+                        }
+                        arr.pop();
+                    }
+                    Action::Minus(v) => {
+                        for n in v {
+                            if count_map.get(&n).is_none() {
+                                count += 1;
+                            }
+                            *count_map.entry(n).or_default() += 1;
+                            arr.push(n);
+                        }
+                    }
+                }
+            }
+            _ => panic!("{a}"),
         }
-        cookies += (n - last_eat - 1) / d;
-        pt.println(format!("{cookies} {}", num))
     }
 }
 

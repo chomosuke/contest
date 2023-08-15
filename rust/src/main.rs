@@ -9,27 +9,21 @@ use std::{
     usize,
 };
 
+// Interval tree
+// Construct an interval tree with a b.
+// With the interval tree, we can BFS/DFS traverse from each possible end point (b) to all l where
+// that end point is reachable. We start with the furthest end point so that in subsequent searches
+// we can ignore already reached nodes.
+// Then we construct an interval tree with r l and use that to find which r, l can each q reach.
+// This will run in O(n + q)
+
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'outer: for _ in 0..test_cases {
         let n = sc.next::<usize>();
-        let items = 1..=n;
-        let mut max = 0;
-        for swap_b in 0..n {
-            let ns = items.clone().take(swap_b).map(|i| i * i).chain(
-                items
-                    .clone()
-                    .skip(swap_b)
-                    .map(|i| i * (n - i + swap_b + 1)),
-            ).collect::<Vec<_>>();
-            let cur = ns.iter().sum::<usize>() - ns.iter().max().unwrap();
-            if max < cur {
-                max = cur;
-            }
-        }
-        pt.println(max);
+
     }
 }
 

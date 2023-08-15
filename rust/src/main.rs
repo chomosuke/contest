@@ -6,133 +6,24 @@ use std::{
     io::{stdin, stdout, BufReader},
     iter,
     mem::{self, swap},
-    ops::Deref,
-    sync::Arc,
-    thread, usize,
+    usize,
 };
-
-use rand::{random, thread_rng, Rng, distributions::Bernoulli};
-
-fn simulate(mut grid: Vec<Vec<u8>>) -> usize {
-    // let mut pos = vec![vec![false; 21]; 21];
-    let mut i = 10i64;
-    let mut j = 10i64;
-    let mut dir = 1;
-    let mut count = 0;
-    while i >= 0 && j >= 0 && i < 21 && j < 21 {
-        // pos[i as usize][j as usize] = true;
-
-        let cur = grid[i as usize][j as usize];
-        if cur != 0 {
-            dir = cur;
-        }
-
-        if cur != 0 {
-            grid[i as usize][j as usize] = if cur <= 4 { cur + 4 } else { cur - 4 };
-        }
-
-        match dir {
-            1 => {
-                j += 1;
-            }
-            2 => {
-                j += 1;
-                i += 1;
-            }
-            3 => {
-                i += 1;
-            }
-            4 => {
-                j -= 1;
-                i += 1;
-            }
-            5 => {
-                j -= 1;
-            }
-            6 => {
-                j -= 1;
-                i -= 1;
-            }
-            7 => {
-                i -= 1;
-            }
-            8 => {
-                j += 1;
-                i -= 1;
-            }
-            _ => panic!(),
-        }
-
-        count += 1;
-    }
-    count
-}
 
 fn main() {
     let mut sc = Scanner::new(stdin());
-    let gen_size = sc.next::<usize>();
-    let children_size = sc.next::<usize>();
-    let probability = sc.next::<f64>();
-    let dist = Binomial::new(21 * 21, probability).unwrap();
-    let mut rng = thread_rng();
-    let mut grids = Arc::new(
-        (0..gen_size)
-            .map(|_| {
-                (0..21)
-                    .map(|_| (0..21).map(|_| rng.gen_range(0..=8u8)).collect::<Vec<_>>())
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>(),
-    );
+    let mut pt = Printer::new(stdout());
+    let test_cases = sc.next::<usize>();
+    for _ in 0..test_cases {
+        let a = sc.next::<u64>();
+        let b = sc.next::<u64>();
+        let c = sc.next::<u64>();
 
-    loop {
-        // generate the children
-        let mut children = Vec::with_capacity(children_size * grids.len());
-        let num_thread = 8;
-        let handles = (0..num_thread)
-            .map(|i| {
-                let grids = Arc::clone(&grids);
-                thread::spawn(move || {
-                    let mut rng = thread_rng();
-                    let mut children = Vec::with_capacity(children_size * grids.len() / num_thread);
-                    for grid in
-                        &grids[i * (gen_size / num_thread)..(i + 1) * (gen_size / num_thread)]
-                    {
-                        for _ in 0..children_size {
-                            let mut child = grid.clone();
-                            let n = dist.sample(&mut rng);
-                            for _ in 0..n {
-                                let i = rng.gen_range(0..21);
-                                let j = rng.gen_range(0..21);
-                                child[i][j] = rng.gen_range(0..=8);
-                            }
-                            children.push((simulate(child.clone()), child));
-                        }
-                    }
-                    children
-                })
-            })
-            .collect::<Vec<_>>();
-
-        for h in handles {
-            children.append(&mut h.join().unwrap());
-        }
-
-        children.sort_unstable_by_key(|&(k, _)| usize::MAX - k);
-        children.dedup();
-        grids = children
-            .into_iter()
-            .take(gen_size)
-            .map(|(_, g)| g)
-            .collect::<Vec<_>>()
-            .into();
-        println!("{}", simulate(grids[0].clone()));
-        println!("{}", simulate(grids[grids.len() - 1].clone()));
-        for row in &grids[0] {
-            for cell in row {
-                print!("{cell}");
-            }
-            println!();
+        let a = a + (c + 1) / 2;
+        let b = b + c / 2;
+        if a > b {
+            pt.println("First");
+        } else {
+            pt.println("Second");
         }
     }
 }
@@ -282,5 +173,3 @@ mod io {
 }
 #[allow(unused_imports)]
 use io::*;
-use rand_distr::{Binomial, Distribution};
-

@@ -6,81 +6,143 @@ use std::{
     io::{stdin, stdout, BufReader},
     iter,
     mem::{self, swap},
-    usize,
+    ops::Deref,
+    sync::{Arc, Mutex},
+    thread, usize,
 };
 
-enum Action {
-    Plus(u32),
-    Minus(Vec<u32>),
+use rand::{distributions::Bernoulli, random, thread_rng, Rng};
+
+fn simulate(mut grid: Vec<Vec<u8>>) -> usize {
+    // let mut pos = vec![vec![false; 21]; 21];
+    let mut i = 10i64;
+    let mut j = 10i64;
+    let mut dir = 1;
+    let mut count = 0;
+    while i >= 0 && j >= 0 && i < 21 && j < 21 {
+        // pos[i as usize][j as usize] = true;
+
+        let cur = grid[i as usize][j as usize];
+        if cur != 0 {
+            dir = cur;
+        }
+
+        if cur != 0 {
+            grid[i as usize][j as usize] = if cur <= 4 { cur + 4 } else { cur - 4 };
+        }
+
+        match dir {
+            1 => {
+                j += 1;
+            }
+            2 => {
+                j += 1;
+                i += 1;
+            }
+            3 => {
+                i += 1;
+            }
+            4 => {
+                j -= 1;
+                i += 1;
+            }
+            5 => {
+                j -= 1;
+            }
+            6 => {
+                j -= 1;
+                i -= 1;
+            }
+            7 => {
+                i -= 1;
+            }
+            8 => {
+                j += 1;
+                i -= 1;
+            }
+            _ => panic!(),
+        }
+
+        count += 1;
+    }
+    count
 }
 
 fn main() {
     let mut sc = Scanner::new(stdin());
-    // let mut pt = Printer::new(stdout());
-    let q = sc.next::<usize>();
-    let mut count_map = HashMap::<u32, usize>::new();
-    let mut actions = Vec::new();
-    let mut arr = Vec::new();
-    let mut count = 0;
-    for _ in 0..q {
-        let a = sc.next::<char>();
-        match a {
-            '+' => {
-                let n = sc.next();
-                if count_map.get(&n).is_none() {
-                    count += 1;
-                }
-                *count_map.entry(n).or_default() += 1;
-                actions.push(Action::Plus(n));
-                arr.push(n);
-            }
-            '-' => {
-                let n = sc.next::<usize>();
-                let d = arr.len() - n;
+    let gen_size = sc.next::<usize>();
+    let children_size = sc.next::<usize>();
+    let probability = sc.next::<f64>();
+    let dist = Binomial::new(21 * 21, probability).unwrap();
+    let mut rng = thread_rng();
+    let mut grids = Arc::new(
+        (0..gen_size)
+            .map(|_| {
+                let g = (0..21)
+                    .map(|_| (0..21).map(|_| rng.gen_range(0..=8u8)).collect::<Vec<_>>())
+                    .collect::<Vec<_>>();
+                (simulate(g.clone()), g)
+            })
+            .collect::<Vec<_>>(),
+    );
 
-                let removed = arr[d..].to_vec();
-                arr.truncate(d);
-                for r in &removed {
-                    *count_map.get_mut(r).unwrap() -= 1;
-                    if count_map[r] == 0 {
-                        count_map.remove(r);
-                        count -= 1;
-                    }
-                }
-                actions.push(Action::Minus(removed));
-            }
-            '?' => {
-                println!("{}", count);
-            }
-            '!' => {
-                let a = actions.pop().unwrap();
-                match a {
-                    Action::Plus(n) => {
-                        *count_map.get_mut(&n).unwrap() -= 1;
-                        if count_map[&n] == 0 {
-                            count_map.remove(&n);
-                            count -= 1;
-                        }
-                        arr.pop();
-                    }
-                    Action::Minus(v) => {
-                        for n in v {
-                            if count_map.get(&n).is_none() {
-                                count += 1;
+    loop {
+        // generate the children
+        let num_thread = 16;
+        let handles = (0..num_thread)
+            .map(|i| {
+                let grids = Arc::clone(&grids);
+                thread::spawn(move || {
+                    let mut rng = thread_rng();
+                    let mut children = Vec::with_capacity(children_size * grids.len() / num_thread);
+                    for (_, grid) in
+                        &grids[i * (grids.len() / num_thread)..(i + 1) * (grids.len() / num_thread)]
+                    {
+                        for _ in 0..children_size {
+                            let mut child = grid.clone();
+                            let n = dist.sample(&mut rng);
+                            for _ in 0..n {
+                                let i = rng.gen_range(0..21);
+                                let j = rng.gen_range(0..21);
+                                child[i][j] = rng.gen_range(0..=8);
                             }
-                            *count_map.entry(n).or_default() += 1;
-                            arr.push(n);
+                            children.push((simulate(child.clone()), child));
                         }
                     }
-                }
+                    children
+                })
+            })
+            .collect::<Vec<_>>();
+
+        let mut children = Vec::clone(&grids);
+        for h in handles {
+            children.append(&mut h.join().unwrap());
+        }
+
+        children.sort_unstable_by_key(|&(k, _)| usize::MAX - k);
+        // children.dedup_by_key(|&mut (k, _)| k);
+        children.dedup();
+        children.truncate(gen_size);
+
+        grids = children.into();
+
+        println!("{}", (grids[0].0));
+        for row in &(grids[0].1) {
+            for cell in row {
+                print!("{cell}");
             }
-            _ => panic!("{a}"),
+            println!();
+        }
+        println!("{}", (grids[grids.len() - 1].0));
+        for row in &(grids[grids.len() - 1].1) {
+            for cell in row {
+                print!("{cell}");
+            }
+            println!();
         }
     }
 }
 
-#[allow(unused_imports)]
-use io::*;
 mod io {
     use std::collections::{HashSet, VecDeque};
     use std::fmt::Display;
@@ -224,3 +286,6 @@ mod io {
         }
     }
 }
+#[allow(unused_imports)]
+use io::*;
+use rand_distr::{Binomial, Distribution};

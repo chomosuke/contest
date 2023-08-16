@@ -7,10 +7,12 @@ use std::{
     iter,
     mem::{self, swap},
     ops::Deref,
+    path::Path,
     sync::{Arc, Mutex},
     thread, usize,
 };
 
+use itertools::Itertools;
 use rand::{distributions::Bernoulli, random, thread_rng, Rng};
 
 fn simulate(mut grid: Vec<Vec<u8>>) -> usize {
@@ -68,27 +70,60 @@ fn simulate(mut grid: Vec<Vec<u8>>) -> usize {
     count
 }
 
+fn to_string(grid: &(usize, Vec<Vec<u8>>)) -> String {
+    let mut str = format!("{}", grid.0).into_bytes();
+    for row in &grid.1 {
+        str.push(b'\n');
+        for cell in row {
+            str.push(cell + b'0');
+        }
+    }
+    str.push(b'\n');
+    String::from_utf8(str).unwrap()
+}
+
 fn main() {
     let mut sc = Scanner::new(stdin());
+    let saved = "saved.txt";
+    if !Path::new(saved).exists() {
+        let mut rng = thread_rng();
+        let grids = Arc::new(
+            (0..1000)
+                .map(|_| {
+                    let g = (0..21)
+                        .map(|_| (0..21).map(|_| rng.gen_range(0..=8u8)).collect::<Vec<_>>())
+                        .collect::<Vec<_>>();
+                    (simulate(g.clone()), g)
+                })
+                .collect::<Vec<_>>(),
+        );
+        fs::write(saved, grids.iter().map(to_string).collect::<String>()).unwrap();
+    }
+    // let gap = sc.next::<usize>();
     let gen_size = sc.next::<usize>();
     let children_size = sc.next::<usize>();
     let probability = sc.next::<f64>();
     let dist = Binomial::new(21 * 21, probability).unwrap();
-    let mut rng = thread_rng();
-    let mut grids = Arc::new(
-        (0..gen_size)
-            .map(|_| {
-                let g = (0..21)
-                    .map(|_| (0..21).map(|_| rng.gen_range(0..=8u8)).collect::<Vec<_>>())
-                    .collect::<Vec<_>>();
-                (simulate(g.clone()), g)
-            })
-            .collect::<Vec<_>>(),
-    );
+    let grids = fs::read_to_string(saved).unwrap();
+    let mut grids = grids.split('\n').collect::<Vec<_>>();
+    grids.pop();
+    let grids: Vec<(usize, Vec<Vec<u8>>)> = grids
+        .chunks(22)
+        .map(|ls| {
+            let n = ls[0].parse().unwrap();
+            let grid = ls[1..22]
+                .iter()
+                .map(|l| l.as_bytes().iter().map(|&c| c - b'0').collect())
+                .collect();
+            (n, grid)
+        })
+        .collect();
+    let mut grids = Arc::new(grids);
 
+    let num_thread = sc.next::<usize>();
+    let mut count = 0;
     loop {
         // generate the children
-        let num_thread = 16;
         let handles = (0..num_thread)
             .map(|i| {
                 let grids = Arc::clone(&grids);
@@ -114,7 +149,7 @@ fn main() {
             })
             .collect::<Vec<_>>();
 
-        let mut children = Vec::clone(&grids);
+        let mut children = grids[0..gen_size / 10].to_vec();
         for h in handles {
             children.append(&mut h.join().unwrap());
         }
@@ -125,20 +160,32 @@ fn main() {
         children.truncate(gen_size);
 
         grids = children.into();
+        // let lower = children[0].0 - gap;
+        // grids = children
+        //     .into_iter()
+        //     .take_while(|&(k, _)| k > lower)
+        //     .collect::<Vec<_>>()
+        //     .into();
 
-        println!("{}", (grids[0].0));
+        println!("{}", grids[0].0);
         for row in &(grids[0].1) {
             for cell in row {
                 print!("{cell}");
             }
             println!();
         }
-        println!("{}", (grids[grids.len() - 1].0));
+        println!("{}", grids[grids.len() - 1].0);
         for row in &(grids[grids.len() - 1].1) {
             for cell in row {
                 print!("{cell}");
             }
             println!();
+        }
+        println!("{} {children_size} {probability}", grids.len());
+
+        count += 1;
+        if count % 5 == 0 {
+            fs::write(saved, grids.iter().map(to_string).collect::<String>()).unwrap();
         }
     }
 }

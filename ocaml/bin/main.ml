@@ -20,44 +20,66 @@ let _next_line () =
   assert (!remaining_tokens = []);
   read_line ()
 
+let find_z str i j =
+  let rec loop str i j len =
+    if String.(length str <= j || length str <= i || get str i <> get str j)
+    then len
+    else loop str (i + 1) (j + 1) (len + 1)
+  in
+  loop str i j 0
+
+let z str =
+  let rec loop str i l r z =
+    if i < String.length str then (
+      if i < r then (
+        let zk = z.(i - l) in
+        if zk < r - i then (
+          (* prefix starting at k does not extend beyond r *)
+          z.(i) <- zk;
+          loop str (i + 1) l r z)
+        else
+          (* prefix starting at k might extend beyond r *)
+          let zi = r - i + find_z str r (r - i) in
+          z.(i) <- zi;
+          loop str (i + 1) i (i + zi) z)
+      else
+        let zi = find_z str 0 i in
+        z.(i) <- zi;
+        loop str (i + 1) i (i + zi) z)
+    else z
+  in
+  loop str 1 0 0 (Array.make (String.length str) (String.length str))
+
+let z_arr = ref (Array.make 0 0)
+
+let prefix_len str i =
+  if i = 0 then String.length str
+  else (
+    if Array.length !z_arr = 0 then z_arr := z str;
+    !z_arr.(i))
+
 (*
-You will simply cut the string once and repeat it many time. This is because:
-You want to find "it got smaller point." and make it as early as poissble.
-
-Find first letter that's equal or bigger than start
-
-If bigger, that's the cut off point.
-
-If equal, then maybe if we take that as cut off point, it will be smaller at a later point.
-
-If it does get smaller at a later point. This will work. This is because something it has always been smaller so
-starting later can't possibly be bigger.
-
-If it doesn't get smaller at a later point, we restart from this index and keep trying to find the cut off point.
-
-Becuase everything after the cut off point is smaller or equal to the start. You will not make the string
-lexically smaller by cutting less than a cycle. Cause you could've done that the first time around (probably)
+We want to find the smallest prefix repeated infinite time.
 *)
 let find_cut_off str =
-  let viable str i =
-    let this = String.get str i in
-    let start = String.get str 0 in
-    start < this
-    || start = this
-       &&
-       let rec viable str i j =
-         String.(
-           if length str <= j then true
-           else if get str i < get str j then true
-           else if get str i > get str j then false
-           else viable str (i + 1) (j + 1))
-       in
-       viable str 0 i
+  let rec loop str m i =
+    if i < String.length str then
+      (* m is length, i is last char in current prefix *)
+      String.(
+        let prev = get str (i mod m) in
+        let curr = get str i in
+        if curr < prev then (* new best m *) loop str (i + 1) (i + 1)
+        else if curr > prev then (* can never get better *) m
+        else if i = (m * 2) - 1 then loop str (i + 1) (i + 1)
+        else
+          let a_len = (i + 1 - m) in
+          let d = prefix_len str a_len in
+          let a = get str d in
+          let b = get str ((d + a_len) mod String.length str) in
+          if a <= b then loop str (i + 1) (i + 1) else loop str m (i + 1))
+    else m
   in
-  let rec loop str i =
-    String.(if length str <= i || viable str i then i else loop str (i + 1))
-  in
-  loop str 1
+  loop str 1 1
 
 let () =
   let k =

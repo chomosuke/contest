@@ -1,4 +1,5 @@
 #![allow(unused_imports, dead_code, clippy::needless_range_loop, unused_labels)]
+use io::*;
 use std::{
     cmp::{max, min, Ordering},
     collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
@@ -6,188 +7,44 @@ use std::{
     io::{stdin, stdout, BufReader},
     iter,
     mem::{self, swap},
-    ops::Deref,
-    path::Path,
-    sync::{Arc, Mutex},
-    thread, usize,
+    usize,
 };
-
-use itertools::Itertools;
-use rand::{distributions::Bernoulli, random, thread_rng, Rng};
-
-fn simulate(mut grid: Vec<Vec<u8>>) -> usize {
-    // let mut pos = vec![vec![false; 21]; 21];
-    let mut i = 10i64;
-    let mut j = 10i64;
-    let mut dir = 1;
-    let mut count = 0;
-    while i >= 0 && j >= 0 && i < 21 && j < 21 {
-        // pos[i as usize][j as usize] = true;
-
-        let cur = grid[i as usize][j as usize];
-        if cur != 0 {
-            dir = cur;
-        }
-
-        if cur != 0 {
-            grid[i as usize][j as usize] = if cur <= 4 { cur + 4 } else { cur - 4 };
-        }
-
-        match dir {
-            1 => {
-                j += 1;
-            }
-            2 => {
-                j += 1;
-                i += 1;
-            }
-            3 => {
-                i += 1;
-            }
-            4 => {
-                j -= 1;
-                i += 1;
-            }
-            5 => {
-                j -= 1;
-            }
-            6 => {
-                j -= 1;
-                i -= 1;
-            }
-            7 => {
-                i -= 1;
-            }
-            8 => {
-                j += 1;
-                i -= 1;
-            }
-            _ => panic!(),
-        }
-
-        count += 1;
-    }
-    count
-}
-
-fn to_string(grid: &(usize, Vec<Vec<u8>>)) -> String {
-    let mut str = format!("{}", grid.0).into_bytes();
-    for row in &grid.1 {
-        str.push(b'\n');
-        for cell in row {
-            str.push(cell + b'0');
-        }
-    }
-    str.push(b'\n');
-    String::from_utf8(str).unwrap()
-}
 
 fn main() {
     let mut sc = Scanner::new(stdin());
-    let saved = "saved.txt";
-    if !Path::new(saved).exists() {
-        let mut rng = thread_rng();
-        let grids = Arc::new(
-            (0..1000)
-                .map(|_| {
-                    let g = (0..21)
-                        .map(|_| (0..21).map(|_| rng.gen_range(0..=8u8)).collect::<Vec<_>>())
-                        .collect::<Vec<_>>();
-                    (simulate(g.clone()), g)
-                })
-                .collect::<Vec<_>>(),
-        );
-        fs::write(saved, grids.iter().map(to_string).collect::<String>()).unwrap();
+    let mut pt = Printer::new(stdout());
+    let n = sc.next::<usize>();
+    let mut nums = Vec::with_capacity(n);
+    for _ in 0..n {
+        nums.push((sc.next::<u64>(), sc.next::<u64>()));
     }
-    // let gap = sc.next::<usize>();
-    let gen_size = sc.next::<usize>();
-    let children_size = sc.next::<usize>();
-    let probability = sc.next::<f64>();
-    let dist = Binomial::new(21 * 21, probability).unwrap();
-    let grids = fs::read_to_string(saved).unwrap();
-    let mut grids = grids.split('\n').collect::<Vec<_>>();
-    grids.pop();
-    let grids: Vec<(usize, Vec<Vec<u8>>)> = grids
-        .chunks(22)
-        .map(|ls| {
-            let n = ls[0].parse().unwrap();
-            let grid = ls[1..22]
-                .iter()
-                .map(|l| l.as_bytes().iter().map(|&c| c - b'0').collect())
-                .collect();
-            (n, grid)
-        })
-        .collect();
-    let mut grids = Arc::new(grids);
-
-    let num_thread = sc.next::<usize>();
-    let mut count = 0;
-    loop {
-        // generate the children
-        let handles = (0..num_thread)
-            .map(|i| {
-                let grids = Arc::clone(&grids);
-                thread::spawn(move || {
-                    let mut rng = thread_rng();
-                    let mut children = Vec::with_capacity(children_size * grids.len() / num_thread);
-                    for (_, grid) in
-                        &grids[i * (grids.len() / num_thread)..(i + 1) * (grids.len() / num_thread)]
-                    {
-                        for _ in 0..children_size {
-                            let mut child = grid.clone();
-                            let n = dist.sample(&mut rng);
-                            for _ in 0..n {
-                                let i = rng.gen_range(0..21);
-                                let j = rng.gen_range(0..21);
-                                child[i][j] = rng.gen_range(0..=8);
-                            }
-                            children.push((simulate(child.clone()), child));
-                        }
-                    }
-                    children
-                })
-            })
-            .collect::<Vec<_>>();
-
-        let mut children = grids[0..gen_size / 10].to_vec();
-        for h in handles {
-            children.append(&mut h.join().unwrap());
+    // record the current card and possibility of previous card counts for each orientation
+    let nums = nums;
+    let mut a_count = 1_u128;
+    let mut b_count = 1_u128;
+    for i in 1..nums.len() {
+        let p = nums[i - 1];
+        let c = nums[i];
+        let mut n_a_count = 0;
+        let mut n_b_count = 0;
+        if p.0 != c.0 {
+            // can choose a for c and a for p
+            n_a_count += a_count;
         }
-
-        children.sort_unstable_by_key(|&(k, _)| usize::MAX - k);
-        // children.dedup_by_key(|&mut (k, _)| k);
-        children.dedup();
-        children.truncate(gen_size);
-
-        grids = children.into();
-        // let lower = children[0].0 - gap;
-        // grids = children
-        //     .into_iter()
-        //     .take_while(|&(k, _)| k > lower)
-        //     .collect::<Vec<_>>()
-        //     .into();
-
-        println!("{}", grids[0].0);
-        for row in &(grids[0].1) {
-            for cell in row {
-                print!("{cell}");
-            }
-            println!();
+        if p.1 != c.0 {
+            // can choose b for c and a for p
+            n_a_count += b_count;
         }
-        println!("{}", grids[grids.len() - 1].0);
-        for row in &(grids[grids.len() - 1].1) {
-            for cell in row {
-                print!("{cell}");
-            }
-            println!();
+        if p.0 != c.1 {
+            n_b_count += a_count;
         }
-        println!("{} {children_size} {probability}", grids.len());
-
-        count += 1;
-        if count % 5 == 0 {
-            fs::write(saved, grids.iter().map(to_string).collect::<String>()).unwrap();
+        if p.1 != c.1 {
+            n_b_count += b_count;
         }
+        b_count = n_b_count % 998244353;
+        a_count = n_a_count % 998244353;
     }
+    pt.println((a_count + b_count) % 998244353);
 }
 
 mod io {
@@ -333,6 +190,3 @@ mod io {
         }
     }
 }
-#[allow(unused_imports)]
-use io::*;
-use rand_distr::{Binomial, Distribution};

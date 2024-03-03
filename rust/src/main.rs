@@ -1,192 +1,168 @@
-#![allow(unused_imports, dead_code, clippy::needless_range_loop, unused_labels)]
-use io::*;
 use std::{
-    cmp::{max, min, Ordering},
-    collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
-    fs,
-    io::{stdin, stdout, BufReader},
-    iter,
-    mem::{self, swap},
-    usize,
+    cmp::min,
+    collections::{HashMap, VecDeque},
+    io::{self, BufRead},
 };
 
-fn main() {
-    let mut sc = Scanner::new(stdin());
-    let mut pt = Printer::new(stdout());
-    let n = sc.next::<usize>();
-    let mut nums = Vec::with_capacity(n);
-    for _ in 0..n {
-        nums.push((sc.next::<u64>(), sc.next::<u64>()));
-    }
-    // record the current card and possibility of previous card counts for each orientation
-    let nums = nums;
-    let mut a_count = 1_u128;
-    let mut b_count = 1_u128;
-    for i in 1..nums.len() {
-        let p = nums[i - 1];
-        let c = nums[i];
-        let mut n_a_count = 0;
-        let mut n_b_count = 0;
-        if p.0 != c.0 {
-            // can choose a for c and a for p
-            n_a_count += a_count;
-        }
-        if p.1 != c.0 {
-            // can choose b for c and a for p
-            n_a_count += b_count;
-        }
-        if p.0 != c.1 {
-            n_b_count += a_count;
-        }
-        if p.1 != c.1 {
-            n_b_count += b_count;
-        }
-        b_count = n_b_count % 998244353;
-        a_count = n_a_count % 998244353;
-    }
-    pt.println((a_count + b_count) % 998244353);
+struct Customer {
+    id: i64,
+    num_items: i32,
+    processed_items: i32,
 }
 
-mod io {
-    use std::collections::{HashSet, VecDeque};
-    use std::fmt::Display;
-    use std::io::{BufReader, BufWriter, Lines, Read, Write};
-    use std::marker::PhantomData;
-    use std::{any::type_name, io::BufRead, str::FromStr};
+struct Line {
+    customers: VecDeque<Option<Customer>>,
+    poped_front: usize,
+}
 
-    pub struct ScannerIter<'a, R: Read, T> {
-        remaining: usize,
-        sc: &'a mut Scanner<R>,
-        item: PhantomData<T>,
+// #[derive(Hash)]
+struct LinePos {
+    line_number: i64,
+    line_pos: usize,
+}
+
+pub struct SupermarketCheckout {
+    lines: HashMap<i64, Line>,
+    customers_line_pos: HashMap<i64, LinePos>,
+}
+
+fn on_customer_exit(customer_id: i64) {
+    // Don't change this implementation.
+    println!("{}", customer_id);
+}
+
+impl SupermarketCheckout {
+    pub fn new() -> Self {
+        Self {
+            lines: HashMap::new(),
+            customers_line_pos: HashMap::new(),
+        }
     }
 
-    impl<R: Read, T: FromStr> Iterator for ScannerIter<'_, R, T> {
-        type Item = T;
+    pub fn on_customer_enter(&mut self, customer_id: i64, line_number: i64, num_items: i32) {
+        if !self.lines.contains_key(&line_number) {
+            self.lines.insert(
+                line_number,
+                Line {
+                    customers: VecDeque::new(),
+                    poped_front: 0,
+                },
+            );
+        }
+        self.customers_line_pos.insert(
+            customer_id,
+            LinePos {
+                line_number,
+                line_pos: self.lines[&line_number].customers.len(),
+            },
+        );
+        self.lines
+            .get_mut(&line_number)
+            .unwrap()
+            .customers
+            .push_back(Some(Customer {
+                id: customer_id,
+                num_items,
+                processed_items: 0,
+            }));
+    }
 
-        fn next(&mut self) -> Option<Self::Item> {
-            if self.remaining == 0 {
-                None
+    pub fn on_basket_change(&mut self, customer_id: i64, new_num_items: i32) {
+        let LinePos {
+            line_number,
+            line_pos,
+        } = self.customers_line_pos.get_mut(&customer_id).unwrap();
+        let line = self.lines.get_mut(line_number).unwrap();
+        let pos = *line_pos - line.poped_front;
+        let customer_opt = &mut line.customers[pos];
+        let customer = customer_opt.as_mut().unwrap();
+        if new_num_items > customer.num_items + customer.processed_items {
+            let mut customer = customer_opt.take().unwrap();
+            customer.num_items = new_num_items - customer.processed_items;
+            *line_pos = line.poped_front + line.customers.len();
+            line.customers.push_back(Some(customer));
+        } else {
+            customer.num_items = new_num_items - customer.processed_items;
+            if new_num_items == 0 {
+                customer_opt.take();
+                self.customers_line_pos.remove(&customer_id);
+                on_customer_exit(customer_id);
+            }
+        }
+    }
+
+    pub fn on_line_service(&mut self, line_number: i64, mut num_processed_items: i32) {
+        let line = self.lines.get_mut(&line_number).unwrap();
+        while num_processed_items > 0 && !line.customers.is_empty() {
+            let customer = if let Some(customer) = line.customers.front_mut().unwrap() {
+                customer
             } else {
-                self.remaining -= 1;
-                Some(self.sc.next::<T>())
-            }
-        }
-    }
-
-    pub struct Scanner<R: Read> {
-        tokens: VecDeque<String>,
-        delimiters: Option<HashSet<char>>,
-        lines: Lines<BufReader<R>>,
-    }
-    impl<R: Read> Scanner<R> {
-        pub fn new(source: R) -> Self {
-            Self {
-                tokens: VecDeque::new(),
-                delimiters: None,
-                lines: BufReader::new(source).lines(),
-            }
-        }
-
-        pub fn with_delimiters(source: R, delimiters: &[char]) -> Self {
-            Self {
-                tokens: VecDeque::new(),
-                delimiters: Some(delimiters.iter().copied().collect()),
-                lines: BufReader::new(source).lines(),
-            }
-        }
-
-        pub fn next<T: FromStr>(&mut self) -> T {
-            let token = loop {
-                let front = self.tokens.pop_front();
-                if let Some(token) = front {
-                    break token;
-                }
-                self.receive_input();
+                line.customers.pop_front();
+                continue;
             };
-            token
-                .parse::<T>()
-                .unwrap_or_else(|_| panic!("input {} isn't a {}", token, type_name::<T>()))
-        }
-
-        pub fn next_n<T: FromStr>(&mut self, n: usize) -> ScannerIter<'_, R, T> {
-            ScannerIter {
-                remaining: n,
-                sc: self,
-                item: PhantomData,
-            }
-        }
-
-        pub fn next_line(&mut self) -> String {
-            assert!(self.tokens.is_empty(), "You have unprocessed token");
-            self.lines
-                .next()
-                .and_then(|e| e.ok())
-                .expect("Failed to read.")
-        }
-
-        fn receive_input(&mut self) {
-            let line = self
-                .lines
-                .next()
-                .and_then(|e| e.ok())
-                .expect("Failed to read.");
-            if let Some(delimiters) = &self.delimiters {
-                for token in line.split(|c| delimiters.contains(&c)) {
-                    self.tokens.push_back(token.to_string());
-                }
-            } else {
-                for token in line.split_whitespace() {
-                    self.tokens.push_back(token.to_string());
-                }
+            let item_num = min(num_processed_items, customer.num_items);
+            num_processed_items -= item_num;
+            customer.num_items -= item_num;
+            customer.processed_items += item_num;
+            if customer.num_items == 0 {
+                let customer_id = customer.id;
+                line.customers.pop_front();
+                self.customers_line_pos.remove(&customer_id);
+                on_customer_exit(customer_id);
             }
         }
     }
 
-    pub struct Printer<W: Write> {
-        writer: BufWriter<W>,
-    }
-    impl<W: Write> Printer<W> {
-        pub fn new(destination: W) -> Self {
-            Self {
-                writer: BufWriter::new(destination),
-            }
-        }
-
-        pub fn print(&mut self, s: impl Display) {
-            self.writer
-                .write_all(s.to_string().as_bytes())
-                .expect("print failed.");
-        }
-
-        pub fn print_bytes(&mut self, b: &[u8]) {
-            self.writer.write_all(b).expect("print_bytes failed.");
-        }
-
-        pub fn println(&mut self, s: impl Display) {
-            self.print(s);
-            self.newline();
-        }
-
-        pub fn newline(&mut self) {
-            self.print_bytes(&[b'\n']);
-        }
-
-        pub fn print_iter(&mut self, mut iter: impl Iterator<Item = impl Display>) {
-            if let Some(e) = iter.next() {
-                self.print(&e);
-                for e in iter {
-                    self.print_bytes(&[b' ']);
-                    self.print(&e);
-                }
-            }
-            self.newline();
+    pub fn on_lines_service(&mut self) {
+        let mut line_numbers: Vec<i64> = self.lines.keys().cloned().collect();
+        line_numbers.sort();
+        for line_number in line_numbers {
+            self.on_line_service(line_number, 1);
         }
     }
-    impl<W: Write> Drop for Printer<W> {
-        fn drop(&mut self) {
-            self.writer
-                .flush()
-                .expect("flush failed when dropping Printer.");
-        }
+}
+
+fn main() {
+    let stdin = io::stdin();
+    let mut stdin_iterator = stdin.lock().lines();
+
+    let mut checkout_tracker: SupermarketCheckout = SupermarketCheckout::new();
+
+    let n = stdin_iterator
+        .next()
+        .unwrap()
+        .unwrap()
+        .trim()
+        .parse::<i64>()
+        .unwrap();
+
+    for _ in 0..n {
+        let line = stdin_iterator.next().unwrap().unwrap();
+        let parameters: Vec<&str> = line.split_whitespace().collect();
+
+        match parameters[0].trim() {
+            "CustomerEnter" => {
+                let customer_id = parameters[1].parse::<i64>().unwrap();
+                let line_number = parameters[2].parse::<i64>().unwrap();
+                let num_items = parameters[3].parse::<i32>().unwrap();
+                checkout_tracker.on_customer_enter(customer_id, line_number, num_items);
+            }
+            "BasketChange" => {
+                let customer_id = parameters[1].parse::<i64>().unwrap();
+                let new_num_items = parameters[2].parse::<i32>().unwrap();
+                checkout_tracker.on_basket_change(customer_id, new_num_items);
+            }
+            "LineService" => {
+                let line_number = parameters[1].parse::<i64>().unwrap();
+                let num_processed_items = parameters[2].parse::<i32>().unwrap();
+                checkout_tracker.on_line_service(line_number, num_processed_items);
+            }
+            "LinesService" => {
+                checkout_tracker.on_lines_service();
+            }
+            _ => {
+                panic!("Malformed input!");
+            }
+        };
     }
 }

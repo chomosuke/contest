@@ -47,33 +47,32 @@ template <typename... TT> struct hash<std::tuple<TT...>> {
 // unordered_map<tuple<Int, Float>, Int, hash_tuple::hash<tuple<Int, Float>>>
 //     memoize;
 
-typedef int64_t Int;
-[[maybe_unused]] const Int Int_max = INT64_MAX;
-[[maybe_unused]] const Int Int_min = INT64_MIN;
-typedef long double Float;
-
-std::unordered_map<std::tuple<Int, Int>, Int,
-                   hash_tuple::hash<std::tuple<Int, Int>>>
-    memoize;
+// typedef int64_t Int;
+// [[maybe_unused]] const Int Int_max = INT64_MAX;
+// [[maybe_unused]] const Int Int_min = INT64_MIN;
+// typedef long double Float;
 
 int main() {
-    int t{};
-    std::cin >> t;
-    for (int i = 0; i < t; i++) {
+    int test_case_num{};
+    std::cin >> test_case_num;
+    for (int test_case = 0; test_case < test_case_num; test_case++) {
         int n{};
+        int prev{0};
         std::cin >> n;
-        if (n % 2 != 0) {
-            std::cout << "NO" << std::endl;
-        } else {
-            std::cout << "YES" << std::endl;
-            for (int i = 0; i < n / 2; i++) {
-                std::cout << "AA";
-                i++;
-                if (i < n / 2) {
-                    std::cout << "BB";
-                }
+        for (int i = 0; i < n; i++) {
+            int a{};
+            std::cin >> a;
+            if (prev <= a / 10 && a / 10 <= a % 10) {
+                a = a % 10; // eagerly break things up.
             }
-            std::cout << std::endl;
+            if (prev > a) {
+                std::cout << "NO";
+                goto end_case;
+            }
+            prev = a;
         }
+        std::cout << "YES";
+    end_case:
+        std::cout << std::endl;
     }
 }

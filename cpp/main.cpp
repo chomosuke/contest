@@ -57,22 +57,12 @@ int main() {
     std::cin >> test_case_num;
     for (int test_case = 0; test_case < test_case_num; test_case++) {
         int n{};
-        int prev{0};
-        std::cin >> n;
-        for (int i = 0; i < n; i++) {
-            int a{};
-            std::cin >> a;
-            if (prev <= a / 10 && a / 10 <= a % 10) {
-                a = a % 10; // eagerly break things up.
-            }
-            if (prev > a) {
-                std::cout << "NO";
-                goto end_case;
-            }
-            prev = a;
+        int k{};
+        std::cin >> n >> k;
+        if (k >= n - 1) {
+            std::cout << 1 << std::endl;
+        } else {
+            std::cout << n << std::endl;
         }
-        std::cout << "YES";
-    end_case:
-        std::cout << std::endl;
     }
 }

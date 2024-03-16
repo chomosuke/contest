@@ -5,6 +5,7 @@
 #include <iostream>      // IWYU pragma: keep
 #include <map>           // IWYU pragma: keep
 #include <queue>         // IWYU pragma: keep
+#include <set>           // IWYU pragma: keep
 #include <tuple>         // IWYU pragma: keep
 #include <unordered_map> // IWYU pragma: keep
 #include <unordered_set> // IWYU pragma: keep
@@ -57,73 +58,29 @@ int main() {
     std::cin >> test_case_num;
     for (int test_case = 0; test_case < test_case_num; test_case++) {
         int n{};
-        int k{};
-        std::cin >> n >> k;
-
-        std::vector<int> arr1{};
-        std::vector<int> arr2{};
-
+        std::cin >> n;
+        std::multiset<int> arr{};
         for (int i = 0; i < n; i++) {
             int a{};
             std::cin >> a;
-            arr1.push_back(a);
+            arr.insert(a);
         }
-        for (int i = 0; i < n; i++) {
-            int a{};
-            std::cin >> a;
-            arr2.push_back(a);
-        }
-
-        sort(arr1.begin(), arr1.end());
-        sort(arr2.begin(), arr2.end());
-
-        std::vector<int> arr1_double{};
-        std::vector<int> arr1_single{};
-        std::vector<int> arr2_double{};
-        std::vector<int> arr2_single{};
-        for (int i = 0; i < n; i++) {
-            if (i < n - 1 && arr1[i] == arr1[i + 1]) {
-                arr1_double.push_back(arr1[i]);
-            } else if (i == 0 || arr1[i] != arr1[i - 1]) {
-                arr1_single.push_back(arr1[i]);
+        int mex{-1};
+        bool alice_played{false};
+        for (int i = 0;; i++) {
+            if (arr.count(i) == 0) {
+                mex = i;
+                break;
             }
-            if (i < n - 1 && arr2[i] == arr2[i + 1]) {
-                arr2_double.push_back(arr2[i]);
-            } else if (i == 0 || arr2[i] != arr2[i - 1]) {
-                arr2_single.push_back(arr2[i]);
+            if (arr.count(i) == 1) {
+                if (alice_played) {
+                    mex = i;
+                    break;
+                } else {
+                    alice_played = true;
+                }
             }
         }
-
-        sort(arr1_single.begin(), arr1_single.end());
-        sort(arr2_single.begin(), arr2_single.end());
-
-        std::vector<int> l{};
-        std::vector<int> r{};
-        int i = 0;
-        while (k > 0) {
-            if (i < arr1_double.size()) {
-                l.push_back(arr1_double[i]);
-                l.push_back(arr1_double[i]);
-                r.push_back(arr2_double[i]);
-                r.push_back(arr2_double[i]);
-            } else {
-                l.push_back(arr1_single[i - arr1_double.size()]);
-                r.push_back(arr2_single[i - arr2_double.size()]);
-                i++;
-                l.push_back(arr1_single[i - arr1_double.size()]);
-                r.push_back(arr2_single[i - arr2_double.size()]);
-            }
-            i++;
-            k--;
-        }
-
-        for (auto l : l) {
-            std::cout << l << " ";
-        }
-        std::cout << std::endl;
-        for (auto r : r) {
-            std::cout << r << " ";
-        }
-        std::cout << std::endl;
+        std::cout << mex << std::endl;
     }
 }

@@ -1,74 +1,112 @@
-#include <algorithm>     // IWYU pragma: keep
-#include <bitset>        // IWYU pragma: keep
-#include <cmath>         // IWYU pragma: keep
-#include <cstdint>       // IWYU pragma: keep
-#include <iostream>      // IWYU pragma: keep
-#include <map>           // IWYU pragma: keep
-#include <queue>         // IWYU pragma: keep
-#include <set>           // IWYU pragma: keep
-#include <string>        // IWYU pragma: keep
-#include <string_view>   // IWYU pragma: keep
-#include <tuple>         // IWYU pragma: keep
-#include <unordered_map> // IWYU pragma: keep
-#include <unordered_set> // IWYU pragma: keep
-#include <vector>        // IWYU pragma: keep
+#include <bits/stdc++.h>
 
-namespace hash_tuple {
-template <typename TT> struct hash {
-    size_t operator()(TT const &tt) const { return std::hash<TT>()(tt); }
-};
-namespace {
+using namespace std;
 
-template <class T> inline void hash_combine(std::size_t &seed, T const &v) {
-    seed ^= hash_tuple::hash<T>()(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+string ltrim(const string &);
+string rtrim(const string &);
+
+
+
+/*
+ * Complete the 'minMoves' function below.
+ *
+ * The function is expected to return an INTEGER.
+ * The function accepts following parameters:
+ *  1. INTEGER n
+ *  2. INTEGER startRow
+ *  3. INTEGER startCol
+ *  4. INTEGER endRow
+ *  5. INTEGER endCol
+ */
+
+int minMoves(int n, int startRow, int startCol, int endRow, int endCol) {
+    vector<vector<int>> dist(n, vector<int>(n, -1));
+    queue<tuple<int, int>> toVisit;
+    dist[startRow][startCol] = 0;
+    toVisit.push(make_tuple(startRow, startCol));
+    while (!toVisit.empty() && dist[endRow][endCol] == -1) {
+        int row = get<0>(toVisit.front());
+        int col = get<1>(toVisit.front());
+        int d = dist[row][col] + 1;
+        tuple<int, int> nexts[8] = {
+            {row + 2, col + 1},
+            {row - 2, col + 1},
+            {row + 2, col - 1},
+            {row - 2, col - 1},
+            {row + 1, col + 2},
+            {row - 1, col + 2},
+            {row + 1, col - 2},
+            {row - 1, col - 2},
+        };
+        for (auto& next : nexts) {
+            int row = get<0>(next);
+            int col = get<1>(next);
+            if (row >= 0 && row < n && col >= 0 && col < n && dist[row][col] == -1) {
+                dist[row][col] = d;
+                toVisit.push(next);
+            }
+        }
+        toVisit.pop();
+    }
+    return dist[endRow][endCol];
 }
 
-template <class Tuple, size_t Index = std::tuple_size<Tuple>::value - 1>
-struct HashValueImpl {
-    static void apply(size_t &seed, Tuple const &tuple) {
-        HashValueImpl<Tuple, Index - 1>::apply(seed, tuple);
-        hash_combine(seed, std::get<Index>(tuple));
-    }
-};
+int main()
+{
+    ofstream fout(getenv("OUTPUT_PATH"));
 
-template <class Tuple> struct HashValueImpl<Tuple, 0> {
-    static void apply(size_t &seed, Tuple const &tuple) {
-        hash_combine(seed, std::get<0>(tuple));
-    }
-};
-} // namespace
+    string n_temp;
+    getline(cin, n_temp);
 
-template <typename... TT> struct hash<std::tuple<TT...>> {
-    size_t operator()(std::tuple<TT...> const &tt) const {
-        size_t seed{0};
-        HashValueImpl<std::tuple<TT...>>::apply(seed, tt);
-        return seed;
-    }
-};
-} // namespace hash_tuple
+    int n = stoi(ltrim(rtrim(n_temp)));
 
-// unordered_map<tuple<Int, Float>, Int, hash_tuple::hash<tuple<Int, Float>>>
-//     memoize;
+    string startRow_temp;
+    getline(cin, startRow_temp);
 
-// typedef int64_t Int;
-// [[maybe_unused]] const Int Int_max = INT64_MAX;
-// [[maybe_unused]] const Int Int_min = INT64_MIN;
-// typedef long double Float;
+    int startRow = stoi(ltrim(rtrim(startRow_temp)));
 
-int main() {
-  std::cout << "How old are you?\n";
+    string startCol_temp;
+    getline(cin, startCol_temp);
 
-  std::uint8_t age{};
-  std::cin >> age;
+    int startCol = stoi(ltrim(rtrim(startCol_temp)));
 
-  std::cout << "Allowed to drive a car in Texas [";
+    string endRow_temp;
+    getline(cin, endRow_temp);
 
-  if (age >= 16)
-    std::cout << "x";
-  else
-    std::cout << ' ';
+    int endRow = stoi(ltrim(rtrim(endRow_temp)));
 
-  std::cout << "]\n";
+    string endCol_temp;
+    getline(cin, endCol_temp);
 
-  return 0;
+    int endCol = stoi(ltrim(rtrim(endCol_temp)));
+
+    int result = minMoves(n, startRow, startCol, endRow, endCol);
+
+    fout << result << "\n";
+
+    fout.close();
+
+    return 0;
+}
+
+string ltrim(const string &str) {
+    string s(str);
+
+    s.erase(
+        s.begin(),
+        find_if(s.begin(), s.end(), not1(ptr_fun<int, int>(isspace)))
+    );
+
+    return s;
+}
+
+string rtrim(const string &str) {
+    string s(str);
+
+    s.erase(
+        find_if(s.rbegin(), s.rend(), not1(ptr_fun<int, int>(isspace))).base(),
+        s.end()
+    );
+
+    return s;
 }

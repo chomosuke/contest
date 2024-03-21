@@ -6,6 +6,8 @@
 #include <map>           // IWYU pragma: keep
 #include <queue>         // IWYU pragma: keep
 #include <set>           // IWYU pragma: keep
+#include <string>        // IWYU pragma: keep
+#include <string_view>   // IWYU pragma: keep
 #include <tuple>         // IWYU pragma: keep
 #include <unordered_map> // IWYU pragma: keep
 #include <unordered_set> // IWYU pragma: keep
@@ -54,33 +56,19 @@ template <typename... TT> struct hash<std::tuple<TT...>> {
 // typedef long double Float;
 
 int main() {
-    int test_case_num{};
-    std::cin >> test_case_num;
-    for (int test_case = 0; test_case < test_case_num; test_case++) {
-        int n{};
-        std::cin >> n;
-        std::multiset<int> arr{};
-        for (int i = 0; i < n; i++) {
-            int a{};
-            std::cin >> a;
-            arr.insert(a);
-        }
-        int mex{-1};
-        bool alice_played{false};
-        for (int i = 0;; i++) {
-            if (arr.count(i) == 0) {
-                mex = i;
-                break;
-            }
-            if (arr.count(i) == 1) {
-                if (alice_played) {
-                    mex = i;
-                    break;
-                } else {
-                    alice_played = true;
-                }
-            }
-        }
-        std::cout << mex << std::endl;
-    }
+  std::cout << "How old are you?\n";
+
+  std::uint8_t age{};
+  std::cin >> age;
+
+  std::cout << "Allowed to drive a car in Texas [";
+
+  if (age >= 16)
+    std::cout << "x";
+  else
+    std::cout << ' ';
+
+  std::cout << "]\n";
+
+  return 0;
 }

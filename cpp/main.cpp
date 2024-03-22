@@ -59,27 +59,56 @@ int main() {
     int test_cases_count{};
     std::cin >> test_cases_count;
     for (int test_case = 0; test_case < test_cases_count; test_case++) {
-        std::vector<int> arr{};
         int n{};
+        int k{};
         std::cin >> n;
+        std::cin >> k;
+        std::vector<int> arr{};
         for (int i = 0; i < n; i++) {
             int a{};
             std::cin >> a;
             arr.push_back(a);
         }
-        std::sort(arr.begin(), arr.end());
-        int result{0};
-        int mid = (arr.size() - 1) / 2;
-        for (int i = 0; i + mid < arr.size(); i++) {
-            int j = i + mid;
-            if (arr[j] > arr[mid]) {
-                result = i;
-                break;
-            }
+
+        std::vector<long long> prefix_sum{};
+        prefix_sum.push_back(0);
+        for (int i = 0; i < arr.size(); i++) {
+            long long next_sum = prefix_sum.back() + arr[i];
+            prefix_sum.push_back(next_sum);
         }
-        if (result == 0) {
-            result = arr.size() - mid;
+
+        std::vector<long long> min_til{};
+        min_til.push_back(prefix_sum[0]);
+        for (int i = 1; i < prefix_sum.size(); i++) {
+            long long next_min = std::min(min_til.back(), prefix_sum[i]);
+            min_til.push_back(next_min);
         }
-        std::cout << result << std::endl;
+
+        std::vector<long long> max_bef{};
+        max_bef.push_back(prefix_sum.back());
+        for (int i = prefix_sum.size() - 2; i >= 0; i--) {
+            long long next_max = std::max(max_bef.back(), prefix_sum[i]);
+            max_bef.push_back(next_max);
+        }
+        std::reverse(max_bef.begin(), max_bef.end());
+
+        long long max_diff = 0;
+        for (int i = 0; i + 1 < max_bef.size(); i++) {
+            max_diff = std::max(max_diff, max_bef[i + 1] - min_til[i]);
+        }
+
+        const long long m = 1000000000 + 7;
+        long long res = max_diff;
+        for (int i = 0; i < k; i++) {
+            res *= 2;
+            res %= m;
+        }
+        res += prefix_sum.back() - max_diff;
+        res %= m;
+        if (res < 0) {
+            res += m;
+        }
+
+        std::cout << res << std::endl;
     }
 }

@@ -1,102 +1,85 @@
-#include <bits/stdc++.h>
+#include <algorithm>     // IWYU pragma: keep
+#include <bitset>        // IWYU pragma: keep
+#include <cmath>         // IWYU pragma: keep
+#include <cstdint>       // IWYU pragma: keep
+#include <iostream>      // IWYU pragma: keep
+#include <map>           // IWYU pragma: keep
+#include <queue>         // IWYU pragma: keep
+#include <set>           // IWYU pragma: keep
+#include <string>        // IWYU pragma: keep
+#include <string_view>   // IWYU pragma: keep
+#include <tuple>         // IWYU pragma: keep
+#include <unordered_map> // IWYU pragma: keep
+#include <unordered_set> // IWYU pragma: keep
+#include <vector>        // IWYU pragma: keep
 
-using namespace std;
+namespace hash_tuple {
+template <typename TT> struct hash {
+    size_t operator()(TT const &tt) const { return std::hash<TT>()(tt); }
+};
+namespace {
 
-string ltrim(const string &);
-string rtrim(const string &);
-
-
-
-/*
- * Complete the 'getMaximumPower' function below.
- *
- * The function is expected to return a LONG_INTEGER.
- * The function accepts INTEGER_ARRAY power as parameter.
- */
-
-long getMaximumPower(vector<int> power) {
-    map<int, int> ps{};
-    for (auto p : power) {
-        if (ps.find(p) == ps.end()) {
-            ps.insert({p, 1});
-        } else {
-            ps[p]++;
-        }
-    }
-    int prevPow = -2;
-    vector<vector<long>> segments{};
-    for (auto const &[p, freq] : ps) {
-        if (p == prevPow + 1) {
-            segments.back().push_back(p * freq);
-        } else {
-            segments.push_back(vector<long>{p * freq});
-        }
-        prevPow = p;
-    }
-
-    long totalPow{0};
-    for (auto const &segment : segments) {
-        long pow1 = 0;
-        long pow2 = 0;
-        for (int i = 0; i < segment.size(); i += 2) {
-            pow1 += segment[i];
-        }
-        for (int i = 1; i < segment.size(); i += 2) {
-            pow2 += segment[i];
-        }
-        totalPow += max(pow1, pow2);
-    }
-
-    return totalPow;
+template <class T> inline void hash_combine(std::size_t &seed, T const &v) {
+    seed ^= hash_tuple::hash<T>()(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 
-int main()
-{
-    ofstream fout(getenv("OUTPUT_PATH"));
-
-    string power_count_temp;
-    getline(cin, power_count_temp);
-
-    int power_count = stoi(ltrim(rtrim(power_count_temp)));
-
-    vector<int> power(power_count);
-
-    for (int i = 0; i < power_count; i++) {
-        string power_item_temp;
-        getline(cin, power_item_temp);
-
-        int power_item = stoi(ltrim(rtrim(power_item_temp)));
-
-        power[i] = power_item;
+template <class Tuple, size_t Index = std::tuple_size<Tuple>::value - 1>
+struct HashValueImpl {
+    static void apply(size_t &seed, Tuple const &tuple) {
+        HashValueImpl<Tuple, Index - 1>::apply(seed, tuple);
+        hash_combine(seed, std::get<Index>(tuple));
     }
+};
 
-    long result = getMaximumPower(power);
+template <class Tuple> struct HashValueImpl<Tuple, 0> {
+    static void apply(size_t &seed, Tuple const &tuple) {
+        hash_combine(seed, std::get<0>(tuple));
+    }
+};
+} // namespace
 
-    fout << result << "\n";
+template <typename... TT> struct hash<std::tuple<TT...>> {
+    size_t operator()(std::tuple<TT...> const &tt) const {
+        size_t seed{0};
+        HashValueImpl<std::tuple<TT...>>::apply(seed, tt);
+        return seed;
+    }
+};
+} // namespace hash_tuple
 
-    fout.close();
+// unordered_map<tuple<Int, Float>, Int, hash_tuple::hash<tuple<Int, Float>>>
+//     memoize;
 
-    return 0;
-}
+// typedef int64_t Int;
+// [[maybe_unused]] const Int Int_max = INT64_MAX;
+// [[maybe_unused]] const Int Int_min = INT64_MIN;
+// typedef long double Float;
 
-string ltrim(const string &str) {
-    string s(str);
-
-    s.erase(
-        s.begin(),
-        find_if(s.begin(), s.end(), not1(ptr_fun<int, int>(isspace)))
-    );
-
-    return s;
-}
-
-string rtrim(const string &str) {
-    string s(str);
-
-    s.erase(
-        find_if(s.rbegin(), s.rend(), not1(ptr_fun<int, int>(isspace))).base(),
-        s.end()
-    );
-
-    return s;
+int main() {
+    int test_cases_count{};
+    std::cin >> test_cases_count;
+    for (int test_case = 0; test_case < test_cases_count; test_case++) {
+        std::vector<int> arr{};
+        int n{};
+        std::cin >> n;
+        for (int i = 0; i < n; i++) {
+            int a{};
+            std::cin >> a;
+            arr.push_back(a);
+        }
+        std::sort(arr.begin(), arr.end());
+        int result{0};
+        int mid = (arr.size() - 1) / 2;
+        for (int i = 0; i + mid < arr.size(); i++) {
+            int j = i + mid;
+            if (arr[j] > arr[mid]) {
+                result = i;
+                break;
+            }
+        }
+        if (result == 0) {
+            result = arr.size() - mid;
+        }
+        std::cout << result << std::endl;
+    }
 }

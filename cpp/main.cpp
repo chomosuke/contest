@@ -8,79 +8,69 @@ string rtrim(const string &);
 
 
 /*
- * Complete the 'minMoves' function below.
+ * Complete the 'getMaximumPower' function below.
  *
- * The function is expected to return an INTEGER.
- * The function accepts following parameters:
- *  1. INTEGER n
- *  2. INTEGER startRow
- *  3. INTEGER startCol
- *  4. INTEGER endRow
- *  5. INTEGER endCol
+ * The function is expected to return a LONG_INTEGER.
+ * The function accepts INTEGER_ARRAY power as parameter.
  */
 
-int minMoves(int n, int startRow, int startCol, int endRow, int endCol) {
-    vector<vector<int>> dist(n, vector<int>(n, -1));
-    queue<tuple<int, int>> toVisit;
-    dist[startRow][startCol] = 0;
-    toVisit.push(make_tuple(startRow, startCol));
-    while (!toVisit.empty() && dist[endRow][endCol] == -1) {
-        int row = get<0>(toVisit.front());
-        int col = get<1>(toVisit.front());
-        int d = dist[row][col] + 1;
-        tuple<int, int> nexts[8] = {
-            {row + 2, col + 1},
-            {row - 2, col + 1},
-            {row + 2, col - 1},
-            {row - 2, col - 1},
-            {row + 1, col + 2},
-            {row - 1, col + 2},
-            {row + 1, col - 2},
-            {row - 1, col - 2},
-        };
-        for (auto& next : nexts) {
-            int row = get<0>(next);
-            int col = get<1>(next);
-            if (row >= 0 && row < n && col >= 0 && col < n && dist[row][col] == -1) {
-                dist[row][col] = d;
-                toVisit.push(next);
-            }
+long getMaximumPower(vector<int> power) {
+    map<int, int> ps{};
+    for (auto p : power) {
+        if (ps.find(p) == ps.end()) {
+            ps.insert({p, 1});
+        } else {
+            ps[p]++;
         }
-        toVisit.pop();
     }
-    return dist[endRow][endCol];
+    int prevPow = -2;
+    vector<vector<long>> segments{};
+    for (auto const &[p, freq] : ps) {
+        if (p == prevPow + 1) {
+            segments.back().push_back(p * freq);
+        } else {
+            segments.push_back(vector<long>{p * freq});
+        }
+        prevPow = p;
+    }
+
+    long totalPow{0};
+    for (auto const &segment : segments) {
+        long pow1 = 0;
+        long pow2 = 0;
+        for (int i = 0; i < segment.size(); i += 2) {
+            pow1 += segment[i];
+        }
+        for (int i = 1; i < segment.size(); i += 2) {
+            pow2 += segment[i];
+        }
+        totalPow += max(pow1, pow2);
+    }
+
+    return totalPow;
 }
 
 int main()
 {
     ofstream fout(getenv("OUTPUT_PATH"));
 
-    string n_temp;
-    getline(cin, n_temp);
+    string power_count_temp;
+    getline(cin, power_count_temp);
 
-    int n = stoi(ltrim(rtrim(n_temp)));
+    int power_count = stoi(ltrim(rtrim(power_count_temp)));
 
-    string startRow_temp;
-    getline(cin, startRow_temp);
+    vector<int> power(power_count);
 
-    int startRow = stoi(ltrim(rtrim(startRow_temp)));
+    for (int i = 0; i < power_count; i++) {
+        string power_item_temp;
+        getline(cin, power_item_temp);
 
-    string startCol_temp;
-    getline(cin, startCol_temp);
+        int power_item = stoi(ltrim(rtrim(power_item_temp)));
 
-    int startCol = stoi(ltrim(rtrim(startCol_temp)));
+        power[i] = power_item;
+    }
 
-    string endRow_temp;
-    getline(cin, endRow_temp);
-
-    int endRow = stoi(ltrim(rtrim(endRow_temp)));
-
-    string endCol_temp;
-    getline(cin, endCol_temp);
-
-    int endCol = stoi(ltrim(rtrim(endCol_temp)));
-
-    int result = minMoves(n, startRow, startCol, endRow, endCol);
+    long result = getMaximumPower(power);
 
     fout << result << "\n";
 

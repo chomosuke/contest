@@ -6,72 +6,48 @@ string ltrim(const string &);
 string rtrim(const string &);
 
 /*
- * Complete the 'maxMin' function below.
+ * Complete the 'findLowestStartingStair' function below.
  *
- * The function is expected to return a LONG_INTEGER_ARRAY.
- * The function accepts following parameters:
- *  1. STRING_ARRAY operations
- *  2. INTEGER_ARRAY x
+ * The function is expected to return an INTEGER.
+ * The function accepts INTEGER_ARRAY jumps as parameter.
  */
 
-vector<long> maxMin(vector<string> operations, vector<int> x) {
-    multiset<int> elements{};
-    vector<long> results{};
-    for (int i = 0; i < operations.size(); i++) {
-        if (operations[i] == "push") {
-            elements.insert(x[i]);
-        } else if (operations[i] == "pop") {
-            elements.erase(elements.find(x[i]));
-        }
-        results.push_back(static_cast<long>(*elements.begin()) * static_cast<long>(*elements.rbegin()));
+int findLowestStartingStair(vector<int> jumps) {
+    int case_{1};
+    int min_case{1};
+    for (auto jump : jumps) {
+        case_ += jump;
+        min_case = min(min_case, case_);
     }
-    return results;
+    if (min_case < 1) {
+        return 1 - min_case + 1;
+    } else {
+        return 1;
+    }
 }
 
 int main() {
     ofstream fout(getenv("OUTPUT_PATH"));
 
-    string operations_count_temp;
-    getline(cin, operations_count_temp);
+    string jumps_count_temp;
+    getline(cin, jumps_count_temp);
 
-    int operations_count = stoi(ltrim(rtrim(operations_count_temp)));
+    int jumps_count = stoi(ltrim(rtrim(jumps_count_temp)));
 
-    vector<string> operations(operations_count);
+    vector<int> jumps(jumps_count);
 
-    for (int i = 0; i < operations_count; i++) {
-        string operations_item;
-        getline(cin, operations_item);
+    for (int i = 0; i < jumps_count; i++) {
+        string jumps_item_temp;
+        getline(cin, jumps_item_temp);
 
-        operations[i] = operations_item;
+        int jumps_item = stoi(ltrim(rtrim(jumps_item_temp)));
+
+        jumps[i] = jumps_item;
     }
 
-    string x_count_temp;
-    getline(cin, x_count_temp);
+    int result = findLowestStartingStair(jumps);
 
-    int x_count = stoi(ltrim(rtrim(x_count_temp)));
-
-    vector<int> x(x_count);
-
-    for (int i = 0; i < x_count; i++) {
-        string x_item_temp;
-        getline(cin, x_item_temp);
-
-        int x_item = stoi(ltrim(rtrim(x_item_temp)));
-
-        x[i] = x_item;
-    }
-
-    vector<long> result = maxMin(operations, x);
-
-    for (size_t i = 0; i < result.size(); i++) {
-        fout << result[i];
-
-        if (i != result.size() - 1) {
-            fout << "\n";
-        }
-    }
-
-    fout << "\n";
+    fout << result << "\n";
 
     fout.close();
 

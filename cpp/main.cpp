@@ -6,72 +6,62 @@ string ltrim(const string &);
 string rtrim(const string &);
 
 /*
- * Complete the 'romanizer' function below.
+ * Complete the 'maxMin' function below.
  *
- * The function is expected to return a STRING_ARRAY.
- * The function accepts INTEGER_ARRAY numbers as parameter.
+ * The function is expected to return a LONG_INTEGER_ARRAY.
+ * The function accepts following parameters:
+ *  1. STRING_ARRAY operations
+ *  2. INTEGER_ARRAY x
  */
 
-vector<string> romanizer(vector<int> numbers) {
-    vector<string> result;
-    for (auto number : numbers) {
-        const int max_digit = 4;
-        int digits[max_digit] = {
-            number % 10,
-            number % 100 / 10,
-            number % 1000 / 100,
-            number / 1000,
-        };
-        char presentation[max_digit][2] = {
-            {'I', 'V'},
-            {'X', 'L'},
-            {'C', 'D'},
-            {'M', 'M'},
-        };
-        stringstream roman;
-        for (int i = max_digit - 1; i >= 0; i--) {
-            if (digits[i] <= 3) {
-                for (int j = 0; j < digits[i]; j++) {
-                    roman << presentation[i][0];
-                }
-            } else if (digits[i] == 4) {
-                roman << presentation[i][0];
-                roman << presentation[i][1];
-            } else if (digits[i] < 9) {
-                roman << presentation[i][1];
-                for (int j = 0; j < digits[i] - 5; j++) {
-                    roman << presentation[i][0];
-                }
-            } else {
-                roman << presentation[i][0];
-                roman << presentation[i + 1][0];
-            }
+vector<long> maxMin(vector<string> operations, vector<int> x) {
+    multiset<int> elements{};
+    vector<long> results{};
+    for (int i = 0; i < operations.size(); i++) {
+        if (operations[i] == "push") {
+            elements.insert(x[i]);
+        } else if (operations[i] == "pop") {
+            elements.erase(elements.find(x[i]));
         }
-        result.push_back(roman.str());
+        results.push_back(static_cast<long>(*elements.begin()) * static_cast<long>(*elements.rbegin()));
     }
-    return result;
+    return results;
 }
 
 int main() {
     ofstream fout(getenv("OUTPUT_PATH"));
 
-    string numbers_count_temp;
-    getline(cin, numbers_count_temp);
+    string operations_count_temp;
+    getline(cin, operations_count_temp);
 
-    int numbers_count = stoi(ltrim(rtrim(numbers_count_temp)));
+    int operations_count = stoi(ltrim(rtrim(operations_count_temp)));
 
-    vector<int> numbers(numbers_count);
+    vector<string> operations(operations_count);
 
-    for (int i = 0; i < numbers_count; i++) {
-        string numbers_item_temp;
-        getline(cin, numbers_item_temp);
+    for (int i = 0; i < operations_count; i++) {
+        string operations_item;
+        getline(cin, operations_item);
 
-        int numbers_item = stoi(ltrim(rtrim(numbers_item_temp)));
-
-        numbers[i] = numbers_item;
+        operations[i] = operations_item;
     }
 
-    vector<string> result = romanizer(numbers);
+    string x_count_temp;
+    getline(cin, x_count_temp);
+
+    int x_count = stoi(ltrim(rtrim(x_count_temp)));
+
+    vector<int> x(x_count);
+
+    for (int i = 0; i < x_count; i++) {
+        string x_item_temp;
+        getline(cin, x_item_temp);
+
+        int x_item = stoi(ltrim(rtrim(x_item_temp)));
+
+        x[i] = x_item;
+    }
+
+    vector<long> result = maxMin(operations, x);
 
     for (size_t i = 0; i < result.size(); i++) {
         fout << result[i];

@@ -10,23 +10,53 @@ use std::{
     usize,
 };
 
+fn solve(mut left: Vec<usize>, mut right: Vec<usize>) -> u64 {
+    left.sort();
+    right.sort();
+
+    let mut result = 0;
+    for l in left.into_iter().rev() {
+        let s = right.len() - min(l, right.len());
+        for i in s..right.len() {
+            right[i] -= 1;
+            result += 1;
+        }
+        if s > 0 && right[s] < right[s - 1] {
+            let begin = right[..s].partition_point(|&x| x != right[s - 1]);
+            let end = right[s..].partition_point(|&x| x == right[s]) + s - 1;
+            let mut i = 0;
+            while right[begin + i] != right[end - i] {
+                right.swap(begin + i, end - i);
+                i += 1;
+            }
+        }
+    }
+    return result;
+}
+
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    let n = sc.next::<u64>();
-    let mut sum = 0;
-    for i in 1..=n {
-        sum += i;
-    }
-    for i in 2..n {
-        if sum % i == 0 {
-            pt.println("Yes");
-            pt.println(i);
-            pt.print_iter((1..=n).filter(|&a| a != i));
-            return;
+    let ns = [sc.next::<usize>(), sc.next::<usize>()];
+    let mut shoes: [HashMap<u64, HashMap<u64, usize>>; 2] = [HashMap::new(), HashMap::new()];
+    for (&n, shoes) in ns.iter().zip(shoes.iter_mut()) {
+        for _ in 0..n {
+            let m = sc.next::<u64>();
+            let c = sc.next::<u64>();
+            let model = shoes.entry(m).or_default();
+            let color = model.entry(c).or_default();
+            *color += 1;
         }
     }
-    pt.println("No");
+    let mut result = 0;
+    for m in shoes[0].keys() {
+        if let (Some(l), Some(r)) = (shoes[0].get(m), shoes[1].get(m)) {
+            let l = l.values().cloned().collect::<Vec<_>>();
+            let r = r.values().cloned().collect::<Vec<_>>();
+            result += solve(l, r);
+        }
+    }
+    pt.println(result);
 }
 
 mod io {

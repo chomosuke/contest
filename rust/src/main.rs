@@ -10,126 +10,20 @@ use std::{
     usize,
 };
 
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
-struct PState {
-    remaining: usize,
-    value: u64,
-    stealing_time: u64,
-    leaving_time: u64,
-}
-
-struct PPrediction {
-    stealing_time: u64,
-    value: u64,
-    arrival_time: u64,
-    leaving_time: u64,
-}
-
-const P: usize = 5;
-
-type PStates = [PState; P];
-
-fn max_value(
-    time: u64,
-    p_states: PStates,
-    parking_preds: [&[PPrediction]; P],
-    memo: &mut HashMap<(PStates, u64), u64>,
-) -> u64 {
-    let k = (p_states, time);
-    if !memo.contains_key(&k) {
-        let mut max_v = 0;
-        // take next wheel
-        for i in 0..P {
-            let PState {
-                remaining,
-                value,
-                stealing_time,
-                leaving_time,
-            } = p_states[i];
-            if remaining > 0 && stealing_time + time <= leaving_time {
-                // steal this wheel.
-                let mut p_states = p_states;
-                let time = time + stealing_time;
-                p_states[i].remaining = remaining - 1;
-
-                let mut i = 0;
-                let parking_preds = parking_preds.map(|p_pred| {
-                    let p_pred = if p_pred.len() > 0 && p_pred[0].arrival_time <= time {
-                        // replace car in park
-                        let PPrediction {
-                            stealing_time,
-                            value,
-                            leaving_time,
-                            ..
-                        } = p_pred[0];
-                        p_states[i] = PState {
-                            remaining: 4,
-                            value,
-                            stealing_time,
-                            leaving_time,
-                        };
-                        &p_pred[1..]
-                    } else {
-                        &p_pred
-                    };
-                    i += 1;
-                    return p_pred;
-                });
-
-                let value = value + max_value(time, p_states, parking_preds, memo);
-                max_v = max(value, max_v);
-            }
-        }
-        memo.insert(k, max_v);
-    }
-    memo[&k]
-}
-
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    let n = sc.next::<usize>();
-    let mut all_parking_preds = Vec::with_capacity(n);
-    for _ in 0..n {
-        let arrival_time = sc.next::<u64>();
-        let leaving_time = sc.next::<u64>();
-        let stealing_time = sc.next::<u64>();
-        let value = sc.next::<u64>();
-        all_parking_preds.push(PPrediction {
-            arrival_time,
-            leaving_time,
-            stealing_time,
-            value,
-        });
+    let l = sc.next::<f64>();
+    let a = sc.next::<f64>();
+    let c = sc.next::<f64>();
+    let b = sc.next::<f64>();
+    let d = sc.next::<f64>();
+    let x = l * b / (a + b);
+    if a * l.powi(2) + c < a * x.powi(2) + c + b * (l - x).powi(2) + d {
+        pt.println(-1);
+    } else {
+        pt.println(x);
     }
-    all_parking_preds.sort_by_key(|p| p.arrival_time);
-    let mut parking_preds = [(); P].map(|_| Vec::<PPrediction>::new());
-    for cur_pred in all_parking_preds {
-        let mut pushed = false;
-        for i in 0..P {
-            if let Some(last_p) = parking_preds[i].last() {
-                if last_p.leaving_time <= cur_pred.arrival_time {
-                    parking_preds[i].push(cur_pred);
-                    pushed = true;
-                    break;
-                }
-            }
-        }
-        assert!(pushed);
-    }
-    let mut memo = HashMap::new();
-    let max_v = max_value(
-        0,
-        [PState {
-            remaining: 4,
-            leaving_time: 0,
-            stealing_time: 1,
-            value: 0,
-        }; P],
-        parking_preds.each_ref().map(|v| &v[..]),
-        &mut memo,
-    );
-    pt.println(max_v);
 }
 
 mod io {

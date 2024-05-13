@@ -10,74 +10,40 @@ use std::{
     usize,
 };
 
-type N = u32;
-
-fn get_nth_bit(a: N, n: usize) -> bool {
-    (a >> n) % 2 == 1
-}
-
-fn set_nth_bit(a: &mut N, n: usize, b: bool) {
-    if b {
-        *a = *a | (1 << n)
-    } else {
-        *a = *a & !(1 << n)
-    }
-}
-
 fn main() {
     let mut sc = Scanner::new(stdin());
-    // let mut pt = Printer::new(stdout());
+    let mut pt = Printer::new(stdout());
     let n = sc.next::<usize>();
-    let k = sc.next::<usize>();
-    println!("and 1 2");
-    let and12 = sc.next::<u32>();
-    println!("or 1 2");
-    let or12 = sc.next::<u32>();
-    println!("and 1 3");
-    let and13 = sc.next::<u32>();
-    println!("or 1 3");
-    let or13 = sc.next::<u32>();
-    println!("and 2 3");
-    let and23 = sc.next::<u32>();
-    println!("or 2 3");
-    let or23 = sc.next::<u32>();
-    let mut v = vec![0; n];
-    for i in 0..32 {
-        let and12 = get_nth_bit(and12, i);
-        let or12 = get_nth_bit(or12, i);
-        let and13 = get_nth_bit(and13, i);
-        let or13 = get_nth_bit(or13, i);
-        let and23 = get_nth_bit(and23, i);
-        let or23 = get_nth_bit(or23, i);
-        if and12 == or12 {
-            set_nth_bit(&mut v[0], i, and12);
-            set_nth_bit(&mut v[1], i, and12);
-            set_nth_bit(&mut v[2], i, (and23 != or23) != and12);
-        } else if and13 == or13 {
-            set_nth_bit(&mut v[0], i, and13);
-            set_nth_bit(&mut v[2], i, and13);
-            set_nth_bit(&mut v[1], i, !and13);
-        } else {
-            set_nth_bit(&mut v[1], i, and23);
-            set_nth_bit(&mut v[2], i, and23);
-            set_nth_bit(&mut v[0], i, !and23);
-        }
+    let d = sc.next::<usize>();
+    let m = sc.next::<u64>();
+    let mut arr = sc.next_n::<u64>(n).collect::<Vec<_>>();
+    arr.sort_unstable();
+    let mut sum = 0;
+    let mut i = 0;
+    while i < arr.len() && arr[i] <= m {
+        sum += arr[i];
+        i += 1;
     }
-    for i in 3..n {
-        let v1 = v[0];
-        println!("and 1 {}", i + 1);
-        let and1i = sc.next::<u32>();
-        println!("or 1 {}", i + 1);
-        let or1i = sc.next::<u32>();
-        for j in 0..32 {
-            let and1i = get_nth_bit(and1i, j);
-            let or1i = get_nth_bit(or1i, j);
-            let v1 = get_nth_bit(v1, j);
-            set_nth_bit(&mut v[i], j, (and1i != or1i) != v1);
-        }
+    let first_too_fun = i;
+    let mut num_too_fun = ((arr.len() - first_too_fun) as f32 / (d + 1) as f32).ceil() as usize;
+    for a in &arr[arr.len() - num_too_fun..] {
+        sum += a;
     }
-    v.sort_unstable();
-    println!("finish {}", v[k - 1])
+    let mut max = sum;
+    for i in 0..first_too_fun {
+        sum -= arr[i];
+        let new_num_too_fun = (arr.len() - first_too_fun + i) / (d + 1) + 1;
+        if new_num_too_fun > num_too_fun {
+            num_too_fun = new_num_too_fun;
+            let too_fun_i = arr.len() - new_num_too_fun;
+            if too_fun_i < first_too_fun {
+                break;
+            }
+            sum += arr[too_fun_i];
+        }
+        max = max.max(sum);
+    }
+    pt.println(max);
 }
 
 mod io {

@@ -13,37 +13,51 @@ use std::{
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    let n = sc.next::<usize>();
-    let d = sc.next::<usize>();
-    let m = sc.next::<u64>();
-    let mut arr = sc.next_n::<u64>(n).collect::<Vec<_>>();
-    arr.sort_unstable();
-    let mut sum = 0;
-    let mut i = 0;
-    while i < arr.len() && arr[i] <= m {
-        sum += arr[i];
-        i += 1;
-    }
-    let first_too_fun = i;
-    let mut num_too_fun = ((arr.len() - first_too_fun) as f32 / (d + 1) as f32).ceil() as usize;
-    for a in &arr[arr.len() - num_too_fun..] {
-        sum += a;
-    }
-    let mut max = sum;
-    for i in 0..first_too_fun {
-        sum -= arr[i];
-        let new_num_too_fun = (arr.len() - first_too_fun + i) / (d + 1) + 1;
-        if new_num_too_fun > num_too_fun {
-            num_too_fun = new_num_too_fun;
-            let too_fun_i = arr.len() - new_num_too_fun;
-            if too_fun_i < first_too_fun {
-                break;
+    let test_case = sc.next::<usize>();
+    for _ in 0..test_case {
+        let n = sc.next::<usize>();
+        let crr = sc.next_n(n).collect::<Vec<u64>>();
+        let mut k = sc.next::<u64>();
+        let mut purchases = Vec::<(usize, u64)>::new();
+        for (i, &c) in crr.iter().enumerate() {
+            let mut p = k / c;
+            k %= c;
+            while let Some(&(li, lp)) = purchases.last() {
+                let new_k = lp * crr[li] + k;
+                let new_p = new_k / c;
+                if new_p >= lp {
+                    purchases.pop();
+                    p += new_p;
+                    k = new_k % c;
+                } else {
+                    let d = c - crr[li];
+                    let convert = k / d;
+                    k %= d;
+                    if convert > 0 {
+                        purchases.last_mut().unwrap().1 -= convert;
+                        p += convert;
+                    }
+                    break;
+                }
             }
-            sum += arr[too_fun_i];
+            if p > 0 {
+                purchases.push((i, p));
+            }
         }
-        max = max.max(sum);
+        let mut arr = Vec::new();
+        let mut a = 0;
+        while arr.len() < crr.len() {
+            let j = crr.len() - arr.len() - 1;
+            if let Some(&(i, p)) = purchases.last() {
+                if i == j {
+                    purchases.pop();
+                    a += p;
+                }
+            }
+            arr.push(a);
+        }
+        pt.print_iter(arr.into_iter().rev());
     }
-    pt.println(max);
 }
 
 mod io {

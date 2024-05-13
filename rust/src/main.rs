@@ -13,16 +13,39 @@ use std::{
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    let l = sc.next::<f64>();
-    let a = sc.next::<f64>();
-    let c = sc.next::<f64>();
-    let b = sc.next::<f64>();
-    let d = sc.next::<f64>();
-    let x = l * b / (a + b);
-    if a * l.powi(2) + c < a * x.powi(2) + c + b * (l - x).powi(2) + d {
-        pt.println(-1);
+    let a = sc.next::<u64>();
+    let b = sc.next::<u64>();
+    let (a, b) = (max(a, b), min(a, b));
+    let d = a - b;
+    if d == 0 {
+        pt.println(0);
+    } else if b >= d {
+        let k = d - a % d;
+        if k == d {
+            pt.println(0);
+        } else {
+            pt.println(k);
+        }
     } else {
-        pt.println(x);
+        let mut factors = Vec::new();
+        let mut i = 1;
+        while i * i < d {
+            if d % i == 0 {
+                factors.push(i);
+                factors.push(d / i);
+            }
+            i += 1;
+        }
+        if i * i == d {
+            factors.push(i);
+        }
+        factors.sort_unstable();
+        for f in factors {
+            if f >= b {
+                pt.println(f - b);
+                break;
+            }
+        }
     }
 }
 

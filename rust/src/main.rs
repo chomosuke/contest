@@ -22,23 +22,47 @@ fn main() {
     let test_case = sc.next::<usize>();
     for _ in 0..test_case {
         let n = sc.next::<usize>();
-        let arr = sc.next_n::<u32>(n).collect::<Vec<_>>();
-        let mut ks = [0; 20];
-        for (b, k) in ks.iter_mut().enumerate() {
-            let mut cur = 0;
-            for &a in &arr {
-                if get_nth_bit(a, b) {
-                    cur = 0;
-                } else {
-                    cur += 1;
-                }
-                *k = max(*k, cur + 1);
-            }
-            if *k == arr.len() + 1 {
-                *k = 1;
-            }
+        let prr = sc.next_n(n).collect::<Vec<u64>>();
+        let one_pos = prr.iter().position(|&p| p == 1).unwrap();
+        let off = if one_pos % 2 == 0 { 0 } else { 1 };
+        let prr = prr.into_iter().enumerate().collect::<Vec<_>>();
+        let mut bigger = prr[1..(prr.len() - 1)]
+            .iter()
+            .cloned()
+            .skip(off)
+            .step_by(2)
+            .collect::<Vec<_>>();
+        let mut smaller = prr
+            .first()
+            .into_iter()
+            .cloned()
+            .chain(
+                prr[1..(prr.len() - 1)]
+                    .iter()
+                    .cloned()
+                    .skip(1 - off)
+                    .step_by(2)
+                    .collect::<Vec<_>>(),
+            )
+            .chain(prr.last().into_iter().cloned())
+            .collect::<Vec<_>>();
+        bigger.sort_by_key(|&(_, p)| p);
+        smaller.sort_by_key(|&(_, p)| p);
+        assert_eq!(smaller.len() + bigger.len(), n);
+        assert!(smaller[0].1 == 1);
+        assert!(bigger[0].1 > 1);
+        let mut qrr = Vec::with_capacity(n);
+        let mut e = n;
+        for (i, _) in bigger {
+            qrr.push((i, e));
+            e -= 1;
         }
-        pt.println(ks.iter().max().unwrap());
+        for (i, _) in smaller {
+            qrr.push((i, e));
+            e -= 1;
+        }
+        qrr.sort();
+        pt.print_iter(qrr.into_iter().map(|(i, q)| q));
     }
 }
 

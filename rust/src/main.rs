@@ -15,48 +15,22 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_case = sc.next::<usize>();
     for _ in 0..test_case {
-        let n = sc.next::<usize>();
-        let crr = sc.next_n(n).collect::<Vec<u64>>();
-        let mut k = sc.next::<u64>();
-        let mut purchases = Vec::<(usize, u64)>::new();
-        for (i, &c) in crr.iter().enumerate() {
-            let mut p = k / c;
-            k %= c;
-            while let Some(&(li, lp)) = purchases.last() {
-                let new_k = lp * crr[li] + k;
-                let new_p = new_k / c;
-                if new_p >= lp {
-                    purchases.pop();
-                    p += new_p;
-                    k = new_k % c;
-                } else {
-                    let d = c - crr[li];
-                    let convert = k / d;
-                    k %= d;
-                    if convert > 0 {
-                        purchases.last_mut().unwrap().1 -= convert;
-                        p += convert;
-                    }
-                    break;
-                }
+        let p1 = sc.next::<u64>();
+        let p2 = sc.next::<u64>();
+        let p3 = sc.next::<u64>();
+        if (p1 + p2 + p3) % 2 != 0 {
+            pt.println(-1);
+        } else {
+            let mut p = vec![p1, p2, p3];
+            let mut r = 0;
+            while p[1] > 0 {
+                p[1] -= 1;
+                p[2] -= 1;
+                p.sort();
+                r += 1;
             }
-            if p > 0 {
-                purchases.push((i, p));
-            }
+            pt.println(r);
         }
-        let mut arr = Vec::new();
-        let mut a = 0;
-        while arr.len() < crr.len() {
-            let j = crr.len() - arr.len() - 1;
-            if let Some(&(i, p)) = purchases.last() {
-                if i == j {
-                    purchases.pop();
-                    a += p;
-                }
-            }
-            arr.push(a);
-        }
-        pt.print_iter(arr.into_iter().rev());
     }
 }
 

@@ -10,27 +10,35 @@ use std::{
     usize,
 };
 
+type N = u32;
+
+fn get_nth_bit(a: N, n: usize) -> bool {
+    (a >> n) % 2 == 1
+}
+
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_case = sc.next::<usize>();
     for _ in 0..test_case {
-        let p1 = sc.next::<u64>();
-        let p2 = sc.next::<u64>();
-        let p3 = sc.next::<u64>();
-        if (p1 + p2 + p3) % 2 != 0 {
-            pt.println(-1);
-        } else {
-            let mut p = vec![p1, p2, p3];
-            let mut r = 0;
-            while p[1] > 0 {
-                p[1] -= 1;
-                p[2] -= 1;
-                p.sort();
-                r += 1;
+        let n = sc.next::<usize>();
+        let arr = sc.next_n::<u32>(n).collect::<Vec<_>>();
+        let mut ks = [0; 20];
+        for (b, k) in ks.iter_mut().enumerate() {
+            let mut cur = 0;
+            for &a in &arr {
+                if get_nth_bit(a, b) {
+                    cur = 0;
+                } else {
+                    cur += 1;
+                }
+                *k = max(*k, cur + 1);
             }
-            pt.println(r);
+            if *k == arr.len() + 1 {
+                *k = 1;
+            }
         }
+        pt.println(ks.iter().max().unwrap());
     }
 }
 

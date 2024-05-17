@@ -18,51 +18,54 @@ fn get_nth_bit(a: N, n: usize) -> bool {
 
 fn main() {
     let mut sc = Scanner::new(stdin());
-    let mut pt = Printer::new(stdout());
+    // let mut pt = Printer::new(stdout());
     let test_case = sc.next::<usize>();
-    for _ in 0..test_case {
+    'test: for _ in 0..test_case {
         let n = sc.next::<usize>();
-        let prr = sc.next_n(n).collect::<Vec<u64>>();
-        let one_pos = prr.iter().position(|&p| p == 1).unwrap();
-        let off = if one_pos % 2 == 0 { 0 } else { 1 };
-        let prr = prr.into_iter().enumerate().collect::<Vec<_>>();
-        let mut bigger = prr[1..(prr.len() - 1)]
-            .iter()
-            .cloned()
-            .skip(off)
-            .step_by(2)
-            .collect::<Vec<_>>();
-        let mut smaller = prr
-            .first()
-            .into_iter()
-            .cloned()
-            .chain(
-                prr[1..(prr.len() - 1)]
-                    .iter()
-                    .cloned()
-                    .skip(1 - off)
-                    .step_by(2)
-                    .collect::<Vec<_>>(),
-            )
-            .chain(prr.last().into_iter().cloned())
-            .collect::<Vec<_>>();
-        bigger.sort_by_key(|&(_, p)| p);
-        smaller.sort_by_key(|&(_, p)| p);
-        assert_eq!(smaller.len() + bigger.len(), n);
-        assert!(smaller[0].1 == 1);
-        assert!(bigger[0].1 > 1);
-        let mut qrr = Vec::with_capacity(n);
-        let mut e = n;
-        for (i, _) in bigger {
-            qrr.push((i, e));
-            e -= 1;
+        let k = sc.next::<usize>();
+        let mut max = 0;
+        let mut i = 1;
+        while i <= n {
+            println!("? 1 {}", n * i);
+            let r = sc.next::<usize>();
+            if r == n {
+                max = i;
+                break;
+            }
+            i += 1;
         }
-        for (i, _) in smaller {
-            qrr.push((i, e));
-            e -= 1;
+        assert_ne!(max, 0);
+        // m <= max * n / k
+        // m % max == 0
+        // m >= max
+        let mut m_ans = -1;
+        'outer: for m in (max..=(max * (n / k))).step_by(max) {
+            assert!(m % max == 0);
+            let mut l = 1;
+            for _ in 0..k {
+                if l > n {
+                    continue 'outer;
+                }
+                println!("? {l} {m}");
+                let r = sc.next::<i64>();
+                if r as usize == n + 1 {
+                    continue 'outer;
+                }
+                if r == -1 {
+                    return;
+                }
+                l = r as usize + 1;
+            }
+            if l == n + 1 {
+                m_ans = m as i64;
+                break;
+            }
         }
-        qrr.sort();
-        pt.print_iter(qrr.into_iter().map(|(i, q)| q));
+        println!("! {m_ans}");
+        let ans = sc.next::<i32>();
+        if ans == -1 {
+            return;
+        }
     }
 }
 

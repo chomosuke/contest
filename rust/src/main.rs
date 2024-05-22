@@ -10,176 +10,26 @@ use std::{
     usize,
 };
 
-fn get_diff(s0: &[u8], s1: &[u8]) -> Vec<usize> {
-    s0.iter()
-        .zip(s1.iter())
-        .map(|(c0, c1)| c0 != c1)
-        .enumerate()
-        .filter_map(|(i, ne)| if ne { Some(i) } else { None })
-        .collect::<Vec<usize>>()
-}
-
-fn generate(s0: &[u8], s1: &[u8], repeats: bool) -> Vec<(usize, usize)> {
-    let diff = get_diff(s0, s1);
-    match diff.len() {
-        0 | 1 => unreachable!(),
-        2 => {
-            let d1 = diff[0];
-            let d2 = diff[1];
-            let mut pos = Vec::new(); // yes swap
-            if repeats {
-                pos.push((d1, d2));
-                pos.push((s0.len(), s0.len())) // no swap
-            }
-
-            for i in 0..s0.len() {
-                if i == d1 || i == d2 {
-                    continue;
-                }
-                if s0[i] == s0[d1] {
-                    pos.push((min(i, d2), max(i, d2)))
-                }
-                if s0[i] == s0[d2] {
-                    pos.push((min(i, d1), max(i, d1)))
-                }
-            }
-
-            pos
-        }
-        3 | 4 => {
-            let mut pos = Vec::new();
-            let s0 = diff.iter().map(|&d| s0[d]).collect::<Vec<_>>();
-            let s1 = diff.iter().map(|&d| s1[d]).collect::<Vec<_>>();
-            for i in 0..(diff.len() - 1) {
-                for j in (i + 1)..diff.len() {
-                    let mut s0 = s0.clone();
-                    let temp = s0[i];
-                    s0[i] = s0[j];
-                    s0[j] = temp;
-                    if get_diff(&s0, &s1).len() == 2 {
-                        pos.push((diff[i], diff[j]));
-                    }
-                }
-            }
-            pos
-        }
-        _ => {
-            vec![]
-        }
-    }
-}
-
-fn filter(s0: &[u8], s1: &[u8], pos: &mut Vec<(usize, usize)>, repeats: bool) {
-    let diff = get_diff(s0, s1);
-
-    match diff.len() {
-        0 | 1 => unreachable!(),
-        2 => {
-            let d1 = diff[0];
-            let d2 = diff[1];
-            pos.retain(|&(i1, i2)| {
-                if i1 == s0.len() && i2 == s0.len() {
-                    // s0 no swap
-                    // possible if some letters show up twice
-                    repeats
-                } else if d1 == i1 && d2 == i2 {
-                    // s1 no swap
-                    // possible if some letters show up twice
-                    repeats
-                } else if d1 == i1 {
-                    let d = d2;
-                    let i = i2;
-                    s0[d] == s0[i]
-                } else if d2 == i2 {
-                    let d = d1;
-                    let i = i1;
-                    s0[d] == s0[i]
-                } else if d1 == i2 {
-                    let d = d2;
-                    let i = i1;
-                    s0[d] == s0[i]
-                } else {
-                    false
-                }
-            });
-        }
-        3 | 4 => {
-            let s0 = diff.iter().map(|&d| s0[d]).collect::<Vec<_>>();
-            let s1 = diff.iter().map(|&d| s1[d]).collect::<Vec<_>>();
-            pos.retain(|&(i1, i2)| {
-                let mut s0 = s0.clone();
-                if let (Some(i1), Some(i2)) = (
-                    diff.iter().position(|&d| d == i1),
-                    diff.iter().position(|&d| d == i2),
-                ) {
-                    let temp = s0[i1];
-                    s0[i1] = s0[i2];
-                    s0[i2] = temp;
-                    get_diff(&s0, &s1).len() == 2
-                } else {
-                    false
-                }
-            });
-        }
-        _ => {
-            pos.clear();
-        }
-    }
-    return;
-}
-
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    // let test_case = sc.next::<usize>();
-    // 'test: for _ in 0..test_case {
-    let k = sc.next::<usize>();
-    let _n = sc.next::<usize>();
-    let srr = sc
-        .next_n::<String>(k)
-        .map(String::into_bytes)
-        .collect::<HashSet<_>>()
-        .into_iter()
-        .collect::<Vec<_>>();
-    if srr.len() == 1 {
-        let mut s = srr.into_iter().next().unwrap();
-        let t = s[0];
-        s[0] = s[1];
-        s[1] = t;
-        pt.println(String::from_utf8(s).unwrap());
-        return;
+    let n = sc.next::<i128>();
+    let mut sq_sum = 0;
+    let mut x_sum = 0;
+    let mut y_sum = 0;
+    let mut xx_sum = 0;
+    let mut yy_sum = 0;
+    for _ in 0..n {
+        let x = sc.next::<i128>();
+        let y = sc.next::<i128>();
+        sq_sum += x.pow(2) + y.pow(2);
+        xx_sum += x * x_sum;
+        yy_sum += y * y_sum;
+        x_sum += x;
+        y_sum += y;
     }
-    let bags = srr
-        .iter()
-        .map(|s| {
-            let mut s = s.clone();
-            s.sort();
-            s
-        })
-        .collect::<Vec<_>>();
-    if bags.iter().skip(1).any(|b| *b != bags[0]) {
-        pt.println(-1);
-        return;
-    }
-    let repeats = bags[0].windows(2).any(|cs| {
-        let [c1, c2] = cs else { unreachable!() };
-        c1 == c2
-    });
-    let mut pos = generate(&srr[0], &srr[1], repeats);
-    for i in 2..srr.len() {
-        filter(&srr[0], &srr[i], &mut pos, repeats);
-    }
-    if pos.len() > 0 {
-        let mut s = srr.into_iter().next().unwrap();
-        let p = pos[0];
-        let t = s[p.0];
-        s[p.0] = s[p.1];
-        s[p.1] = t;
-        pt.println(String::from_utf8(s).unwrap());
-    } else {
-        pt.println(-1);
-    }
-    // }
+    let sum = sq_sum * (n - 1) - xx_sum * 2 - yy_sum * 2;
+    pt.println(sum);
 }
 
 mod io {

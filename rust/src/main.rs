@@ -16,17 +16,65 @@ fn main() {
     let test_case = sc.next::<usize>();
     'test: for _ in 0..test_case {
         let n = sc.next::<usize>();
-        let arr = sc.next_n::<u32>(n).collect::<Vec<_>>();
-        let mut max = 0;
-        for i in 0..(n - 1) {
-            max = max.max(min(arr[i], arr[i + 1]));
+        let a = sc.next::<usize>() - 1;
+        let b = sc.next::<usize>() - 1;
+        let mut adj_nodes = vec![Vec::<usize>::new(); n];
+        for _ in 0..(n - 1) {
+            let u = sc.next::<usize>() - 1;
+            let v = sc.next::<usize>() - 1;
+            adj_nodes[u].push(v);
+            adj_nodes[v].push(u);
         }
-        for i in 0..(n - 2) {
-            let mut sub = arr[i..=(i + 2)].to_vec();
-            sub.sort_unstable();
-            max = max.max(sub[1]);
+        // find path between u and v
+        let mut a_visited = vec![false; n];
+        let mut a_to_visit = vec![(a, a)]; // (src, dst)
+        let mut b_to_visit = vec![(b, b)];
+        let mut b_moved = 0;
+        let middle = 'middle: loop {
+            let mut a_next_visit = Vec::new();
+            for (src, dst) in a_to_visit {
+                a_next_visit.extend(adj_nodes[dst].iter().filter_map(|&nd| {
+                    if nd == src {
+                        None
+                    } else {
+                        Some((dst, nd))
+                    }
+                }));
+                a_visited[dst] = true;
+            }
+            a_to_visit = a_next_visit;
+
+            let mut b_next_visit = Vec::new();
+            for (src, dst) in b_to_visit {
+                if a_visited[dst] {
+                    break 'middle dst;
+                }
+                b_next_visit.extend(adj_nodes[dst].iter().filter_map(|&nd| {
+                    if nd == src {
+                        None
+                    } else {
+                        Some((dst, nd))
+                    }
+                }));
+            }
+            b_to_visit = b_next_visit;
+
+            b_moved += 1;
+        };
+        let mut dist = vec![usize::MAX; n];
+        let mut to_visit = vec![middle];
+        let mut d = 0usize;
+        while !to_visit.is_empty() {
+            let mut next_visit = Vec::new();
+            for v in to_visit {
+                next_visit.extend(adj_nodes[v].iter().filter(|&&nd| dist[nd] == usize::MAX));
+                dist[v] = d;
+            }
+            to_visit = next_visit;
+            d += 1;
         }
-        pt.println(max);
+        let &max_d = dist.iter().max().unwrap();
+        pt.println(((n - 1) * 2) - max_d + b_moved);
     }
 }
 

@@ -13,23 +13,27 @@ use std::{
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    let n = sc.next::<i128>();
-    let mut sq_sum = 0;
-    let mut x_sum = 0;
-    let mut y_sum = 0;
-    let mut xx_sum = 0;
-    let mut yy_sum = 0;
-    for _ in 0..n {
-        let x = sc.next::<i128>();
-        let y = sc.next::<i128>();
-        sq_sum += x.pow(2) + y.pow(2);
-        xx_sum += x * x_sum;
-        yy_sum += y * y_sum;
-        x_sum += x;
-        y_sum += y;
+    let test_case = sc.next::<usize>();
+    'test: for _ in 0..test_case {
+        let n = sc.next::<usize>();
+        let mut arr = sc.next_n::<u32>(n).collect::<Vec<_>>();
+        arr.sort_unstable();
+        let smallest = arr[0];
+        let mut smallest2 = arr[1];
+        for &a in &arr {
+            if a % smallest != 0 {
+                smallest2 = a;
+                break;
+            }
+        }
+        for i in 2..arr.len() {
+            if arr[i] % smallest != 0 && arr[i] % smallest2 != 0 {
+                pt.println("No");
+                continue 'test;
+            }
+        }
+        pt.println("Yes");
     }
-    let sum = sq_sum * (n - 1) - xx_sum * 2 - yy_sum * 2;
-    pt.println(sum);
 }
 
 mod io {

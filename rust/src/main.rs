@@ -16,23 +16,17 @@ fn main() {
     let test_case = sc.next::<usize>();
     'test: for _ in 0..test_case {
         let n = sc.next::<usize>();
-        let mut arr = sc.next_n::<u32>(n).collect::<Vec<_>>();
-        arr.sort_unstable();
-        let smallest = arr[0];
-        let mut smallest2 = arr[1];
-        for &a in &arr {
-            if a % smallest != 0 {
-                smallest2 = a;
-                break;
-            }
+        let arr = sc.next_n::<u32>(n).collect::<Vec<_>>();
+        let mut max = 0;
+        for i in 0..(n - 1) {
+            max = max.max(min(arr[i], arr[i + 1]));
         }
-        for i in 2..arr.len() {
-            if arr[i] % smallest != 0 && arr[i] % smallest2 != 0 {
-                pt.println("No");
-                continue 'test;
-            }
+        for i in 0..(n - 2) {
+            let mut sub = arr[i..=(i + 2)].to_vec();
+            sub.sort_unstable();
+            max = max.max(sub[1]);
         }
-        pt.println("Yes");
+        pt.println(max);
     }
 }
 

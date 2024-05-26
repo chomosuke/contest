@@ -10,67 +10,24 @@ use std::{
     usize,
 };
 
-fn update(
-    children: &Vec<Vec<usize>>,
-    parent: &Vec<usize>,
-    black: &mut Vec<bool>,
-    num_child_black: &mut Vec<usize>,
-    toggle: usize,
-    num_groups: &mut usize,
-    num_2_child: &mut usize,
-    num_3_child: &mut usize,
-) {
-    let neighbor_count = num_child_black[toggle]
-        + if black[parent[toggle]] && parent[toggle] != toggle {
-            1
-        } else {
-            0
-        };
-    if black[toggle] {
-        black[toggle] = false;
-        if neighbor_count == 0 {
-            *num_groups -= 1;
-        } else {
-            *num_groups += neighbor_count - 1;
-        }
-        if parent[toggle] != toggle {
-            num_child_black[parent[toggle]] -= 1;
-            if num_child_black[parent[toggle]] == 1 {
-                *num_2_child -= 1;
-            }
-            if num_child_black[parent[toggle]] == 2 {
-                *num_3_child -= 1;
+pub fn get_prime_facts(mut x: u64) -> Vec<u64> {
+    let mut result = Vec::new();
+    let mut n = 2;
+    while n * n <= x {
+        if x % n == 0 {
+            x /= n;
+            result.push(n);
+            while x % n == 0 {
+                x /= n;
+                result.push(n);
             }
         }
-        if num_child_black[toggle] >= 2 {
-            *num_2_child -= 1;
-        }
-        if num_child_black[toggle] >= 3 {
-            *num_3_child -= 1;
-        }
-    } else {
-        black[toggle] = true;
-        if neighbor_count == 0 {
-            *num_groups += 1;
-        } else {
-            *num_groups -= neighbor_count - 1;
-        }
-        if parent[toggle] != toggle {
-            num_child_black[parent[toggle]] += 1;
-            if num_child_black[parent[toggle]] == 2 {
-                *num_2_child += 1;
-            }
-            if num_child_black[parent[toggle]] == 3 {
-                *num_3_child += 1;
-            }
-        }
-        if num_child_black[toggle] >= 2 {
-            *num_2_child += 1;
-        }
-        if num_child_black[toggle] >= 3 {
-            *num_3_child += 1;
-        }
+        n += 1;
     }
+    if x != 1 {
+        result.push(x);
+    }
+    result
 }
 
 fn main() {
@@ -78,75 +35,23 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_case = sc.next::<usize>();
     'test: for _ in 0..test_case {
-        let n = sc.next::<usize>();
-        let q = sc.next::<usize>();
-        let colors_in = sc.next_n::<u8>(n).map(|c| c == 1).collect::<Vec<_>>();
-        let mut adj_nodes = vec![Vec::<usize>::new(); n];
-        for _ in 0..(n - 1) {
-            let u = sc.next::<usize>() - 1;
-            let v = sc.next::<usize>() - 1;
-            adj_nodes[u].push(v);
-            adj_nodes[v].push(u);
-        }
-
-        let mut children = vec![Vec::new(); n];
-        let mut parent = vec![0; n];
-        let mut to_visit = vec![(0, 0)];
-        while !to_visit.is_empty() {
-            let mut next_visit = Vec::new();
-            for (p, v) in to_visit {
-                let nvs = adj_nodes[v]
-                    .iter()
-                    .filter(|&&nv| nv != p)
-                    .map(|&v| v)
-                    .collect::<Vec<_>>();
-                next_visit.extend(nvs.iter().map(|&nv| (v, nv)));
-                children[v] = nvs;
-                parent[v] = p;
-            }
-            to_visit = next_visit;
-        }
-
-        let mut num_child_black = vec![0; n];
-        let mut num_groups = 0;
-        let mut num_2_child = 0;
-        let mut num_3_child = 0;
-
-        let mut black = vec![false; n];
-        for (i, is_black) in colors_in.into_iter().enumerate() {
-            if is_black {
-                update(
-                    &children,
-                    &parent,
-                    &mut black,
-                    &mut num_child_black,
-                    i,
-                    &mut num_groups,
-                    &mut num_2_child,
-                    &mut num_3_child,
-                );
-                // pt.print_iter([num_groups, num_2_child].iter());
-            }
-        }
-
-        for _ in 0..q {
-            let u = sc.next::<usize>() - 1;
-            update(
-                &children,
-                &parent,
-                &mut black,
-                &mut num_child_black,
-                u,
-                &mut num_groups,
-                &mut num_2_child,
-                &mut num_3_child,
-            );
-            // pt.print_iter([num_groups, num_2_child].iter());
-            if num_2_child <= 1 && num_3_child == 0 && num_groups == 1 {
-                pt.println("Yes");
+        let a = sc.next::<u64>();
+        let b = sc.next::<u64>();
+        let k = sc.next::<usize>();
+        if k == 1 {
+            pt.println(if (a % b == 0 || b % a == 0) && a != b {
+                "Yes"
             } else {
-                pt.println("No");
-            }
+                "No"
+            })
+        } else {
+            let a_f = get_prime_facts(a);
+            let b_f = get_prime_facts(b);
+            pt.println(if a_f.len() + b_f.len() >= k {
+                "Yes"
+            } else {
+                "No"
+            });
         }
     }
 }

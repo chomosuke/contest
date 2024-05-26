@@ -10,14 +10,77 @@ use std::{
     usize,
 };
 
+fn update(
+    children: &Vec<Vec<usize>>,
+    parent: &Vec<usize>,
+    black: &mut Vec<bool>,
+    num_child_black: &mut Vec<usize>,
+    toggle: usize,
+    num_groups: &mut usize,
+    num_2_child: &mut usize,
+    num_3_child: &mut usize,
+) {
+    let neighbor_count = num_child_black[toggle]
+        + if black[parent[toggle]] && parent[toggle] != toggle {
+            1
+        } else {
+            0
+        };
+    if black[toggle] {
+        black[toggle] = false;
+        if neighbor_count == 0 {
+            *num_groups -= 1;
+        } else {
+            *num_groups += neighbor_count - 1;
+        }
+        if parent[toggle] != toggle {
+            num_child_black[parent[toggle]] -= 1;
+            if num_child_black[parent[toggle]] == 1 {
+                *num_2_child -= 1;
+            }
+            if num_child_black[parent[toggle]] == 2 {
+                *num_3_child -= 1;
+            }
+        }
+        if num_child_black[toggle] >= 2 {
+            *num_2_child -= 1;
+        }
+        if num_child_black[toggle] >= 3 {
+            *num_3_child -= 1;
+        }
+    } else {
+        black[toggle] = true;
+        if neighbor_count == 0 {
+            *num_groups += 1;
+        } else {
+            *num_groups -= neighbor_count - 1;
+        }
+        if parent[toggle] != toggle {
+            num_child_black[parent[toggle]] += 1;
+            if num_child_black[parent[toggle]] == 2 {
+                *num_2_child += 1;
+            }
+            if num_child_black[parent[toggle]] == 3 {
+                *num_3_child += 1;
+            }
+        }
+        if num_child_black[toggle] >= 2 {
+            *num_2_child += 1;
+        }
+        if num_child_black[toggle] >= 3 {
+            *num_3_child += 1;
+        }
+    }
+}
+
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_case = sc.next::<usize>();
     'test: for _ in 0..test_case {
         let n = sc.next::<usize>();
-        let a = sc.next::<usize>() - 1;
-        let b = sc.next::<usize>() - 1;
+        let q = sc.next::<usize>();
+        let colors_in = sc.next_n::<u8>(n).map(|c| c == 1).collect::<Vec<_>>();
         let mut adj_nodes = vec![Vec::<usize>::new(); n];
         for _ in 0..(n - 1) {
             let u = sc.next::<usize>() - 1;
@@ -25,56 +88,66 @@ fn main() {
             adj_nodes[u].push(v);
             adj_nodes[v].push(u);
         }
-        // find path between u and v
-        let mut a_visited = vec![false; n];
-        let mut a_to_visit = vec![(a, a)]; // (src, dst)
-        let mut b_to_visit = vec![(b, b)];
-        let mut b_moved = 0;
-        let middle = 'middle: loop {
-            let mut a_next_visit = Vec::new();
-            for (src, dst) in a_to_visit {
-                a_next_visit.extend(adj_nodes[dst].iter().filter_map(|&nd| {
-                    if nd == src {
-                        None
-                    } else {
-                        Some((dst, nd))
-                    }
-                }));
-                a_visited[dst] = true;
-            }
-            a_to_visit = a_next_visit;
 
-            let mut b_next_visit = Vec::new();
-            for (src, dst) in b_to_visit {
-                if a_visited[dst] {
-                    break 'middle dst;
-                }
-                b_next_visit.extend(adj_nodes[dst].iter().filter_map(|&nd| {
-                    if nd == src {
-                        None
-                    } else {
-                        Some((dst, nd))
-                    }
-                }));
-            }
-            b_to_visit = b_next_visit;
-
-            b_moved += 1;
-        };
-        let mut dist = vec![usize::MAX; n];
-        let mut to_visit = vec![middle];
-        let mut d = 0usize;
+        let mut children = vec![Vec::new(); n];
+        let mut parent = vec![0; n];
+        let mut to_visit = vec![(0, 0)];
         while !to_visit.is_empty() {
             let mut next_visit = Vec::new();
-            for v in to_visit {
-                next_visit.extend(adj_nodes[v].iter().filter(|&&nd| dist[nd] == usize::MAX));
-                dist[v] = d;
+            for (p, v) in to_visit {
+                let nvs = adj_nodes[v]
+                    .iter()
+                    .filter(|&&nv| nv != p)
+                    .map(|&v| v)
+                    .collect::<Vec<_>>();
+                next_visit.extend(nvs.iter().map(|&nv| (v, nv)));
+                children[v] = nvs;
+                parent[v] = p;
             }
             to_visit = next_visit;
-            d += 1;
         }
-        let &max_d = dist.iter().max().unwrap();
-        pt.println(((n - 1) * 2) - max_d + b_moved);
+
+        let mut num_child_black = vec![0; n];
+        let mut num_groups = 0;
+        let mut num_2_child = 0;
+        let mut num_3_child = 0;
+
+        let mut black = vec![false; n];
+        for (i, is_black) in colors_in.into_iter().enumerate() {
+            if is_black {
+                update(
+                    &children,
+                    &parent,
+                    &mut black,
+                    &mut num_child_black,
+                    i,
+                    &mut num_groups,
+                    &mut num_2_child,
+                    &mut num_3_child,
+                );
+                // pt.print_iter([num_groups, num_2_child].iter());
+            }
+        }
+
+        for _ in 0..q {
+            let u = sc.next::<usize>() - 1;
+            update(
+                &children,
+                &parent,
+                &mut black,
+                &mut num_child_black,
+                u,
+                &mut num_groups,
+                &mut num_2_child,
+                &mut num_3_child,
+            );
+            // pt.print_iter([num_groups, num_2_child].iter());
+            if num_2_child <= 1 && num_3_child == 0 && num_groups == 1 {
+                pt.println("Yes");
+            } else {
+                pt.println("No");
+            }
+        }
     }
 }
 

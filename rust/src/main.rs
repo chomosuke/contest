@@ -10,24 +10,14 @@ use std::{
     usize,
 };
 
-pub fn get_prime_facts(mut x: u64) -> Vec<u64> {
-    let mut result = Vec::new();
-    let mut n = 2;
-    while n * n <= x {
-        if x % n == 0 {
-            x /= n;
-            result.push(n);
-            while x % n == 0 {
-                x /= n;
-                result.push(n);
-            }
-        }
-        n += 1;
-    }
-    if x != 1 {
-        result.push(x);
-    }
-    result
+type N = u32;
+
+fn get_nth_bit(a: N, n: usize) -> bool {
+    (a >> n) % 2 == 1
+}
+
+fn set_nth_bit(a: &mut N, n: usize) {
+    *a = *a & (1 << n)
 }
 
 fn main() {
@@ -35,24 +25,24 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_case = sc.next::<usize>();
     'test: for _ in 0..test_case {
-        let a = sc.next::<u64>();
-        let b = sc.next::<u64>();
-        let k = sc.next::<usize>();
-        if k == 1 {
-            pt.println(if (a % b == 0 || b % a == 0) && a != b {
-                "Yes"
+        let x = sc.next::<u32>();
+        pt.println(32);
+        let mut out = vec![0; 32];
+        let mut one_count = 0;
+        for i in 0..32 {
+            if get_nth_bit(x, i) {
+                one_count += 1;
             } else {
-                "No"
-            })
-        } else {
-            let a_f = get_prime_facts(a);
-            let b_f = get_prime_facts(b);
-            pt.println(if a_f.len() + b_f.len() >= k {
-                "Yes"
-            } else {
-                "No"
-            });
+                if one_count == 1 {
+                    out[i - one_count] = 1;
+                    one_count = 0;
+                } else if one_count > 1 {
+                    out[i - one_count] = -1;
+                    one_count = 1;
+                }
+            }
         }
+        pt.print_iter(out.into_iter());
     }
 }
 

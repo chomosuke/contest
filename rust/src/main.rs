@@ -10,14 +10,34 @@ use std::{
     usize,
 };
 
-type N = u32;
-
-fn get_nth_bit(a: N, n: usize) -> bool {
-    (a >> n) % 2 == 1
+fn factorize(n: u64) -> Vec<u64> {
+    let mut fs = Vec::new();
+    let mut f = 2;
+    while f * f < n {
+        if n % f == 0 {
+            fs.push(f);
+            fs.push(n / f);
+        }
+        f += 1;
+    }
+    if f * f == n {
+        fs.push(f);
+    }
+    fs
 }
 
-fn set_nth_bit(a: &mut N, n: usize) {
-    *a = *a & (1 << n)
+fn get_gcd(mut x: u64, mut y: u64) -> u64 {
+    while y != 0 {
+        let ty = y;
+        y = x.rem_euclid(y);
+        x = ty;
+    }
+    x
+}
+
+fn get_lcm(x: u64, y: u64) -> u64 {
+    let gcd = get_gcd(x, y);
+    x * y / gcd
 }
 
 fn main() {
@@ -25,24 +45,37 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_case = sc.next::<usize>();
     'test: for _ in 0..test_case {
-        let x = sc.next::<u32>();
-        pt.println(32);
-        let mut out = vec![0; 32];
-        let mut one_count = 0;
-        for i in 0..32 {
-            if get_nth_bit(x, i) {
-                one_count += 1;
-            } else {
-                if one_count == 1 {
-                    out[i - one_count] = 1;
-                    one_count = 0;
-                } else if one_count > 1 {
-                    out[i - one_count] = -1;
-                    one_count = 1;
-                }
+        let n = sc.next::<usize>();
+        let mut arr = sc.next_n::<u64>(n).collect::<Vec<_>>();
+        arr.sort_unstable();
+        let &max = arr.last().unwrap();
+        for a in &arr {
+            if max % a != 0 {
+                pt.println(n);
+                continue 'test;
             }
         }
-        pt.print_iter(out.into_iter());
+        arr.pop();
+        // everything is divisible by max
+        // factorize max, lcm must be one of the factor.
+        let facts = factorize(max);
+        let mut max_subseq_len = 0;
+        for f in facts {
+            if arr.binary_search(&f).is_ok() {
+                continue;
+            }
+            let subseq = arr
+                .iter()
+                .cloned()
+                .filter(|&a| f % a == 0)
+                .collect::<Vec<_>>();
+            let lcm = subseq.iter().fold(1, |lcm, &a| get_lcm(lcm, a));
+            if lcm != f {
+                continue;
+            }
+            max_subseq_len = max_subseq_len.max(subseq.len());
+        }
+        pt.println(max_subseq_len);
     }
 }
 

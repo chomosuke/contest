@@ -10,72 +10,49 @@ use std::{
     usize,
 };
 
-fn factorize(n: u64) -> Vec<u64> {
-    let mut fs = Vec::new();
-    let mut f = 2;
-    while f * f < n {
-        if n % f == 0 {
-            fs.push(f);
-            fs.push(n / f);
-        }
-        f += 1;
-    }
-    if f * f == n {
-        fs.push(f);
-    }
-    fs
-}
-
-fn get_gcd(mut x: u64, mut y: u64) -> u64 {
-    while y != 0 {
-        let ty = y;
-        y = x.rem_euclid(y);
-        x = ty;
-    }
-    x
-}
-
-fn get_lcm(x: u64, y: u64) -> u64 {
-    let gcd = get_gcd(x, y);
-    x * y / gcd
-}
-
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_case = sc.next::<usize>();
     'test: for _ in 0..test_case {
-        let n = sc.next::<usize>();
-        let mut arr = sc.next_n::<u64>(n).collect::<Vec<_>>();
-        arr.sort_unstable();
-        let &max = arr.last().unwrap();
-        for a in &arr {
-            if max % a != 0 {
-                pt.println(n);
-                continue 'test;
+        let m = sc.next::<usize>();
+        let x = sc.next::<i64>();
+        let mut chrr = Vec::new();
+        for _ in 0..m {
+            chrr.push((sc.next::<i64>(), sc.next::<usize>()));
+        }
+        let mut savings_needed_for_happiness = HashMap::new(); // savings on start of month i needed
+                                                               // to buy happiness starting from
+                                                               // month i
+        let (cost, happiness) = chrr.pop().unwrap();
+        savings_needed_for_happiness.insert(0, 0);
+        savings_needed_for_happiness.insert(happiness, cost);
+
+        for (cost, happiness) in chrr.into_iter().rev() {
+            let mut prev_savings_needed_for_happiness = HashMap::new();
+            for (f_happiness, savings) in savings_needed_for_happiness {
+                // buy the happiness this month
+                let s = prev_savings_needed_for_happiness
+                    .entry(happiness + f_happiness)
+                    .or_insert(i64::MAX);
+                *s = (*s).min((savings + cost - x).max(cost));
+                // don't buy the happiness this month
+                let s = prev_savings_needed_for_happiness
+                    .entry(f_happiness)
+                    .or_insert(i64::MAX);
+                *s = (*s).min((savings - x).max(0));
+            }
+            savings_needed_for_happiness = prev_savings_needed_for_happiness;
+        }
+
+        let mut max_h = 0;
+        for (h, s) in savings_needed_for_happiness {
+            if s <= 0 {
+                max_h = max_h.max(h);
             }
         }
-        arr.pop();
-        // everything is divisible by max
-        // factorize max, lcm must be one of the factor.
-        let facts = factorize(max);
-        let mut max_subseq_len = 0;
-        for f in facts {
-            if arr.binary_search(&f).is_ok() {
-                continue;
-            }
-            let subseq = arr
-                .iter()
-                .cloned()
-                .filter(|&a| f % a == 0)
-                .collect::<Vec<_>>();
-            let lcm = subseq.iter().fold(1, |lcm, &a| get_lcm(lcm, a));
-            if lcm != f {
-                continue;
-            }
-            max_subseq_len = max_subseq_len.max(subseq.len());
-        }
-        pt.println(max_subseq_len);
+
+        pt.println(max_h);
     }
 }
 

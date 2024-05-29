@@ -2,7 +2,7 @@
 use io::*;
 use std::{
     cmp::{max, min, Ordering},
-    collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
+    collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, VecDeque},
     fs,
     io::{stdin, stdout, BufReader},
     iter,
@@ -16,43 +16,25 @@ fn main() {
     let test_case = sc.next::<usize>();
     'test: for _ in 0..test_case {
         let m = sc.next::<usize>();
-        let x = sc.next::<i64>();
-        let mut chrr = Vec::new();
-        for _ in 0..m {
-            chrr.push((sc.next::<i64>(), sc.next::<usize>()));
-        }
-        let mut savings_needed_for_happiness = HashMap::new(); // savings on start of month i needed
-                                                               // to buy happiness starting from
-                                                               // month i
-        let (cost, happiness) = chrr.pop().unwrap();
-        savings_needed_for_happiness.insert(0, 0);
-        savings_needed_for_happiness.insert(happiness, cost);
-
-        for (cost, happiness) in chrr.into_iter().rev() {
-            let mut prev_savings_needed_for_happiness = HashMap::new();
-            for (f_happiness, savings) in savings_needed_for_happiness {
-                // buy the happiness this month
-                let s = prev_savings_needed_for_happiness
-                    .entry(happiness + f_happiness)
-                    .or_insert(i64::MAX);
-                *s = (*s).min((savings + cost - x).max(cost));
-                // don't buy the happiness this month
-                let s = prev_savings_needed_for_happiness
-                    .entry(f_happiness)
-                    .or_insert(i64::MAX);
-                *s = (*s).min((savings - x).max(0));
+        let x = sc.next::<u64>();
+        let crr = sc.next_n::<u64>(m).collect::<Vec<_>>();
+        let mut money = 0;
+        let mut h_costs = BinaryHeap::new();
+        for c in crr {
+            if c <= money {
+                h_costs.push(c);
+                money -= c;
+            } else if let Some(h_c) = h_costs.pop() {
+                if c < h_c {
+                    money += h_c - c;
+                    h_costs.push(c);
+                } else {
+                    h_costs.push(h_c);
+                }
             }
-            savings_needed_for_happiness = prev_savings_needed_for_happiness;
+            money += x;
         }
-
-        let mut max_h = 0;
-        for (h, s) in savings_needed_for_happiness {
-            if s <= 0 {
-                max_h = max_h.max(h);
-            }
-        }
-
-        pt.println(max_h);
+        pt.println(h_costs.len());
     }
 }
 

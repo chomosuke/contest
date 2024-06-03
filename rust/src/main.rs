@@ -19,39 +19,42 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_case = sc.next::<usize>();
     'test: for _ in 0..test_case {
-        let n = sc.next::<usize>();
-        let m = sc.next::<usize>();
-        let mut rows = [vec![Vec::new(); n], vec![Vec::new(); n]];
-        let mut columns = [vec![Vec::new(); m], vec![Vec::new(); m]];
-        for k in 0..2 {
-            for i in 0..n {
-                for j in 0..m {
-                    let a = sc.next::<u64>();
-                    rows[k][i].push(a);
-                    columns[k][j].push(a);
-                }
-            }
-            for i in 0..n {
-                rows[k][i].sort();
-            }
-            rows[k].sort();
-            for j in 0..m {
-                columns[k][j].sort();
-            }
-            columns[k].sort();
+        let n = sc.next::<u64>();
+        let m = sc.next::<u64>();
+        let k = sc.next::<usize>();
+        let mut fountains = Vec::with_capacity(k);
+        for _ in 0..k {
+            fountains.push((sc.next::<u64>(), sc.next::<u64>()))
         }
-        if rows[0] != rows[1] || columns[0] != columns[1] {
-            pt.println("No");
-        } else {
-            pt.println("Yes");
+        let fountains = fountains;
+        let mut fs = fountains.clone();
+        fs.sort_by_key(|&(r, c)| (c, u64::MAX - r));
+        let mut edges = Vec::new();
+        let mut row = 0;
+        for &(r, c) in &fs {
+            if r > row {
+                row = r;
+                edges.push((r, c));
+            }
         }
-        // for i in 0..n {
-        //     for j in 0..m {
-        //         if rows[0][i][j] != rows[1][i][j] || columns[0][j][i] != columns[0][j][i] {
-        //
-        //         }
-        //     }
-        // }
+        let mut area = 0;
+        let mut last_row = 0;
+        for &(r, c) in &edges {
+            area += (r - last_row) * (c - 1);
+            last_row = r;
+        }
+        area += (n - last_row) * m;
+        let edges = edges.into_iter().collect::<HashSet<_>>();
+        pt.println(area);
+        for f in &fountains {
+            if edges.contains(f) {
+                pt.print(1);
+            } else {
+                pt.print(0);
+            }
+            pt.print(' ');
+        }
+        pt.println("");
     }
 }
 

@@ -31,24 +31,51 @@ fn main() {
         fs.sort_by_key(|&(r, c)| (c, u64::MAX - r));
         let mut edges = Vec::new();
         let mut row = 0;
-        for &(r, c) in &fs {
+        for (i, &(r, c)) in fs.iter().enumerate() {
             if r > row {
                 row = r;
-                edges.push((r, c));
+                edges.push((i, (r, c)));
             }
         }
         let mut area = 0;
         let mut last_row = 0;
-        for &(r, c) in &edges {
+        for &(_, (r, c)) in &edges {
             area += (r - last_row) * (c - 1);
             last_row = r;
         }
         area += (n - last_row) * m;
-        let edges = edges.into_iter().collect::<HashSet<_>>();
+        let edges_m = edges
+            .iter()
+            .cloned()
+            .enumerate()
+            .map(|(e_i, (f_i, rc))| (rc, (f_i, e_i)))
+            .collect::<BTreeMap<_, _>>();
+        let edges = edges.into_iter().map(|(_i, rc)| rc).collect::<Vec<_>>();
         pt.println(area);
         for f in &fountains {
-            if edges.contains(f) {
-                pt.print(1);
+            if let Some(&(f_i, e_i)) = edges_m.get(f) {
+                let last_r = if e_i > 0 { edges[e_i - 1].0 } else { 0 };
+                let (nr, nc) = if e_i < edges.len() - 1 {
+                    edges[e_i + 1]
+                } else {
+                    (n, m + 1)
+                };
+                let (r, c) = f;
+                let prev_area = (r - last_r) * (c - 1) + (nr - r) * (nc - 1);
+
+                let mut last_r = last_r;
+                let mut new_area = 0;
+                for &(r, c) in fs[f_i + 1..].iter() {
+                    if r == nr && c == nc {
+                        break;
+                    }
+                    if r > last_r {
+                        new_area += (r - last_r) * (c - 1);
+                        last_r = r;
+                    }
+                }
+                new_area += (nr - last_r) * (nc - 1);
+                pt.print(new_area - prev_area);
             } else {
                 pt.print(0);
             }

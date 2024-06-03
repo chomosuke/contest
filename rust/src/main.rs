@@ -19,39 +19,39 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_case = sc.next::<usize>();
     'test: for _ in 0..test_case {
-        let bks = sc
-            .next_line()
-            .into_bytes()
-            .into_iter()
-            .map(|bk| if bk == b'(' { 1 } else { -1 })
-            .collect::<Vec<i64>>();
-        let mut highest = 0;
-        let mut current = 0;
-        let mut crrs = Vec::with_capacity(bks.len() + 1);
-        crrs.push(current as usize);
-        for &bk in &bks {
-            current += bk;
-            crrs.push(current as usize);
-            highest = highest.max(current);
-        }
-
-        // let mut ls = Vec::new();
-        // for i in 0..(crrs.len() - 1) {
-        //     let level = min(crrs[i], crrs[i + 1]) as usize;
-        //     ls.push(level);
-        // }
-
-        let mut b_at_levels = vec![0; (highest + 1) as usize];
-        let mut sum = 0u64;
-        for c in crrs {
-            sum += b_at_levels[c];
-            b_at_levels[c] += 1;
-            if c > 0 {
-                b_at_levels[(c - 1) / 2] = 0;
+        let n = sc.next::<usize>();
+        let m = sc.next::<usize>();
+        let mut rows = [vec![Vec::new(); n], vec![Vec::new(); n]];
+        let mut columns = [vec![Vec::new(); m], vec![Vec::new(); m]];
+        for k in 0..2 {
+            for i in 0..n {
+                for j in 0..m {
+                    let a = sc.next::<u64>();
+                    rows[k][i].push(a);
+                    columns[k][j].push(a);
+                }
             }
+            for i in 0..n {
+                rows[k][i].sort();
+            }
+            rows[k].sort();
+            for j in 0..m {
+                columns[k][j].sort();
+            }
+            columns[k].sort();
         }
-
-        pt.println(sum);
+        if rows[0] != rows[1] || columns[0] != columns[1] {
+            pt.println("No");
+        } else {
+            pt.println("Yes");
+        }
+        // for i in 0..n {
+        //     for j in 0..m {
+        //         if rows[0][i][j] != rows[1][i][j] || columns[0][j][i] != columns[0][j][i] {
+        //
+        //         }
+        //     }
+        // }
     }
 }
 

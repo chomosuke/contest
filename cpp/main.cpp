@@ -16,101 +16,56 @@
 #include <unordered_set> // IWYU pragma: keep
 #include <vector>        // IWYU pragma: keep
 
-/*
- * Complete the 'stringSimilarity' function below.
- *
- * The function is expected to return an INTEGER.
- * The function accepts STRING s as parameter.
- */
+using namespace std;
+typedef long long ll;
+const ll mod = 1e9 + 7;
 
-int common_len(const std::string &s, int i, int j) {
-    int k{0};
-    for (; k + i < s.size() && k + j < s.size(); k++) {
-        if (s[i + k] != s[j + k]) {
-            break;
+ll powmod(ll a, ll b, ll mod) {
+    ll curr = a, ans = 1;
+    for (; b > 0; b >>= 1) {
+        if (b & 1) {
+            ans = ans * curr % mod;
         }
+        curr = curr * curr % mod;
     }
-    return k;
+    return ans;
 }
 
-std::vector<int> zArrayHelper(std::string s) {
-    std::vector<int> z(s.size(), s.size());
-    int l = 0;
-    int r = 0;
-    int k;
-    for (int i = 1; i < s.size(); i++) {
-        if (i > r) {
-            l = i;
-            r = i;
-            while (r < s.size() && s[r - l] == s[r]) {
-                r++;
-            }
-            z[i] = r - l;
-            r--;
-        } else {
-            k = i - l;
-            if (z[k] < r + 1 - i) {
-                z[i] = z[k];
-            } else {
-                l = i;
-                while (r < s.size() && s[r - l] == s[r]) {
-                    r++;
-                }
-                z[i] = r - l;
-                r--;
-            }
+void solve() {
+    ll n;
+    cin >> n;
+    vector<ll> aa(n);
+    for (ll i = 0; i < n; ++i)
+        cin >> aa[i];
+    vector<ll> pows(32);
+    for (ll i = 0; i < n; ++i) {
+        ll k = 0, x = aa[i];
+        while (x % 2 == 0) {
+            ++k;
+            x >>= 1;
         }
+        ++pows[k];
     }
-    return z;
+
+    ll tot = 0;
+    for (ll i = 30; ~i; --i) {
+        ll rest = powmod(2, pows[i + 1], mod);
+        if (i == 0) {
+            tot = (tot + (powmod(2, pows[i], mod) - 1 + mod) % mod * rest % mod) % mod;
+        } else if (pows[i] > 1) {
+            tot =
+                (tot + (powmod(2, pows[i], mod) * powmod(2, mod - 2, mod) % mod - 1) %
+                mod * rest % mod) % mod;
+        }
+        pows[i] += pows[i + 1];
+    }
+    cout << tot << endl;
 }
 
-int stringSimilarity(std::string s) {
-    std::vector<int> z{static_cast<int>(s.size())};
-    while (z.size() < s.size()) {
-        int i{static_cast<int>(z.size())};
-        z.push_back(common_len(s, 0, i));
-        while (z.size() < i + z[i]) {
-            int j{static_cast<int>(z.size())};
-            if (j + z[j - i] < i + z[i]) {
-                z.push_back(z[j - i]);
-            } else {
-                int known_common{i + z[i] - j};
-                z.push_back(common_len(s, known_common, j + known_common) +
-                            known_common);
-                i = j;
-            }
-        }
-    }
-    std::vector<int> z2 = zArrayHelper(s);
-
-    for (int i{0}; i < z.size(); i++) {
-        assert(z[i] == z2[i]);
-    }
-
-    assert(z.size() == z2.size());
-
-    return std::accumulate(z.begin(), z.end(), 0, std::plus<int>());
-}
-
-int stringSimilarityB(std::string s) {
-    int r{0};
-    for (int i{0}; i < s.size(); i++) {
-        int j{0};
-        while (j + i < s.size() && s[j] == s[i + j]) {
-            j++;
-        }
-        r += j;
-    }
-    return r;
-}
-
-int main() {
-    assert(stringSimilarity("aaaaaaaaaaab") ==
-           stringSimilarityB("aaaaaaaaaaab"));
-    assert(stringSimilarity("abababababab") ==
-           stringSimilarityB("abababababab"));
-    assert(stringSimilarity("ababcabababab") ==
-           stringSimilarityB("ababcabababab"));
-    assert(stringSimilarity("ababcaauestnahoesthakbabababab") ==
-           stringSimilarityB("ababcaauestnahoesthakbabababab"));
+signed main() {
+    ll t;
+    // cin >> t;
+    // while (t--)
+        solve();
+    return 0;
 }

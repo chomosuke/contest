@@ -14,10 +14,19 @@ use std::{
     usize,
 };
 
-type N = u64;
+type N = u128;
 
-fn get_nth_bit(a: N, n: usize) -> bool {
-    (a >> n) % 2 == 1
+fn get_gcd(mut x: N, mut y: N) -> N {
+    while y != 0 {
+        let ty = y;
+        y = x.rem_euclid(y);
+        x = ty;
+    }
+    x
+}
+
+fn get_lcm (x: N, y: N) -> N {
+    x * y / get_gcd(x, y)
 }
 
 fn main() {
@@ -25,13 +34,24 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_case = sc.next::<usize>();
     'test: for _ in 0..test_case {
-        let a = sc.next::<u64>();
-        let b = sc.next::<u64>();
-        for i in 0..64 {
-            if get_nth_bit(a, i) != get_nth_bit(b, i) {
-                pt.println(2_u64.pow(i as u32));
-                break;
-            }
+        let n = sc.next::<usize>();
+        let krr = sc.next_n::<u128>(n).collect::<Vec<_>>();
+        // each a must be equal to x / k
+        // if sum of a is not smaller than x than no good.
+        // x is the lcm of k
+        let mut x = 1;
+        for &k in &krr {
+            x = get_lcm(x, k);
+        }
+        let mut arr = Vec::with_capacity(n);
+        for &k in &krr {
+            let a = x / k;
+            arr.push(a);
+        }
+        if arr.iter().sum::<u128>() < x {
+            pt.print_iter(arr.iter());
+        } else {
+            pt.println(-1);
         }
     }
 }

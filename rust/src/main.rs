@@ -19,69 +19,14 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_case = sc.next::<usize>();
     'test: for _ in 0..test_case {
-        let n = sc.next::<u64>();
-        let m = sc.next::<u64>();
-        let k = sc.next::<usize>();
-        let mut fountains = Vec::with_capacity(k);
-        for _ in 0..k {
-            fountains.push((sc.next::<u64>(), sc.next::<u64>()))
+        let n = sc.next::<usize>();
+        let arr = sc.next_n::<u64>(n).collect::<Vec<_>>();
+        let mut min_max = u64::MAX;
+        for i in 1..arr.len() {
+            let m = max(arr[i], arr[i - 1]);
+            min_max = min_max.min(m);
         }
-        let fountains = fountains;
-        let mut fs = fountains.clone();
-        fs.sort_by_key(|&(r, c)| (c, u64::MAX - r));
-        let mut edges = Vec::new();
-        let mut row = 0;
-        for (i, &(r, c)) in fs.iter().enumerate() {
-            if r > row {
-                row = r;
-                edges.push((i, (r, c)));
-            }
-        }
-        let mut area = 0;
-        let mut last_row = 0;
-        for &(_, (r, c)) in &edges {
-            area += (r - last_row) * (c - 1);
-            last_row = r;
-        }
-        area += (n - last_row) * m;
-        let edges_m = edges
-            .iter()
-            .cloned()
-            .enumerate()
-            .map(|(e_i, (f_i, rc))| (rc, (f_i, e_i)))
-            .collect::<BTreeMap<_, _>>();
-        let edges = edges.into_iter().map(|(_i, rc)| rc).collect::<Vec<_>>();
-        pt.println(area);
-        for f in &fountains {
-            if let Some(&(f_i, e_i)) = edges_m.get(f) {
-                let last_r = if e_i > 0 { edges[e_i - 1].0 } else { 0 };
-                let (nr, nc) = if e_i < edges.len() - 1 {
-                    edges[e_i + 1]
-                } else {
-                    (n, m + 1)
-                };
-                let (r, c) = f;
-                let prev_area = (r - last_r) * (c - 1) + (nr - r) * (nc - 1);
-
-                let mut last_r = last_r;
-                let mut new_area = 0;
-                for &(r, c) in fs[f_i + 1..].iter() {
-                    if r == nr && c == nc {
-                        break;
-                    }
-                    if r > last_r {
-                        new_area += (r - last_r) * (c - 1);
-                        last_r = r;
-                    }
-                }
-                new_area += (nr - last_r) * (nc - 1);
-                pt.print(new_area - prev_area);
-            } else {
-                pt.print(0);
-            }
-            pt.print(' ');
-        }
-        pt.println("");
+        pt.println(min_max - 1);
     }
 }
 

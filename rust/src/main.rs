@@ -14,19 +14,25 @@ use std::{
     usize,
 };
 
+type N = u64;
+
+fn get_nth_bit(a: N, n: usize) -> bool {
+    (a >> n) % 2 == 1
+}
+
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_case = sc.next::<usize>();
     'test: for _ in 0..test_case {
-        let n = sc.next::<usize>();
-        let arr = sc.next_n::<u64>(n).collect::<Vec<_>>();
-        let mut min_max = u64::MAX;
-        for i in 1..arr.len() {
-            let m = max(arr[i], arr[i - 1]);
-            min_max = min_max.min(m);
+        let a = sc.next::<u64>();
+        let b = sc.next::<u64>();
+        for i in 0..64 {
+            if get_nth_bit(a, i) != get_nth_bit(b, i) {
+                pt.println(2_u64.pow(i as u32));
+                break;
+            }
         }
-        pt.println(min_max - 1);
     }
 }
 

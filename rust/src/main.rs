@@ -20,100 +20,19 @@ fn main() {
     let test_case = sc.next::<usize>();
     'test: for _ in 0..test_case {
         let n = sc.next::<usize>();
-        let k = sc.next::<usize>();
-        let s = sc.next_line().into_bytes();
-        let mut li = 0;
-        let mut lb = s[0];
-        let mut groups = Vec::with_capacity(n / k + 1);
-        for i in 0..s.len() {
-            if s[i] != lb {
-                groups.push(i - li);
-                lb = s[i];
-                li = i;
-            }
-        }
-        groups.push(s.len() - li);
-
-        let groups = groups
-            .into_iter()
-            .enumerate()
-            .map(|(i, c)| (i % 2 == 0, c))
-            .collect::<Vec<_>>();
-        let g = groups
-            .iter()
-            .enumerate()
-            .filter(|&(_i, &(_one, c))| c != k)
-            .collect::<Vec<_>>();
-
-        if g.len() == 0 {
-            pt.println(n);
-            continue 'test;
-        }
-
-        let (i, &(one, c)) = g[0];
-
-        let &(last_one, last_c) = groups.last().unwrap();
-        if g.len() == 1 {
-            if i != groups.len() - 1 && one != last_one && c == k * 2 {
-                pt.println(i * k + k);
-            } else {
-                pt.println(-1);
-            }
-        } else if g.len() == 2 && g[1].0 == groups.len() - 1 && one == last_one {
-            if c < k && c + last_c == k {
-                pt.println(i * k + c);
-            } else if c > k && c + last_c == k * 2 {
-                pt.println(i * k + c - k);
-            } else {
-                pt.println(-1);
-            }
+        let arr = sc.next_n(n).collect::<Vec<u64>>();
+        if arr[0] == *arr.last().unwrap() {
+            pt.println("No");
+        } else if arr.len() == 2 {
+            pt.println("No");
         } else {
-            pt.println(-1);
+            pt.println("Yes");
+            if arr[0] == arr[1] {
+                pt.println("R".to_owned() + &"B".repeat(arr.len() - 1));
+            } else {
+                pt.println("BR".to_owned() + &"B".repeat(arr.len() - 2))
+            }
         }
-
-        // let ans = if g.len() > 2 || (g.len() == 2 && (g[1].0 != groups.len() - 1 || g[1].1.0 != g[0].1.0)) {
-        //     // println!("hey1");
-        //     -1 // too many wrong groups, we can only fix one
-        // } else if g.len() == 0 {
-        //     // println!("hey2");
-        //     1 // no wrong groups, do nothing
-        // } else if g.len() == 1 && g[0].0 == groups.len() - 1 {
-        //     // println!("hey3");
-        //     -1 // wrong group is the last group, can't fix
-        // } else {
-        //     let (i, &(one, c)) = g[0];
-        //     let last_c = if g.len() == 1 {
-        //         let &(last_one, last_c) = groups.last().unwrap();
-        //         if last_one == one {
-        //             // println!("hey4");
-        //             last_c
-        //         } else {
-        //             // println!("hey5");
-        //             0
-        //         }
-        //     } else {
-        //         g[1].1 .1
-        //     };
-        //
-        //     if c < k {
-        //         if c + last_c == k {
-        //             // println!("hey7");
-        //             (i * k + c) as i64
-        //         } else {
-        //             // println!("hey8");
-        //             -1
-        //         }
-        //     } else {
-        //         if c + last_c == k * 2 {
-        //             // println!("hey9");
-        //             (i * k + c - k) as i64
-        //         } else {
-        //             // println!("hey10");
-        //             -1
-        //         }
-        //     }
-        // };
-        // println!("{ans}");
     }
 }
 

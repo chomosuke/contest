@@ -14,19 +14,52 @@ use std::{
     usize,
 };
 
+type N = usize;
+fn pow(x: N, n: N, m: N) -> N {
+    let x = x.rem_euclid(m);
+    if n == 0 {
+        1
+    } else if n % 2 == 0 {
+        pow(x, n / 2, m).pow(2).rem_euclid(m)
+    } else {
+        (pow(x, n - 1, m) * x).rem_euclid(m)
+    }
+}
+
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_case = sc.next::<usize>();
     'test: for _ in 0..test_case {
+        let m = 998244353;
         let n = sc.next::<usize>();
         let arr = sc.next_n(n).collect::<Vec<i64>>();
         let mut prefix_sum = Vec::new();
         for a in arr {
             prefix_sum.push(prefix_sum.last().unwrap_or(&0) + a);
         }
-        let min = prefix_sum.iter().min().unwrap().min(&0);
-        pt.println(prefix_sum.last().unwrap() - min * 2);
+        let &min = prefix_sum.iter().min().unwrap();
+        if min >= 0 {
+            pt.println(pow(2, n, m));
+            continue 'test;
+        }
+        let min_is =
+            prefix_sum
+                .iter()
+                .enumerate()
+                .filter_map(|(i, &s)| if s == min { Some(i) } else { None })
+                .collect::<Vec<_>>();
+        let mut pos_count = Vec::new();
+        for &s in &prefix_sum {
+            pos_count.push(pos_count.last().unwrap_or(&0) + if s >= 0 { 1_usize } else { 0 })
+        }
+        let mut count = 0;
+        for i in min_is {
+            // flip the ith prefix_sum
+            count += pow(2, n - 1 - i + pos_count[i], m);
+            count %= m;
+        }
+        pt.println(count);
     }
 }
 

@@ -19,20 +19,36 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_case = sc.next::<usize>();
     'test: for _ in 0..test_case {
-        let n = sc.next::<usize>();
-        let arr = sc.next_n(n).collect::<Vec<u64>>();
-        if arr[0] == *arr.last().unwrap() {
-            pt.println("No");
-        } else if arr.len() == 2 {
-            pt.println("No");
-        } else {
-            pt.println("Yes");
-            if arr[0] == arr[1] {
-                pt.println("R".to_owned() + &"B".repeat(arr.len() - 1));
+        let mut x = sc.next::<u128>();
+        let mut digits = Vec::new();
+        while x > 0 {
+            digits.push(x % 10);
+            x /= 10;
+        }
+        digits.reverse();
+        let mut numbers = Vec::new();
+        for i in 1..digits.len() {
+            let mut n = 0;
+            if i == 1 {
+                n += digits[i - 1] * 10;
             } else {
-                pt.println("BR".to_owned() + &"B".repeat(arr.len() - 2))
+                n += 10;
+            }
+            if i == digits.len() - 1 {
+                n += digits[i];
+            } else {
+                n += digits[i];
+                n -= 1;
+            }
+            numbers.push(n);
+        }
+        for n in numbers {
+            if n < 10 || n > 18 {
+                pt.println("No");
+                continue 'test;
             }
         }
+        pt.println("Yes");
     }
 }
 

@@ -14,17 +14,45 @@ use std::{
     usize,
 };
 
+type N = u128;
+
+fn get_nth_bit(a: N, n: usize) -> bool {
+    (a >> n) % 2 == 1
+}
+
+fn set_nth_bit(a: &mut N, n: usize) {
+    *a = *a & (1 << n)
+}
+
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let n = sc.next::<usize>();
-    let a = sc.next::<u64>();
-    let ts = sc.next_n(n).collect::<Vec<u64>>();
-    let mut now = 0;
-    for t in ts {
-        now = max(t, now) + a;
-        pt.println(now);
+    let m = sc.next::<usize>();
+    let sets = sc
+        .next_n::<String>(n)
+        .map(|s| {
+            s.into_bytes()
+                .iter()
+                .map(|&c| c == b'o')
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    let mut min_sets = n;
+    for comb in 1..2_u128.pow(10) {
+        let mut bought = vec![false; m];
+        for (i, set) in sets.iter().enumerate() {
+            if get_nth_bit(comb, i) {
+                for j in 0..set.len() {
+                    bought[j] = bought[j] || set[j];
+                }
+            }
+        }
+        if bought.iter().all(|&b| b) {
+            min_sets = min_sets.min(comb.count_ones() as usize);
+        }
     }
+    pt.println(min_sets);
 }
 
 mod io {

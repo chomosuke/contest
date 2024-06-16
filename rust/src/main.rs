@@ -17,28 +17,14 @@ use std::{
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    let n = sc.next::<usize>();
-    let m = sc.next::<usize>();
-    let mut arr = sc.next_n::<u64>(n).collect::<Vec<_>>();
-    arr.sort_unstable();
-    arr.reverse();
-    let mut brr = sc.next_n::<u64>(m).collect::<Vec<_>>();
-    brr.sort_unstable();
-    let mut sp = 0;
-    for b in brr {
-        loop {
-            if let Some(a) = arr.pop() {
-                if a >= b {
-                    sp += a;
-                    break;
-                }
-            } else {
-                pt.println(-1);
-                return;
-            }
-        }
+    let test_cases = sc.next::<usize>();
+    'test: for _ in 0..test_cases {
+        let n = sc.next::<usize>();
+        let mut arr = sc.next_n::<u64>(n).collect::<Vec<_>>();
+        let mut b = arr.pop().unwrap();
+        arr.sort_unstable();
+        pt.println(arr.pop().unwrap() + b);
     }
-    pt.println(sp);
 }
 
 mod io {

@@ -19,16 +19,42 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
-        let n = sc.next::<i64>();
-        let a = sc.next::<i64>();
-        let b = sc.next::<i64>();
-        if b < a {
-            pt.println(a * n);
-        } else if b - a < n {
-            pt.println(a * n + (b - a) * (b - a + 1) / 2);
-        } else {
-            pt.println(b * (b + 1) / 2 - (b - n) * (b - n + 1) / 2);
+        let n = sc.next::<usize>();
+        let k = sc.next::<usize>();
+        if k % 2 != 0 {
+            pt.println("NO");
+            continue 'test;
         }
+
+        if k > (n / 2) * (n / 2 + 1) * 2 - if n % 2 == 0 { n } else { 0 } {
+            pt.println("No");
+            continue 'test;
+        }
+
+        let mut arr = (1..=n).into_iter().collect::<Vec<_>>();
+        let mut k = k;
+        let mut i = 0;
+        let mut j = n - 1;
+
+        while k > 0 && i < j {
+            let gained = (arr[j] - arr[i]) * 2;
+            if k >= gained {
+                k -= gained;
+                arr.swap(i, j);
+            } else {
+                let gained_j = (arr[j - 1] - arr[i]) * 2;
+                if k == gained_j {
+                    j -= 1;
+                    k -= gained_j;
+                    arr.swap(i, j);
+                }
+            }
+            i += 1;
+            j -= 1;
+        }
+
+        pt.println("Yes");
+        pt.print_iter(arr.into_iter());
     }
 }
 

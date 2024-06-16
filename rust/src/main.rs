@@ -20,41 +20,38 @@ fn main() {
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
         let n = sc.next::<usize>();
-        let k = sc.next::<usize>();
-        if k % 2 != 0 {
-            pt.println("NO");
-            continue 'test;
-        }
-
-        if k > (n / 2) * (n / 2 + 1) * 2 - if n % 2 == 0 { n } else { 0 } {
-            pt.println("No");
-            continue 'test;
-        }
-
-        let mut arr = (1..=n).into_iter().collect::<Vec<_>>();
-        let mut k = k;
-        let mut i = 0;
-        let mut j = n - 1;
-
-        while k > 0 && i < j {
-            let gained = (arr[j] - arr[i]) * 2;
-            if k >= gained {
-                k -= gained;
-                arr.swap(i, j);
-            } else {
-                let gained_j = (arr[j - 1] - arr[i]) * 2;
-                if k == gained_j {
-                    j -= 1;
-                    k -= gained_j;
-                    arr.swap(i, j);
-                }
+        let c = sc.next::<u64>();
+        let mut arr = sc.next_n::<u64>(n);
+        arr[0] += c;
+        let mut max_i = 0;
+        for i in 0..n {
+            if arr[max_i] < arr[i] {
+                max_i = i;
             }
-            i += 1;
-            j -= 1;
         }
 
-        pt.println("Yes");
-        pt.print_iter(arr.into_iter());
+        let mut prefix = Vec::with_capacity(n + 1);
+        prefix.push(0);
+        for i in 0..n {
+            prefix.push(arr[i] + prefix.last().unwrap());
+        }
+
+        let mut res = Vec::with_capacity(n);
+
+        for i in 0..n {
+            if i == max_i {
+                res.push(0);
+                continue;
+            }
+
+            let sum_vote = prefix[i] + arr[i];
+            if sum_vote >= arr[max_i] {
+                res.push(i);
+            } else {
+                res.push(i + 1);
+            }
+        }
+        pt.print_iter(res.iter());
     }
 }
 
@@ -64,25 +61,6 @@ mod io {
     use std::io::{BufReader, BufWriter, Lines, Read, Write};
     use std::marker::PhantomData;
     use std::{any::type_name, io::BufRead, str::FromStr};
-
-    pub struct ScannerIter<'a, R: Read, T> {
-        remaining: usize,
-        sc: &'a mut Scanner<R>,
-        item: PhantomData<T>,
-    }
-
-    impl<R: Read, T: FromStr> Iterator for ScannerIter<'_, R, T> {
-        type Item = T;
-
-        fn next(&mut self) -> Option<Self::Item> {
-            if self.remaining == 0 {
-                None
-            } else {
-                self.remaining -= 1;
-                Some(self.sc.next::<T>())
-            }
-        }
-    }
 
     pub struct Scanner<R: Read> {
         tokens: VecDeque<String>,
@@ -119,12 +97,12 @@ mod io {
                 .unwrap_or_else(|_| panic!("input {} isn't a {}", token, type_name::<T>()))
         }
 
-        pub fn next_n<T: FromStr>(&mut self, n: usize) -> ScannerIter<'_, R, T> {
-            ScannerIter {
-                remaining: n,
-                sc: self,
-                item: PhantomData,
+        pub fn next_n<T: FromStr>(&mut self, n: usize) -> Vec<T> {
+            let mut v = Vec::with_capacity(n);
+            for _ in 0..n {
+                v.push(self.next());
             }
+            v
         }
 
         pub fn next_line(&mut self) -> String {

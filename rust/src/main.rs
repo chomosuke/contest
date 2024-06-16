@@ -19,11 +19,16 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
-        let n = sc.next::<usize>();
-        let mut arr = sc.next_n::<u64>(n).collect::<Vec<_>>();
-        let mut b = arr.pop().unwrap();
-        arr.sort_unstable();
-        pt.println(arr.pop().unwrap() + b);
+        let n = sc.next::<i64>();
+        let a = sc.next::<i64>();
+        let b = sc.next::<i64>();
+        if b < a {
+            pt.println(a * n);
+        } else if b - a < n {
+            pt.println(a * n + (b - a) * (b - a + 1) / 2);
+        } else {
+            pt.println(b * (b + 1) / 2 - (b - n) * (b - n + 1) / 2);
+        }
     }
 }
 

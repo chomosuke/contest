@@ -1,7 +1,7 @@
 #![allow(unused_imports, dead_code, clippy::needless_range_loop, unused_labels)]
 use io::*;
 use std::{
-    cmp::{max, min, Ordering},
+    cmp::{max, min, Ordering, Reverse},
     collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, VecDeque},
     fs,
     io::{stdin, stdout, BufReader},
@@ -18,41 +18,59 @@ fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
-    'test: for _ in 0..test_cases {
-        let n = sc.next::<usize>();
-        let c = sc.next::<u64>();
-        let mut arr = sc.next_n::<u64>(n);
-        arr[0] += c;
-        let mut max_i = 0;
-        for i in 0..n {
-            if arr[max_i] < arr[i] {
-                max_i = i;
-            }
-        }
+    'test: for _ in 0..test_cases {}
+}
 
-        let mut prefix = Vec::with_capacity(n + 1);
-        prefix.push(0);
-        for i in 0..n {
-            prefix.push(arr[i] + prefix.last().unwrap());
-        }
-
-        let mut res = Vec::with_capacity(n);
-
-        for i in 0..n {
-            if i == max_i {
-                res.push(0);
-                continue;
-            }
-
-            let sum_vote = prefix[i] + arr[i];
-            if sum_vote >= arr[max_i] {
-                res.push(i);
-            } else {
-                res.push(i + 1);
-            }
-        }
-        pt.print_iter(res.iter());
+fn trap_rain_water(mut height_map: Vec<Vec<i32>>) -> i32 {
+    let mut border = BinaryHeap::<Reverse<(i32, usize, usize)>>::new();
+    let mut sum = 0;
+    let mut in_border = vec![vec![false; height_map[0].len()]; height_map.len()];
+    for i in 0..height_map.len() {
+        let j = 0;
+        in_border[i][j] = true;
+        border.push(Reverse((height_map[i][j], i, j)));
+        let j = height_map[0].len() - 1;
+        in_border[i][j] = true;
+        border.push(Reverse((height_map[i][j], i, j)));
     }
+    for j in 1..(height_map[0].len() - 1) {
+        let i = 0;
+        in_border[i][j] = true;
+        border.push(Reverse((height_map[i][j], i, j)));
+        let i = height_map.len() - 1;
+        in_border[i][j] = true;
+        border.push(Reverse((height_map[i][j], i, j)));
+    }
+    while let Some(Reverse((height, i, j))) = border.pop() {
+        let neightbor = [
+            (i + 1 + 1, j + 1),
+            (i + 1 - 1, j + 1),
+            (i + 1, j + 1 + 1),
+            (i + 1, j + 1 - 1),
+        ]
+        .into_iter()
+        .filter_map(|(i, j)| {
+            if i > 0 && j > 0 {
+                Some((i - 1, j - 1))
+            } else {
+                None
+            }
+        })
+        .filter(|&(i, j)| i < height_map.len() && j < height_map[0].len())
+        .filter(|&(i, j)| !in_border[i][j])
+        .collect::<Vec<_>>();
+
+        for (ni, nj) in neightbor {
+            if height_map[ni][nj] < height {
+                sum += height - height_map[ni][nj];
+                height_map[ni][nj] = height;
+            }
+            let (i, j) = (ni, nj);
+            in_border[i][j] = true;
+            border.push(Reverse((height_map[i][j], i, j)));
+        }
+    }
+    sum
 }
 
 mod io {

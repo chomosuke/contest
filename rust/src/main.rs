@@ -25,22 +25,39 @@ fn trap_rain_water(mut height_map: Vec<Vec<i32>>) -> i32 {
     let mut border = BinaryHeap::<Reverse<(i32, usize, usize)>>::new();
     let mut sum = 0;
     let mut in_border = vec![vec![false; height_map[0].len()]; height_map.len()];
+
+    fn push_border(
+        i: usize,
+        j: usize,
+        in_border: &mut Vec<Vec<bool>>,
+        border: &mut BinaryHeap<Reverse<(i32, usize, usize)>>,
+        height_map: &Vec<Vec<i32>>,
+    ) {
+        in_border[i][j] = true;
+        border.push(Reverse((height_map[i][j], i, j)));
+    }
+
     for i in 0..height_map.len() {
-        let j = 0;
-        in_border[i][j] = true;
-        border.push(Reverse((height_map[i][j], i, j)));
-        let j = height_map[0].len() - 1;
-        in_border[i][j] = true;
-        border.push(Reverse((height_map[i][j], i, j)));
+        push_border(i, 0, &mut in_border, &mut border, &height_map);
+        push_border(
+            i,
+            height_map[0].len() - 1,
+            &mut in_border,
+            &mut border,
+            &height_map,
+        );
     }
     for j in 1..(height_map[0].len() - 1) {
-        let i = 0;
-        in_border[i][j] = true;
-        border.push(Reverse((height_map[i][j], i, j)));
-        let i = height_map.len() - 1;
-        in_border[i][j] = true;
-        border.push(Reverse((height_map[i][j], i, j)));
+        push_border(0, j, &mut in_border, &mut border, &height_map);
+        push_border(
+            height_map.len() - 1,
+            j,
+            &mut in_border,
+            &mut border,
+            &height_map,
+        );
     }
+
     while let Some(Reverse((height, i, j))) = border.pop() {
         let neightbor = [
             (i + 1 + 1, j + 1),
@@ -65,11 +82,10 @@ fn trap_rain_water(mut height_map: Vec<Vec<i32>>) -> i32 {
                 sum += height - height_map[ni][nj];
                 height_map[ni][nj] = height;
             }
-            let (i, j) = (ni, nj);
-            in_border[i][j] = true;
-            border.push(Reverse((height_map[i][j], i, j)));
+            push_border(ni, nj, &mut in_border, &mut border, &height_map);
         }
     }
+
     sum
 }
 

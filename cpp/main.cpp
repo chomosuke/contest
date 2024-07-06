@@ -24,16 +24,48 @@ using ll = long long;
 int main() {
     int n;
     cin >> n;
-    vector<ll> fs{};
+    vector<int> ts;
     for (int i{0}; i < n; i++) {
-        int f;
-        cin >> f;
-        fs.push_back(f);
+        int t;
+        cin >> t;
+        ts.push_back(t);
     }
-    sort(fs.begin(), fs.end());
-    ll f_all{0};
-    for (int i{n / 3}; i < n; i += 2) {
-        f_all += fs[i];
+    vector<vector<int>> count_before{{0}, {0}, {0}};
+    for (int i{1}; i <= n; i++) {
+        for (int j{0}; j < 3; j++) {
+            count_before[j].push_back(count_before[j][i - 1]);
+        }
+        count_before[ts[i - 1]][i]++;
     }
-    cout << f_all << endl;
+
+    int max_total{0};
+
+    vector<int> perm{0, 1, 2};
+    for (int p{0}; p < 6; p++) {
+        int p1{perm[0]};
+        int p2{perm[1]};
+        int p3{perm[2]};
+
+        int p1_p2{0};
+
+        auto total{[&](int p1_p2, int p2_p3) {
+            return count_before[p1][p1_p2] + count_before[p2][p2_p3] -
+                   count_before[p2][p1_p2] + count_before[p3][n] -
+                   count_before[p3][p2_p3];
+        }};
+
+        for (int p2_p3{0}; p2_p3 <= n; p2_p3++) {
+            int t1{total(p1_p2, p2_p3)};
+            int t2{total(p2_p3, p2_p3)};
+            if (t2 > t1) {
+                p1_p2 = p2_p3;
+            }
+            max_total = max(max_total, t1);
+            max_total = max(max_total, t2);
+        }
+
+        next_permutation(perm.begin(), perm.end());
+    }
+
+    cout << max_total << endl;
 }

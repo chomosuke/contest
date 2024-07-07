@@ -18,7 +18,10 @@ fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
-    'test: for _ in 0..test_cases {}
+    'test: for _ in 0..test_cases {
+        let n = sc.next::<usize>();
+        pt.print_iter(1..=n);
+    }
 }
 
 fn trap_rain_water(mut height_map: Vec<Vec<i32>>) -> i32 {

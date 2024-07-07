@@ -22,39 +22,62 @@ fn main() {
         let n = sc.next::<usize>();
         let arr = sc.next_n::<u64>(n);
         let brr = sc.next_n::<u64>(n);
-        let mut etoi = HashMap::with_capacity(n);
-        for (i, a) in arr.into_iter().enumerate() {
-            assert!(!etoi.contains_key(&a));
-            etoi.insert(a, i);
-        }
-        let mut p = Vec::with_capacity(n);
-        for b in brr {
-            if let Some(&i) = etoi.get(&b) {
-                p.push(i);
-            } else {
-                pt.println("No");
+        let crr = sc.next_n::<u64>(n);
+        let min = arr.iter().sum::<u64>().div_ceil(3);
+        let arrs = [arr, brr, crr];
+        for p in [
+            [0, 1, 2],
+            [0, 2, 1],
+            [1, 0, 2],
+            [1, 2, 0],
+            [2, 0, 1],
+            [2, 1, 0],
+        ] {
+            let mut pairs = [None; 3];
+            let mut i = 0;
+            let mut last_i = i + 1;
+            'outer: for _ in 0..3 {
+                let mut sums = [0; 3];
+                while i < n {
+                    for j in p {
+                        if pairs[j].is_none() {
+                            sums[j] += arrs[j][i];
+                        }
+                    }
+                    i += 1;
+                    if *sums.iter().max().unwrap() >= min {
+                        if sums[p[0]] >= min {
+                            pairs[p[0]] = Some((last_i, i));
+                            last_i = i + 1;
+                            continue 'outer;
+                        } else if sums[p[1]] >= min {
+                            pairs[p[1]] = Some((last_i, i));
+                            last_i = i + 1;
+                            continue 'outer;
+                        } else {
+                            pairs[p[2]] = Some((last_i, i));
+                            last_i = i + 1;
+                            continue 'outer;
+                        }
+                    }
+                }
+            }
+            if pairs.iter().all(|p| p.is_some()) {
+                pt.print_iter(
+                    [
+                        pairs[0].unwrap().0,
+                        pairs[0].unwrap().1,
+                        pairs[1].unwrap().0,
+                        pairs[1].unwrap().1,
+                        pairs[2].unwrap().0,
+                        pairs[2].unwrap().1,
+                    ]
+                    .into_iter(),
+                );
                 continue 'test;
             }
         }
-        let mut swap = 0_usize;
-        for i in 0..p.len() {
-            assert!(p[i] >= i);
-            if p[i] != i {
-                let mut i = i;
-                while p[i] != i {
-                    let t = p[i];
-                    p[i] = i;
-                    i = t;
-                    swap += 1;
-                }
-                swap -= 1;
-            }
-        }
-        if swap % 2 == 0 {
-            pt.println("Yes");
-        } else {
-            pt.println("No");
-        }
+        pt.println(-1);
     }
 }
 

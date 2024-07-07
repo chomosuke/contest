@@ -20,7 +20,41 @@ fn main() {
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
         let n = sc.next::<usize>();
-        pt.print_iter(1..=n);
+        let arr = sc.next_n::<u64>(n);
+        let brr = sc.next_n::<u64>(n);
+        let mut etoi = HashMap::with_capacity(n);
+        for (i, a) in arr.into_iter().enumerate() {
+            assert!(!etoi.contains_key(&a));
+            etoi.insert(a, i);
+        }
+        let mut p = Vec::with_capacity(n);
+        for b in brr {
+            if let Some(&i) = etoi.get(&b) {
+                p.push(i);
+            } else {
+                pt.println("No");
+                continue 'test;
+            }
+        }
+        let mut swap = 0_usize;
+        for i in 0..p.len() {
+            assert!(p[i] >= i);
+            if p[i] != i {
+                let mut i = i;
+                while p[i] != i {
+                    let t = p[i];
+                    p[i] = i;
+                    i = t;
+                    swap += 1;
+                }
+                swap -= 1;
+            }
+        }
+        if swap % 2 == 0 {
+            pt.println("Yes");
+        } else {
+            pt.println("No");
+        }
     }
 }
 

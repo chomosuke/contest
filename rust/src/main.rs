@@ -20,51 +20,52 @@ fn main() {
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
         let n = sc.next::<usize>();
-        let arr = sc.next_n::<u64>(n);
-        let brr = sc.next_n::<u64>(n);
-        let crr = sc.next_n::<u64>(n);
-        let min = arr.iter().sum::<u64>().div_ceil(3);
-        let arrs = [arr, brr, crr];
-        for p in [
-            [0, 1, 2],
-            [0, 2, 1],
-            [1, 0, 2],
-            [1, 2, 0],
-            [2, 0, 1],
-            [2, 1, 0],
-        ] {
-            let mut pairs = [None; 3];
-            let mut i = 0;
-            let mut last_i = i + 1;
-            'outer: for k in 0..3 {
-                let mut sum = 0;
-                let p = p[k];
-                while i < n {
-                    sum += arrs[p][i];
-                    i += 1;
-                    if sum >= min {
-                        pairs[p] = Some((last_i, i));
-                        last_i = i + 1;
-                        break;
-                    }
-                }
+        let m = sc.next::<usize>();
+        let mut a = Vec::with_capacity(n);
+        for _ in 0..n {
+            a.push(
+                sc.next_line()
+                    .into_bytes()
+                    .into_iter()
+                    .map(|b| b as u64)
+                    .collect::<Vec<_>>(),
+            );
+        }
+        let mut b = Vec::with_capacity(n);
+        for _ in 0..n {
+            b.push(
+                sc.next_line()
+                    .into_bytes()
+                    .into_iter()
+                    .map(|b| b as u64)
+                    .collect::<Vec<_>>(),
+            );
+        }
+        for i in 0..n {
+            let mut asum = 0;
+            let mut bsum = 0;
+            for j in 0..m {
+                asum += a[i][j];
+                bsum += b[i][j];
             }
-            if pairs.iter().all(|p| p.is_some()) {
-                pt.print_iter(
-                    [
-                        pairs[0].unwrap().0,
-                        pairs[0].unwrap().1,
-                        pairs[1].unwrap().0,
-                        pairs[1].unwrap().1,
-                        pairs[2].unwrap().0,
-                        pairs[2].unwrap().1,
-                    ]
-                    .into_iter(),
-                );
+            if asum % 3 != bsum % 3 {
+                pt.println("No");
                 continue 'test;
             }
         }
-        pt.println(-1);
+        for j in 0..m {
+            let mut asum = 0;
+            let mut bsum = 0;
+            for i in 0..n {
+                asum += a[i][j];
+                bsum += b[i][j];
+            }
+            if asum % 3 != bsum % 3 {
+                pt.println("No");
+                continue 'test;
+            }
+        }
+        pt.println("Yes");
     }
 }
 

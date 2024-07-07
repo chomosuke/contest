@@ -36,29 +36,16 @@ fn main() {
             let mut pairs = [None; 3];
             let mut i = 0;
             let mut last_i = i + 1;
-            'outer: for _ in 0..3 {
-                let mut sums = [0; 3];
+            'outer: for k in 0..3 {
+                let mut sum = 0;
+                let p = p[k];
                 while i < n {
-                    for j in p {
-                        if pairs[j].is_none() {
-                            sums[j] += arrs[j][i];
-                        }
-                    }
+                    sum += arrs[p][i];
                     i += 1;
-                    if *sums.iter().max().unwrap() >= min {
-                        if sums[p[0]] >= min {
-                            pairs[p[0]] = Some((last_i, i));
-                            last_i = i + 1;
-                            continue 'outer;
-                        } else if sums[p[1]] >= min {
-                            pairs[p[1]] = Some((last_i, i));
-                            last_i = i + 1;
-                            continue 'outer;
-                        } else {
-                            pairs[p[2]] = Some((last_i, i));
-                            last_i = i + 1;
-                            continue 'outer;
-                        }
+                    if sum >= min {
+                        pairs[p] = Some((last_i, i));
+                        last_i = i + 1;
+                        break;
                     }
                 }
             }
@@ -79,74 +66,6 @@ fn main() {
         }
         pt.println(-1);
     }
-}
-
-fn trap_rain_water(mut height_map: Vec<Vec<i32>>) -> i32 {
-    let mut border = BinaryHeap::<Reverse<(i32, usize, usize)>>::new();
-    let mut sum = 0;
-    let mut in_border = vec![vec![false; height_map[0].len()]; height_map.len()];
-
-    fn push_border(
-        i: usize,
-        j: usize,
-        in_border: &mut Vec<Vec<bool>>,
-        border: &mut BinaryHeap<Reverse<(i32, usize, usize)>>,
-        height_map: &Vec<Vec<i32>>,
-    ) {
-        in_border[i][j] = true;
-        border.push(Reverse((height_map[i][j], i, j)));
-    }
-
-    for i in 0..height_map.len() {
-        push_border(i, 0, &mut in_border, &mut border, &height_map);
-        push_border(
-            i,
-            height_map[0].len() - 1,
-            &mut in_border,
-            &mut border,
-            &height_map,
-        );
-    }
-    for j in 1..(height_map[0].len() - 1) {
-        push_border(0, j, &mut in_border, &mut border, &height_map);
-        push_border(
-            height_map.len() - 1,
-            j,
-            &mut in_border,
-            &mut border,
-            &height_map,
-        );
-    }
-
-    while let Some(Reverse((height, i, j))) = border.pop() {
-        let neightbor = [
-            (i + 1 + 1, j + 1),
-            (i + 1 - 1, j + 1),
-            (i + 1, j + 1 + 1),
-            (i + 1, j + 1 - 1),
-        ]
-        .into_iter()
-        .filter_map(|(i, j)| {
-            if i > 0 && j > 0 {
-                Some((i - 1, j - 1))
-            } else {
-                None
-            }
-        })
-        .filter(|&(i, j)| i < height_map.len() && j < height_map[0].len())
-        .filter(|&(i, j)| !in_border[i][j])
-        .collect::<Vec<_>>();
-
-        for (ni, nj) in neightbor {
-            if height_map[ni][nj] < height {
-                sum += height - height_map[ni][nj];
-                height_map[ni][nj] = height;
-            }
-            push_border(ni, nj, &mut in_border, &mut border, &height_map);
-        }
-    }
-
-    sum
 }
 
 mod io {

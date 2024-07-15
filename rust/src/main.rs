@@ -58,50 +58,33 @@ fn root_tree(adj_nodes: &Vec<Vec<usize>>, root: usize) -> RootedTree {
     RootedTree { parents, childrens }
 }
 
-fn min_attack(
-    node: usize,
-    no_kill: usize,
-    tree: &RootedTree,
-    arr: &Vec<u128>,
-    mem_min_attack_when_kill: &mut Vec<[Option<u128>; 3]>,
-) -> u128 {
-    for i in 0..3 {
-        if mem_min_attack_when_kill[node][i].is_none() {
-            let mx = (i as u128 + 1) * arr[node]
-                + tree.childrens[node]
-                    .iter()
-                    .map(|&child| min_attack(child, i, tree, arr, mem_min_attack_when_kill))
-                    .sum::<u128>();
-            mem_min_attack_when_kill[node][i] = Some(mx);
-        }
-    }
-    mem_min_attack_when_kill[node]
-        .iter()
-        .enumerate()
-        .map(|(i, &m)| if no_kill == i { u128::MAX } else { m.unwrap() })
-        .min()
-        .unwrap()
-}
-
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
-        let n = sc.next::<usize>();
-        let arr = sc.next_n::<u128>(n);
-        let mut edges = Vec::with_capacity(n - 1);
-        for _ in 0..n - 1 {
-            edges.push((sc.next::<usize>() - 1, sc.next::<usize>() - 1));
+        sc.next::<usize>();
+        let ones = sc
+            .next_line()
+            .into_bytes()
+            .into_iter()
+            .map(|b| b == b'1')
+            .collect::<Vec<_>>();
+        let one_count = ones.iter().filter(|&&b| b).count();
+        let mut zero_count = 0;
+        for i in 0..(ones.len() - 1) {
+            if ones[i] && !ones[i + 1] {
+                zero_count += 1;
+            }
         }
-        if n == 1 {
-            pt.println(arr[0]);
-            continue 'test;
+        if !ones[0] {
+            zero_count += 1;
         }
-        let adj_nodes = edges_to_adj_nodes(&edges);
-        let rooted = root_tree(&adj_nodes, 0);
-        let mut mem = vec![[None; 3]; n];
-        pt.println(min_attack(0, 4, &rooted, &arr, &mut mem));
+        if one_count > zero_count {
+            pt.println("Yes");
+        } else {
+            pt.println("No");
+        }
     }
 }
 

@@ -14,58 +14,94 @@ use std::{
     usize,
 };
 
+fn edges_to_adj_nodes(edges: &[(usize, usize)]) -> Vec<Vec<usize>> {
+    let mut adj_nodes = Vec::new();
+    for &(u, v) in edges {
+        let max_node = max(u, v);
+        while max_node >= adj_nodes.len() {
+            adj_nodes.push(Vec::new());
+        }
+        adj_nodes[u].push(v);
+        adj_nodes[v].push(u);
+    }
+    adj_nodes
+}
+
+struct RootedTree {
+    parents: Vec<Option<usize>>,
+    childrens: Vec<Vec<usize>>,
+}
+
+fn root_tree(adj_nodes: &Vec<Vec<usize>>, root: usize) -> RootedTree {
+    let mut parents = vec![None; adj_nodes.len()];
+    let mut childrens = vec![Vec::new(); adj_nodes.len()];
+
+    let mut to_visit = adj_nodes[root]
+        .iter()
+        .map(|&n| (root, n))
+        .collect::<Vec<_>>();
+    let mut visited = vec![false; adj_nodes.len()];
+    while let Some((parent, node)) = to_visit.pop() {
+        assert!(!visited[node], "There's a cycle in your tree");
+        visited[node] = true;
+        parents[node] = Some(parent);
+        childrens[parent].push(node);
+        to_visit.extend(adj_nodes[node].iter().filter_map(|&n| {
+            if n == parent {
+                None
+            } else {
+                Some((node, n))
+            }
+        }));
+    }
+
+    RootedTree { parents, childrens }
+}
+
+fn min_attack(
+    node: usize,
+    no_kill: usize,
+    tree: &RootedTree,
+    arr: &Vec<u128>,
+    mem_min_attack_when_kill: &mut Vec<[Option<u128>; 3]>,
+) -> u128 {
+    for i in 0..3 {
+        if mem_min_attack_when_kill[node][i].is_none() {
+            let mx = (i as u128 + 1) * arr[node]
+                + tree.childrens[node]
+                    .iter()
+                    .map(|&child| min_attack(child, i, tree, arr, mem_min_attack_when_kill))
+                    .sum::<u128>();
+            mem_min_attack_when_kill[node][i] = Some(mx);
+        }
+    }
+    mem_min_attack_when_kill[node]
+        .iter()
+        .enumerate()
+        .map(|(i, &m)| if no_kill == i { u128::MAX } else { m.unwrap() })
+        .min()
+        .unwrap()
+}
+
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
         let n = sc.next::<usize>();
-        let m = sc.next::<usize>();
-        let mut a = Vec::with_capacity(n);
-        for _ in 0..n {
-            a.push(
-                sc.next_line()
-                    .into_bytes()
-                    .into_iter()
-                    .map(|b| b as u64)
-                    .collect::<Vec<_>>(),
-            );
+        let arr = sc.next_n::<u128>(n);
+        let mut edges = Vec::with_capacity(n - 1);
+        for _ in 0..n - 1 {
+            edges.push((sc.next::<usize>() - 1, sc.next::<usize>() - 1));
         }
-        let mut b = Vec::with_capacity(n);
-        for _ in 0..n {
-            b.push(
-                sc.next_line()
-                    .into_bytes()
-                    .into_iter()
-                    .map(|b| b as u64)
-                    .collect::<Vec<_>>(),
-            );
+        if n == 1 {
+            pt.println(arr[0]);
+            continue 'test;
         }
-        for i in 0..n {
-            let mut asum = 0;
-            let mut bsum = 0;
-            for j in 0..m {
-                asum += a[i][j];
-                bsum += b[i][j];
-            }
-            if asum % 3 != bsum % 3 {
-                pt.println("No");
-                continue 'test;
-            }
-        }
-        for j in 0..m {
-            let mut asum = 0;
-            let mut bsum = 0;
-            for i in 0..n {
-                asum += a[i][j];
-                bsum += b[i][j];
-            }
-            if asum % 3 != bsum % 3 {
-                pt.println("No");
-                continue 'test;
-            }
-        }
-        pt.println("Yes");
+        let adj_nodes = edges_to_adj_nodes(&edges);
+        let rooted = root_tree(&adj_nodes, 0);
+        let mut mem = vec![[None; 3]; n];
+        pt.println(min_attack(0, 4, &rooted, &arr, &mut mem));
     }
 }
 

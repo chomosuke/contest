@@ -58,33 +58,39 @@ fn root_tree(adj_nodes: &Vec<Vec<usize>>, root: usize) -> RootedTree {
     RootedTree { parents, childrens }
 }
 
+type N = u128;
+
+fn get_nth_bit(a: N, n: usize) -> bool {
+    (a >> n) % 2 == 1
+}
+
+fn toggle_nth_bit(a: &mut N, n: usize) {
+    *a = *a ^ (1 << n)
+}
+
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
-        sc.next::<usize>();
-        let ones = sc
-            .next_line()
-            .into_bytes()
-            .into_iter()
-            .map(|b| b == b'1')
-            .collect::<Vec<_>>();
-        let one_count = ones.iter().filter(|&&b| b).count();
-        let mut zero_count = 0;
-        for i in 0..(ones.len() - 1) {
-            if ones[i] && !ones[i + 1] {
-                zero_count += 1;
+        let n = sc.next::<u128>();
+        let bits = n.count_ones() as usize;
+        if bits == 1 {
+            pt.println(1);
+            pt.println(n);
+            continue 'test;
+        }
+        pt.println(bits + 1);
+        let mut res = Vec::with_capacity(bits + 1);
+        for i in (0..128).rev() {
+            if get_nth_bit(n, i) {
+                let mut n = n;
+                toggle_nth_bit(&mut n, i);
+                res.push(n);
             }
         }
-        if !ones[0] {
-            zero_count += 1;
-        }
-        if one_count > zero_count {
-            pt.println("Yes");
-        } else {
-            pt.println("No");
-        }
+        res.push(n);
+        pt.print_iter(res.into_iter());
     }
 }
 

@@ -14,41 +14,23 @@ use std::{
     usize,
 };
 
-fn is_on(k: u64, on_time: u64, current_time: u64) -> bool {
-    (current_time - on_time) % (2 * k) < k
-}
-
-fn is_all_on(k: u64, arr: &Vec<u64>, current_time: u64) -> bool {
-    arr.iter().all(|&a| is_on(k, a, current_time))
-}
-
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
         let n = sc.next::<usize>();
-        let k = sc.next::<u64>();
-        let arr = sc.next_n::<u64>(n);
-        let &latest = arr.iter().max().unwrap();
-        let mut left = latest;
-        if is_all_on(k, &arr, latest) {
-            pt.println(latest);
-            continue 'test;
-        }
-        let mut step = k / 2;
-        while step > 0 {
-            if !is_all_on(k, &arr, left + step) && left + step < latest + k {
-                left += step;
-            } else {
-                step /= 2;
-            }
-        }
-        if !is_all_on(k, &arr, left) && is_all_on(k, &arr, left + 1) {
-            pt.println(left + 1);
-        } else {
-            pt.println(-1);
-        }
+        let anss = sc.next_line().into_bytes();
+        let a_count = anss.iter().filter(|&&b| b == b'A').count();
+        let b_count = anss.iter().filter(|&&b| b == b'B').count();
+        let c_count = anss.iter().filter(|&&b| b == b'C').count();
+        let d_count = anss.iter().filter(|&&b| b == b'D').count();
+        let mut sum = 0;
+        sum += a_count.min(n);
+        sum += b_count.min(n);
+        sum += c_count.min(n);
+        sum += d_count.min(n);
+        pt.println(sum);
     }
 }
 

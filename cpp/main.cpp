@@ -23,28 +23,36 @@ using namespace std;
 using ll = long long;
 
 int main() {
-    ll n, m, k;
-    cin >> n >> m >> k;
-    if (k + m >= n) {
-        cout << 100 << endl;
-        return 0;
-    }
-    vector<ll> ss;
+    ll n, m;
+    cin >> n >> m;
+    vector<string> names;
+    string n_;
+    getline(cin, n_);
     for (int i = 0; i < n; i++) {
-        ll s;
-        cin >> s;
-        ss.push_back(s);
+        string n;
+        getline(cin, n);
+        names.push_back(n);
+        assert(n.size() == m);
     }
-    sort(ss.rbegin(), ss.rend());
-    ll sum = 0;
-    for (int i = 0; i < n; i++) {
-        sum += ss[i];
+    stringstream ss;
+    for (int i = 0; i < m; i++) {
+        map<char, ll> chars;
+        for (int j = 0; j < n; j++) {
+            if (!chars.count(names[j][i])) {
+                chars[names[j][i]] = 0;
+            }
+            chars[names[j][i]] += 1;
+        }
+        char choosen = 0;
+        char choosen_vote = 0;
+        for (auto c : chars) {
+            assert(c.first >= 'a' && c.first <= 'z');
+            if (c.second > choosen_vote || (c.second == choosen_vote && c.first < choosen)) {
+                choosen = c.first;
+                choosen_vote = c.second;
+            }
+        }
+        ss << choosen;
     }
-    ll downloaded = 0;
-    for (int i = 0; i < k + m; i++) {
-        downloaded += ss[i];
-    }
-    cout << setprecision(10);
-    cout << static_cast<double>(100) / sum * downloaded << endl;
-    return 0;
+    cout << ss.str() << endl;
 }

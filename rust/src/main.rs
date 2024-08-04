@@ -36,6 +36,13 @@ fn root_tree(adj_nodes: &Vec<Vec<usize>>, root: usize) -> RootedTree {
     let mut parents = vec![None; adj_nodes.len()];
     let mut childrens = vec![Vec::new(); adj_nodes.len()];
 
+    if adj_nodes.is_empty() {
+        return RootedTree {
+            parents: vec![None],
+            childrens: vec![Vec::new()],
+        };
+    }
+
     let mut to_visit = adj_nodes[root]
         .iter()
         .map(|&n| (root, n))
@@ -58,14 +65,29 @@ fn root_tree(adj_nodes: &Vec<Vec<usize>>, root: usize) -> RootedTree {
     RootedTree { parents, childrens }
 }
 
-type N = u128;
-
-fn get_nth_bit(a: N, n: usize) -> bool {
-    (a >> n) % 2 == 1
-}
-
-fn toggle_nth_bit(a: &mut N, n: usize) {
-    *a = *a ^ (1 << n)
+fn min_attack(
+    node: usize,
+    no_kill: usize,
+    tree: &RootedTree,
+    arr: &Vec<u128>,
+    mem_min_attack_when_kill: &mut Vec<[Option<u128>; 100]>,
+) -> u128 {
+    for i in 0..100 {
+        if mem_min_attack_when_kill[node][i].is_none() {
+            let mx = (i as u128 + 1) * arr[node]
+                + tree.childrens[node]
+                    .iter()
+                    .map(|&child| min_attack(child, i, tree, arr, mem_min_attack_when_kill))
+                    .sum::<u128>();
+            mem_min_attack_when_kill[node][i] = Some(mx);
+        }
+    }
+    mem_min_attack_when_kill[node]
+        .iter()
+        .enumerate()
+        .map(|(i, &m)| if no_kill == i { u128::MAX } else { m.unwrap() })
+        .min()
+        .unwrap()
 }
 
 fn main() {
@@ -73,24 +95,18 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
-        let n = sc.next::<u128>();
-        let bits = n.count_ones() as usize;
-        if bits == 1 {
-            pt.println(1);
-            pt.println(n);
-            continue 'test;
+        let n = sc.next::<usize>();
+        let arr = sc.next_n::<u128>(n);
+        let mut edges = Vec::with_capacity(n - 1);
+        for _ in 0..n - 1 {
+            edges.push((sc.next::<usize>() - 1, sc.next::<usize>() - 1));
         }
-        pt.println(bits + 1);
-        let mut res = Vec::with_capacity(bits + 1);
-        for i in (0..128).rev() {
-            if get_nth_bit(n, i) {
-                let mut n = n;
-                toggle_nth_bit(&mut n, i);
-                res.push(n);
-            }
-        }
-        res.push(n);
-        pt.print_iter(res.into_iter());
+        let adj_nodes = edges_to_adj_nodes(&edges);
+        let rooted = root_tree(&adj_nodes, 0);
+        let mut mem = vec![[None; 100]; n];
+        let m1 = min_attack(0, 100, &rooted, &arr, &mut mem);
+
+        pt.println(m1);
     }
 }
 

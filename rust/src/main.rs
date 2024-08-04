@@ -20,17 +20,34 @@ fn main() {
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
         let n = sc.next::<usize>();
-        let anss = sc.next_line().into_bytes();
-        let a_count = anss.iter().filter(|&&b| b == b'A').count();
-        let b_count = anss.iter().filter(|&&b| b == b'B').count();
-        let c_count = anss.iter().filter(|&&b| b == b'C').count();
-        let d_count = anss.iter().filter(|&&b| b == b'D').count();
-        let mut sum = 0;
-        sum += a_count.min(n);
-        sum += b_count.min(n);
-        sum += c_count.min(n);
-        sum += d_count.min(n);
-        pt.println(sum);
+        let mut arr = sc.next_n::<u64>(n);
+        arr.sort();
+        let evens = arr
+            .iter()
+            .cloned()
+            .filter(|&a| a % 2 == 0)
+            .collect::<Vec<_>>();
+        if evens.len() == n {
+            pt.println(0);
+            continue 'test;
+        }
+        if arr.last().unwrap() % 2 == 0 {
+            let odds = arr
+                .iter()
+                .cloned()
+                .filter(|&a| a % 2 == 1)
+                .collect::<Vec<_>>();
+            let mut max_odd = *odds.last().unwrap();
+            for &even in &evens {
+                if even > max_odd {
+                    pt.println(evens.len() + 1);
+                    continue 'test;
+                } else {
+                    max_odd += even;
+                }
+            }
+        }
+        pt.println(evens.len());
     }
 }
 

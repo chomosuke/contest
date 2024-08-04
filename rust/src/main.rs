@@ -14,80 +14,12 @@ use std::{
     usize,
 };
 
-fn edges_to_adj_nodes(edges: &[(usize, usize)]) -> Vec<Vec<usize>> {
-    let mut adj_nodes = Vec::new();
-    for &(u, v) in edges {
-        let max_node = max(u, v);
-        while max_node >= adj_nodes.len() {
-            adj_nodes.push(Vec::new());
-        }
-        adj_nodes[u].push(v);
-        adj_nodes[v].push(u);
-    }
-    adj_nodes
+fn is_on(k: u64, on_time: u64, current_time: u64) -> bool {
+    (current_time - on_time) % (2 * k) < k
 }
 
-struct RootedTree {
-    parents: Vec<Option<usize>>,
-    childrens: Vec<Vec<usize>>,
-}
-
-fn root_tree(adj_nodes: &Vec<Vec<usize>>, root: usize) -> RootedTree {
-    let mut parents = vec![None; adj_nodes.len()];
-    let mut childrens = vec![Vec::new(); adj_nodes.len()];
-
-    if adj_nodes.is_empty() {
-        return RootedTree {
-            parents: vec![None],
-            childrens: vec![Vec::new()],
-        };
-    }
-
-    let mut to_visit = adj_nodes[root]
-        .iter()
-        .map(|&n| (root, n))
-        .collect::<Vec<_>>();
-    let mut visited = vec![false; adj_nodes.len()];
-    while let Some((parent, node)) = to_visit.pop() {
-        assert!(!visited[node], "There's a cycle in your tree");
-        visited[node] = true;
-        parents[node] = Some(parent);
-        childrens[parent].push(node);
-        to_visit.extend(adj_nodes[node].iter().filter_map(|&n| {
-            if n == parent {
-                None
-            } else {
-                Some((node, n))
-            }
-        }));
-    }
-
-    RootedTree { parents, childrens }
-}
-
-fn min_attack(
-    node: usize,
-    no_kill: usize,
-    tree: &RootedTree,
-    arr: &Vec<u128>,
-    mem_min_attack_when_kill: &mut Vec<[Option<u128>; 100]>,
-) -> u128 {
-    for i in 0..100 {
-        if mem_min_attack_when_kill[node][i].is_none() {
-            let mx = (i as u128 + 1) * arr[node]
-                + tree.childrens[node]
-                    .iter()
-                    .map(|&child| min_attack(child, i, tree, arr, mem_min_attack_when_kill))
-                    .sum::<u128>();
-            mem_min_attack_when_kill[node][i] = Some(mx);
-        }
-    }
-    mem_min_attack_when_kill[node]
-        .iter()
-        .enumerate()
-        .map(|(i, &m)| if no_kill == i { u128::MAX } else { m.unwrap() })
-        .min()
-        .unwrap()
+fn is_all_on(k: u64, arr: &Vec<u64>, current_time: u64) -> bool {
+    arr.iter().all(|&a| is_on(k, a, current_time))
 }
 
 fn main() {
@@ -96,17 +28,27 @@ fn main() {
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
         let n = sc.next::<usize>();
-        let arr = sc.next_n::<u128>(n);
-        let mut edges = Vec::with_capacity(n - 1);
-        for _ in 0..n - 1 {
-            edges.push((sc.next::<usize>() - 1, sc.next::<usize>() - 1));
+        let k = sc.next::<u64>();
+        let arr = sc.next_n::<u64>(n);
+        let &latest = arr.iter().max().unwrap();
+        let mut left = latest;
+        if is_all_on(k, &arr, latest) {
+            pt.println(latest);
+            continue 'test;
         }
-        let adj_nodes = edges_to_adj_nodes(&edges);
-        let rooted = root_tree(&adj_nodes, 0);
-        let mut mem = vec![[None; 100]; n];
-        let m1 = min_attack(0, 100, &rooted, &arr, &mut mem);
-
-        pt.println(m1);
+        let mut step = k / 2;
+        while step > 0 {
+            if !is_all_on(k, &arr, left + step) && left + step < latest + k {
+                left += step;
+            } else {
+                step /= 2;
+            }
+        }
+        if !is_all_on(k, &arr, left) && is_all_on(k, &arr, left + 1) {
+            pt.println(left + 1);
+        } else {
+            pt.println(-1);
+        }
     }
 }
 

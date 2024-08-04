@@ -14,40 +14,36 @@ use std::{
     usize,
 };
 
+fn is_on(k: u64, on_time: u64, current_time: u64) -> bool {
+    (current_time - on_time) % (2 * k) < k
+}
+
+fn is_all_on(k: u64, arr: &Vec<u64>, current_time: u64) -> bool {
+    arr.iter().all(|&a| is_on(k, a, current_time))
+}
+
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
         let n = sc.next::<usize>();
-        let mut arr = sc.next_n::<u64>(n);
-        arr.sort();
-        let evens = arr
-            .iter()
-            .cloned()
-            .filter(|&a| a % 2 == 0)
-            .collect::<Vec<_>>();
-        if evens.len() == n {
-            pt.println(0);
-            continue 'test;
-        }
-        if arr.last().unwrap() % 2 == 0 {
-            let odds = arr
-                .iter()
-                .cloned()
-                .filter(|&a| a % 2 == 1)
-                .collect::<Vec<_>>();
-            let mut max_odd = *odds.last().unwrap();
-            for &even in &evens {
-                if even > max_odd {
-                    pt.println(evens.len() + 1);
-                    continue 'test;
-                } else {
-                    max_odd += even;
-                }
+        let k = sc.next::<u64>();
+        let arr = sc.next_n::<u64>(n);
+        let &latest = arr.iter().max().unwrap();
+        let mut left = latest;
+        let mut right = latest + k;
+        for a in arr {
+            if is_on(k, a, left) {
+                right = right.min(left - (left - a) % (2 * k) + k);
+            } else if is_on(k, a, right - 1) {
+                left = left.max(left - (left - a) % (2 * k) + 2 * k);
+            } else {
+                pt.println(-1);
+                continue 'test;
             }
         }
-        pt.println(evens.len());
+        pt.println(left);
     }
 }
 

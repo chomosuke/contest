@@ -27,18 +27,12 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
-        let xc = sc.next::<i64>();
-        let yc = sc.next::<i64>();
-        let mut k = sc.next::<usize>();
-        if k % 2 != 0 {
-            pt.print_iter([xc, yc].iter());
-            k -= 1;
-        }
-        for i in 1..=(k / 2) {
-            let i = i as i64;
-            pt.print_iter([xc - i, yc].iter());
-            pt.print_iter([xc + i, yc].iter());
-        }
+        let n = sc.next::<usize>();
+        let mut ps = sc.next_n::<usize>(n);
+        let p = ps[0];
+        ps.remove(0);
+        ps.push(p);
+        pt.print_iter(ps.iter());
     }
 }
 

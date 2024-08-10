@@ -27,23 +27,18 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
-        let n = sc.next::<usize>();
-        let k = sc.next::<u64>();
-        let arr = sc.next_n::<u64>(n);
-        let &latest = arr.iter().max().unwrap();
-        let mut left = latest;
-        let mut right = latest + k;
-        for a in arr {
-            if is_on(k, a, left) {
-                right = right.min(left - (left - a) % (2 * k) + k);
-            } else if is_on(k, a, right - 1) {
-                left = left.max(left - (left - a) % (2 * k) + 2 * k);
-            } else {
-                pt.println(-1);
-                continue 'test;
-            }
+        let xc = sc.next::<i64>();
+        let yc = sc.next::<i64>();
+        let mut k = sc.next::<usize>();
+        if k % 2 != 0 {
+            pt.print_iter([xc, yc].iter());
+            k -= 1;
         }
-        pt.println(left);
+        for i in 1..=(k / 2) {
+            let i = i as i64;
+            pt.print_iter([xc - i, yc].iter());
+            pt.print_iter([xc + i, yc].iter());
+        }
     }
 }
 

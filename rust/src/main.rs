@@ -15,58 +15,6 @@ use std::{
     usize,
 };
 
-fn get_med(arr: &Vec<u64>, i_to_remove: usize) -> u64 {
-    let mid = (arr.len() - 1) / 2;
-    if i_to_remove > mid {
-        arr[(arr.len() - 2) / 2]
-    } else if i_to_remove < mid {
-        arr[(arr.len() - 2) / 2 + 1]
-    } else {
-        if arr.len() % 2 == 0 {
-            arr[mid + 1]
-        } else {
-            arr[mid - 1]
-        }
-    }
-}
-
-type U = u64;
-
-fn search(start: U, step: U, p: impl Fn(U) -> bool) -> U {
-    assert!(p(start));
-    let mut index = start;
-    let mut step = step;
-    while step > 0 {
-        if p(index + step) {
-            index += step;
-        } else {
-            step /= 2;
-        }
-    }
-    index + 1
-}
-
-/// The biggest is already taken out.
-fn med_reachable(arr0: &Vec<u64>, arr1: &Vec<u64>, k: u64) -> u64 {
-    let tot_smaller = (arr0.len() + arr1.len() - 1) / 2;
-    search(1, 500_000_000, |med| {
-        let smaller = arr0.partition_point(|&a| a < med);
-        if smaller > tot_smaller {
-            return false;
-        }
-        let smaller = tot_smaller - smaller;
-        let mut k_needed = 0;
-        for i in smaller..arr1.len() {
-            // arr1 must be equal to med
-            if arr1[i] < med {
-                k_needed += med - arr1[i];
-            } else {
-                break;
-            }
-        }
-        return k_needed <= k;
-    }) - 1
-}
 
 fn main() {
     let mut sc = Scanner::new(stdin());
@@ -74,38 +22,9 @@ fn main() {
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
         let n = sc.next::<usize>();
-        let k = sc.next::<u64>();
-        let arr = sc.next_n::<u64>(n);
-        let brr = sc
-            .next_n::<u8>(n)
-            .into_iter()
-            .map(|b| b == 1)
-            .collect::<Vec<_>>();
-        let mut abrr = arr.into_iter().zip(brr.into_iter()).collect::<Vec<_>>();
-        abrr.sort();
-        let arr = abrr.iter().map(|&(a, _b)| a).collect::<Vec<_>>();
-        let brr = abrr.iter().map(|&(_a, b)| b).collect::<Vec<_>>();
-
-        let mut max = arr[arr.len() - 1] + get_med(&arr, arr.len() - 1);
-        for i in 0..n {
-            if brr[i] {
-                if arr[i] + k >= arr[arr.len() - 1] {
-                    max = max.max(arr[i] + k + get_med(&arr, i));
-                }
-            }
-        }
-        let (m, _) = abrr.pop().unwrap();
-        let arr0 = abrr
-            .iter()
-            .filter_map(|&(a, b)| if !b { Some(a) } else { None })
-            .collect::<Vec<_>>();
-        let arr1 = abrr
-            .iter()
-            .filter_map(|&(a, b)| if b { Some(a) } else { None })
-            .collect::<Vec<_>>();
-
-        max = max.max(med_reachable(&arr0, &arr1, k) + m);
-        pt.println(max);
+        let m = sc.next::<usize>();
+        let k = sc.next::<usize>();
+        pt.println(k.min(n)*k.min(m));
     }
 }
 

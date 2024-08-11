@@ -22,9 +22,15 @@ fn main() {
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
         let n = sc.next::<usize>();
-        let m = sc.next::<usize>();
-        let k = sc.next::<usize>();
-        pt.println(k.min(n)*k.min(m));
+        let arr = sc.next_n::<usize>(n);
+        let brr = sc.next_n::<usize>(n);
+        let mut arr2 = arr.clone();
+        arr2.reverse();
+        if arr == brr || arr2 == brr {
+            pt.println("Bob");
+        } else {
+            pt.println("Alice");
+        }
     }
 }
 

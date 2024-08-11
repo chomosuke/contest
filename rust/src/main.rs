@@ -15,6 +15,13 @@ use std::{
     usize,
 };
 
+fn dist_sq(xy1: (u64, u64), xy2: (u64, u64)) -> u64 {
+    let x1 = xy1.0;
+    let y1 = xy1.1;
+    let x2 = xy2.0;
+    let y2 = xy2.1;
+    x1.abs_diff(x2).pow(2) + y1.abs_diff(y2).pow(2)
+}
 
 fn main() {
     let mut sc = Scanner::new(stdin());
@@ -22,15 +29,22 @@ fn main() {
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
         let n = sc.next::<usize>();
-        let arr = sc.next_n::<usize>(n);
-        let brr = sc.next_n::<usize>(n);
-        let mut arr2 = arr.clone();
-        arr2.reverse();
-        if arr == brr || arr2 == brr {
-            pt.println("Bob");
-        } else {
-            pt.println("Alice");
+        let mut circles = Vec::with_capacity(n);
+        for _ in 0..n + 2 {
+            let x = sc.next::<u64>();
+            let y = sc.next::<u64>();
+            circles.push((x, y));
         }
+        let end = circles.pop().unwrap();
+        let start = circles.pop().unwrap();
+        let se_dist = dist_sq(start, end);
+        for c in circles {
+            if dist_sq(c, end) <= se_dist {
+                pt.println("NO");
+                continue 'test;
+            }
+        }
+        pt.println("YES");
     }
 }
 

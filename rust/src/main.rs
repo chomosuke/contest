@@ -26,14 +26,20 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
-        let a = sc.next_line().into_bytes();
-        if a.len() < 3 || a[0] != b'1' || a[1] != b'0' || a[2] == b'0' {
-            pt.println("NO");
-            continue 'test;
+        let n = sc.next::<usize>();
+        let mut arr = vec![false; n + 2];
+        let a = sc.next::<usize>();
+        arr[a] = true;
+        let mut follow = true;
+        for _ in 1..n {
+            let a = sc.next::<usize>();
+            assert!(!arr[a]);
+            arr[a] = true;
+            if !arr[a - 1] && !arr[a + 1] {
+                follow = false;
+            }
         }
-        let x = String::from_utf8(a[2..].to_owned()).unwrap();
-        let x = x.parse::<u128>().unwrap();
-        if x >= 2 {
+        if follow {
             pt.println("YES");
         } else {
             pt.println("NO");

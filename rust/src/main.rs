@@ -21,62 +21,39 @@ use std::{
     usize,
 };
 
-#[derive(PartialEq, Eq)]
-enum LR {
-    L,
-    R,
-}
+type I = i128;
+type U = u128;
 
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
-        let n = sc.next::<usize>();
-        let arr = sc.next_n::<u128>(n);
-        let lrs = sc
-            .next_line()
-            .bytes()
-            .map(|b| {
-                if b == b'L' {
-                    LR::L
-                } else if b == b'R' {
-                    LR::R
-                } else {
-                    panic!("Not 'L' or 'R'.");
-                }
-            })
-            .collect::<Vec<_>>();
+        let n = sc.next::<U>();
+        let m = sc.next::<U>();
+        let k = sc.next::<U>();
+        let w = sc.next::<usize>();
+        let mut arr = sc.next_n::<U>(w);
+        arr.sort();
+        arr.reverse();
+        let mut cells = Vec::new();
+        for mi in 0..m {
+            for ni in 0..n {
+                let dist = [mi, ni, m - mi - 1, n - ni - 1];
+                let dist = dist.map(|d| (d + 1).min(k));
 
-        let mut arr_inc_i_sum = Vec::new();
-        for &a in &arr {
-            arr_inc_i_sum.push(arr_inc_i_sum.last().unwrap_or(&0) + a);
-        }
-
-        assert_eq!(lrs.len(), arr_inc_i_sum.len());
-
-        let mut left = 0;
-        let mut right = n - 1;
-        let mut sum = 0;
-        while left < right {
-            while lrs[left] != LR::L && left < right {
-                left += 1;
-            }
-            while lrs[right] != LR::R && left < right {
-                right -= 1;
-            }
-
-            if left < right {
-                if left == 0 {
-                    sum += arr_inc_i_sum[right];
-                } else {
-                    sum += arr_inc_i_sum[right] - arr_inc_i_sum[left - 1];
-                }
-                left += 1;
-                right -= 1;
+                let mk = dist[0] + dist[2] - k;
+                let nk = dist[1] + dist[3] - k;
+                cells.push(mk * nk);
             }
         }
-        pt.println(sum);
+        cells.sort();
+        cells.reverse();
+        let mut ans = 0;
+        for (a, c) in cells.into_iter().zip(arr.into_iter()) {
+            ans += a * c;
+        }
+        pt.println(ans);
     }
 }
 

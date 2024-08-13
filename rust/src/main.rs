@@ -27,22 +27,37 @@ fn main() {
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
         let n = sc.next::<usize>();
-        let mut arr = vec![false; n + 2];
-        let a = sc.next::<usize>();
-        arr[a] = true;
-        let mut follow = true;
-        for _ in 1..n {
-            let a = sc.next::<usize>();
-            assert!(!arr[a]);
-            arr[a] = true;
-            if !arr[a - 1] && !arr[a + 1] {
-                follow = false;
+        let arr = sc.next_n::<i32>(n);
+        let m = sc.next::<usize>();
+        'str: for _ in 0..m {
+            let s = sc.next_line().into_bytes();
+            if s.len() != arr.len() {
+                pt.println("NO");
+                continue 'str;
             }
-        }
-        if follow {
+            let mut map_ac = HashMap::new();
+            let mut map_ca = HashMap::new();
+            for i in 0..n {
+                let a = arr[i];
+                let c = s[i];
+                if let Some(&v) = map_ac.get(&a) {
+                    if v != c {
+                        pt.println("NO");
+                        continue 'str;
+                    }
+                } else {
+                    map_ac.insert(a, c);
+                }
+                if let Some(&v) = map_ca.get(&c) {
+                    if v != a {
+                        pt.println("NO");
+                        continue 'str;
+                    }
+                } else {
+                    map_ca.insert(c, a);
+                }
+            }
             pt.println("YES");
-        } else {
-            pt.println("NO");
         }
     }
 }

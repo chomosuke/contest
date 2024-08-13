@@ -21,85 +21,22 @@ use std::{
     usize,
 };
 
-fn is_happy(
-    pi: usize,
-    childrens: &Vec<Vec<usize>>,
-    p: &Vec<usize>,
-    pi_happy_node: &Vec<bool>,
-) -> bool {
-    let n = p[pi];
-    let children = childrens[n].iter().collect::<HashSet<_>>();
-    let depth = (n + 1).ilog2(); // root has depth 0
-    let deepest_depth = (childrens.len() + 1).ilog2();
-    let sub_tree_size = 2_usize.pow(deepest_depth - depth) - 1;
-    let visited_children = if sub_tree_size > 1 {
-        vec![pi + 1, pi + 1 + sub_tree_size / 2]
-    } else {
-        vec![]
-    };
-    for &vc in &visited_children {
-        if !pi_happy_node[vc] {
-            return false;
-        }
-    }
-    return children == visited_children.iter().collect::<HashSet<_>>();
-}
-
-fn get_parent(size: usize, n: usize) {
-    let depth = (n + 1).ilog2(); // root has depth 0
-}
-
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
-        let n = sc.next::<usize>();
-        let q = sc.next::<usize>();
-        let parents = [None]
-            .into_iter()
-            .chain(sc.next_n::<usize>(n - 1).into_iter().map(|p| Some(p - 1)))
-            .collect::<Vec<_>>();
-        let mut p = sc
-            .next_n::<usize>(n)
-            .into_iter()
-            .map(|p| p - 1)
-            .collect::<Vec<_>>();
-        let mut childrens = vec![Vec::new(); n];
-        for (n, p) in parents.iter().enumerate() {
-            if let &Some(p) = p {
-                childrens[p].push(n);
-            }
+        let a = sc.next_line().into_bytes();
+        if a.len() < 3 || a[0] != b'1' || a[1] != b'0' || a[2] == b'0' {
+            pt.println("NO");
+            continue 'test;
         }
-
-        let mut pi_happy_node = vec![false; n];
-        for i in (0..pi_happy_node.len()).rev() {
-            pi_happy_node[i] = is_happy(i, &childrens, &p, &pi_happy_node);
-        }
-        for _ in 0..q {
-            let x = sc.next::<usize>() - 1;
-            let y = sc.next::<usize>() - 1;
-            p.swap(x, y);
-            let mut i = x;
-            loop {
-                pi_happy_node[i] = is_happy(i, &childrens, &p, &pi_happy_node);
-                if let Some(parent) = parents[i] {
-                    i = parent;
-                } else {
-                    break;
-                }
-            }
-            let mut i = y;
-            loop {
-                pi_happy_node[i] = is_happy(i, &childrens, &p, &pi_happy_node);
-                if let Some(parent) = parents[i] {
-                    // TODO
-                    i = parent;
-                } else {
-                    break;
-                }
-            }
-            pt.println(if pi_happy_node[0] { "YES" } else { "NO" });
+        let x = String::from_utf8(a[2..].to_owned()).unwrap();
+        let x = x.parse::<u128>().unwrap();
+        if x >= 2 {
+            pt.println("YES");
+        } else {
+            pt.println("NO");
         }
     }
 }

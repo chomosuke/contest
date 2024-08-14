@@ -29,28 +29,31 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
-        let mut x = sc.next::<U>();
-        let y = sc.next::<U>();
-        let mut k = sc.next::<U>();
-        while k > 0 && x > 1 {
-            let steps = y - (x % y);
-            if steps <= k {
-                k -= steps;
-                x += steps;
-                while x % y == 0 {
-                    x /= y;
-                }
-            } else {
-                x += k;
-                k = 0;
+        let n = sc.next::<usize>();
+        let l = sc.next::<U>();
+        let r = sc.next::<U>();
+        let arr = sc.next_n::<U>(n);
+        let mut rounds = 0;
+        let mut left = 0;
+        let mut right = 1;
+        let mut prefix_arr = vec![0];
+        for a in arr {
+            prefix_arr.push(prefix_arr.last().unwrap() + a);
+        }
+        while right < prefix_arr.len() {
+            while right < prefix_arr.len() && prefix_arr[right] - prefix_arr[left] < l {
+                right += 1;
+            }
+            while right < prefix_arr.len() && left < right && prefix_arr[right] - prefix_arr[left] > r {
+                left += 1;
+            }
+            if right < prefix_arr.len() && left < right && prefix_arr[right] - prefix_arr[left] >= l && prefix_arr[right] - prefix_arr[left] <= r {
+                rounds += 1;
+                left = right;
+                right = left + 1;
             }
         }
-        if k == 0 {
-            pt.println(x);
-        } else {
-            // x == 1
-            pt.println(1 + k % (y - 1));
-        }
+        pt.println(rounds);
     }
 }
 

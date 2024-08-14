@@ -29,14 +29,27 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
-        let x1 = sc.next::<U>();
-        let y1 = sc.next::<U>();
-        let x2 = sc.next::<U>();
-        let y2 = sc.next::<U>();
-        if (y1 <= x1 && x2 <= y2) || (x1 <= y1 && y2 <= x2) {
-            pt.println("NO");
+        let mut x = sc.next::<U>();
+        let y = sc.next::<U>();
+        let mut k = sc.next::<U>();
+        while k > 0 && x > 1 {
+            let steps = y - (x % y);
+            if steps <= k {
+                k -= steps;
+                x += steps;
+                while x % y == 0 {
+                    x /= y;
+                }
+            } else {
+                x += k;
+                k = 0;
+            }
+        }
+        if k == 0 {
+            pt.println(x);
         } else {
-            pt.println("YES");
+            // x == 1
+            pt.println(1 + k % (y - 1));
         }
     }
 }

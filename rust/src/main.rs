@@ -29,31 +29,15 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
-        let n = sc.next::<U>();
-        let m = sc.next::<U>();
-        let k = sc.next::<U>();
-        let w = sc.next::<usize>();
-        let mut arr = sc.next_n::<U>(w);
-        arr.sort();
-        arr.reverse();
-        let mut cells = Vec::new();
-        for mi in 0..m {
-            for ni in 0..n {
-                let dist = [mi, ni, m - mi - 1, n - ni - 1];
-                let dist = dist.map(|d| (d + 1).min(k));
-
-                let mk = dist[0] + dist[2] - k;
-                let nk = dist[1] + dist[3] - k;
-                cells.push(mk * nk);
-            }
+        let x1 = sc.next::<U>();
+        let y1 = sc.next::<U>();
+        let x2 = sc.next::<U>();
+        let y2 = sc.next::<U>();
+        if (y1 <= x1 && x2 <= y2) || (x1 <= y1 && y2 <= x2) {
+            pt.println("NO");
+        } else {
+            pt.println("YES");
         }
-        cells.sort();
-        cells.reverse();
-        let mut ans = 0;
-        for (a, c) in cells.into_iter().zip(arr.into_iter()) {
-            ans += a * c;
-        }
-        pt.println(ans);
     }
 }
 

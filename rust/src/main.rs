@@ -24,36 +24,81 @@ use std::{
 type I = i128;
 type U = u128;
 
+/// O(log(x))
+pub fn get_gcd(mut x: I, mut y: I) -> I {
+    while y != 0 {
+        let ty = y;
+        y = x.rem_euclid(y);
+        x = ty;
+    }
+    x
+}
+
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
         let n = sc.next::<usize>();
-        let l = sc.next::<U>();
-        let r = sc.next::<U>();
-        let arr = sc.next_n::<U>(n);
-        let mut rounds = 0;
-        let mut left = 0;
-        let mut right = 1;
-        let mut prefix_arr = vec![0];
-        for a in arr {
-            prefix_arr.push(prefix_arr.last().unwrap() + a);
+        let m = sc.next::<usize>();
+        let k = sc.next::<usize>();
+        let mut ass = Vec::with_capacity(n);
+        for _ in 0..n {
+            ass.push(sc.next_n::<I>(m));
         }
-        while right < prefix_arr.len() {
-            while right < prefix_arr.len() && prefix_arr[right] - prefix_arr[left] < l {
-                right += 1;
-            }
-            while right < prefix_arr.len() && left < right && prefix_arr[right] - prefix_arr[left] > r {
-                left += 1;
-            }
-            if right < prefix_arr.len() && left < right && prefix_arr[right] - prefix_arr[left] >= l && prefix_arr[right] - prefix_arr[left] <= r {
-                rounds += 1;
-                left = right;
-                right = left + 1;
+        let mut capss = Vec::with_capacity(n);
+        for _ in 0..n {
+            capss.push(
+                sc.next_line()
+                    .bytes()
+                    .map(|b| if b == b'1' { 1 } else { -1 })
+                    .collect::<Vec<_>>(),
+            );
+        }
+
+        let mut cap_height_diff = 0;
+        for i in 0..n {
+            for j in 0..m {
+                cap_height_diff += ass[i][j] * capss[i][j];
             }
         }
-        pt.println(rounds);
+
+        let mut prefix_capss = vec![vec![0; m + 1]; n + 1];
+        for i in 0..n {
+            for j in 0..m {
+                prefix_capss[i + 1][j + 1] = prefix_capss[i][j + 1] + prefix_capss[i + 1][j]
+                    - prefix_capss[i][j]
+                    + capss[i][j];
+            }
+        }
+        let mut diffs = Vec::new();
+        for i in 0..(n - k + 1) {
+            for j in 0..(m - k + 1) {
+                let diff = prefix_capss[i + k][j + k] + prefix_capss[i][j]
+                    - prefix_capss[i][j + k]
+                    - prefix_capss[i + k][j];
+                if diff != 0 {
+                    diffs.push(diff);
+                }
+            }
+        }
+        if diffs.is_empty() {
+            if cap_height_diff == 0 {
+                pt.println("YES");
+            } else {
+                pt.println("NO");
+            }
+        } else {
+            let mut gcd = diffs[0];
+            for &diff in diffs.iter().skip(1) {
+                gcd = get_gcd(gcd, diff);
+            }
+            if cap_height_diff % gcd == 0 {
+                pt.println("YES");
+            } else {
+                pt.println("NO");
+            }
+        }
     }
 }
 

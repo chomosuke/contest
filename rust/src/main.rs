@@ -31,33 +31,26 @@ fn main() {
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
-        let mut l1 = sc.next::<U>();
-        let mut r1 = sc.next::<U>();
-        let mut l2 = sc.next::<U>();
-        let mut r2 = sc.next::<U>();
-        if l1 > l2 {
-            mem::swap(&mut l1, &mut l2);
-            mem::swap(&mut r1, &mut r2);
-        }
-        if l1 == l2 {
-            if r1 < r2 {
-                pt.println(r1 - l1 + 1);
-            } else if r1 > r2 {
-                pt.println(r2 - l1 + 1);
+        let n = sc.next::<usize>();
+        let k = sc.next::<U>();
+        let mut arr = sc.next_n::<U>(n);
+        arr.sort();
+        let mut a_score = 0;
+        let mut b_score = 0;
+        for i in 0..arr.len() {
+            if (arr.len() - i) % 2 == 0 {
+                b_score += arr[i];
             } else {
-                pt.println(r1 - l1);
+                a_score += arr[i];
             }
+        }
+        let diff = a_score - b_score;
+        let reducable = if arr.len() % 2 == 0 {
+            diff
         } else {
-            if r1 < l2 {
-                pt.println(1);
-            } else if r1 < r2 {
-                pt.println(r1 - l2 + 2);
-            } else if r1 > r2 {
-                pt.println(r2 - l2 + 2);
-            } else {
-                pt.println(r1 - l2 + 1);
-            }
-        }
+            diff - arr[0]
+        };
+        pt.println(diff - min(k, reducable));
     }
 }
 

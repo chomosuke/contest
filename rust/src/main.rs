@@ -13,7 +13,7 @@ use std::{
     cmp::{max, min, Ordering, Reverse},
     collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, VecDeque},
     fs,
-    io::{stdin, stdout, BufReader},
+    io::{stdin, stdout, BufReader, Stdin, Stdout},
     iter,
     mem::{self, swap},
     ops::{
@@ -26,31 +26,76 @@ use std::{
 type I = i128;
 type U = u128;
 
+fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
+    let n = sc.next::<usize>();
+    let q = sc.next::<usize>();
+    let cs = sc
+        .next_n::<String>(n)
+        .into_iter()
+        .map(|s| {
+            let s = s.chars().collect::<Vec<_>>();
+            [s[0], s[1]]
+        })
+        .collect::<Vec<_>>();
+
+    let mut city_of_colors = HashMap::new();
+    city_of_colors.insert(['B', 'G'], BTreeSet::new());
+    city_of_colors.insert(['B', 'R'], BTreeSet::new());
+    city_of_colors.insert(['B', 'Y'], BTreeSet::new());
+    city_of_colors.insert(['G', 'R'], BTreeSet::new());
+    city_of_colors.insert(['G', 'Y'], BTreeSet::new());
+    city_of_colors.insert(['R', 'Y'], BTreeSet::new());
+    for (i, c) in cs.iter().enumerate() {
+        city_of_colors.get_mut(c).unwrap().insert(i);
+    }
+
+    'q: for _ in 0..q {
+        let mut x = sc.next::<usize>() - 1;
+        let mut y = sc.next::<usize>() - 1;
+        if x > y {
+            mem::swap(&mut x, &mut y);
+        }
+
+        let mut mcs = Vec::new();
+        for i in 0..2 {
+            for j in 0..2 {
+                if cs[x][i] == cs[y][j] {
+                    pt.println(x.abs_diff(y));
+                    continue 'q;
+                }
+                let mut ncs = [cs[x][i], cs[y][j]];
+                ncs.sort();
+                mcs.push(ncs);
+            }
+        }
+
+        let mut dist = usize::MAX;
+        for mc in mcs {
+            let mut ps = Vec::new();
+            if let Some(&p) = city_of_colors[&mc].range(..x).next_back() {
+                ps.push(p);
+            }
+            if let Some(&p) = city_of_colors[&mc].range(x..).next() {
+                ps.push(p);
+            }
+            for p in ps {
+                dist = dist.min(x.abs_diff(p) + y.abs_diff(p));
+            }
+        }
+        if dist == usize::MAX {
+            pt.println(-1);
+        } else {
+            pt.println(dist);
+        }
+    }
+}
+
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
-        let n = sc.next::<usize>();
-        let k = sc.next::<U>();
-        let mut arr = sc.next_n::<U>(n);
-        arr.sort();
-        let mut a_score = 0;
-        let mut b_score = 0;
-        for i in 0..arr.len() {
-            if (arr.len() - i) % 2 == 0 {
-                b_score += arr[i];
-            } else {
-                a_score += arr[i];
-            }
-        }
-        let diff = a_score - b_score;
-        let reducable = if arr.len() % 2 == 0 {
-            diff
-        } else {
-            diff - arr[0]
-        };
-        pt.println(diff - min(k, reducable));
+        solve(&mut sc, &mut pt);
     }
 }
 

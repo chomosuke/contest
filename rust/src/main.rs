@@ -3,7 +3,9 @@
     dead_code,
     clippy::needless_range_loop,
     unused_labels,
-    clippy::ptr_arg
+    clippy::ptr_arg,
+    clippy::comparison_chain,
+    clippy::collapsible_else_if
 )]
 use core::hash::Hash;
 use io::*;
@@ -24,79 +26,36 @@ use std::{
 type I = i128;
 type U = u128;
 
-/// O(log(x))
-pub fn get_gcd(mut x: I, mut y: I) -> I {
-    while y != 0 {
-        let ty = y;
-        y = x.rem_euclid(y);
-        x = ty;
-    }
-    x
-}
-
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let test_cases = sc.next::<usize>();
     'test: for _ in 0..test_cases {
-        let n = sc.next::<usize>();
-        let m = sc.next::<usize>();
-        let k = sc.next::<usize>();
-        let mut ass = Vec::with_capacity(n);
-        for _ in 0..n {
-            ass.push(sc.next_n::<I>(m));
+        let mut l1 = sc.next::<U>();
+        let mut r1 = sc.next::<U>();
+        let mut l2 = sc.next::<U>();
+        let mut r2 = sc.next::<U>();
+        if l1 > l2 {
+            mem::swap(&mut l1, &mut l2);
+            mem::swap(&mut r1, &mut r2);
         }
-        let mut capss = Vec::with_capacity(n);
-        for _ in 0..n {
-            capss.push(
-                sc.next_line()
-                    .bytes()
-                    .map(|b| if b == b'1' { 1 } else { -1 })
-                    .collect::<Vec<_>>(),
-            );
-        }
-
-        let mut cap_height_diff = 0;
-        for i in 0..n {
-            for j in 0..m {
-                cap_height_diff += ass[i][j] * capss[i][j];
-            }
-        }
-
-        let mut prefix_capss = vec![vec![0; m + 1]; n + 1];
-        for i in 0..n {
-            for j in 0..m {
-                prefix_capss[i + 1][j + 1] = prefix_capss[i][j + 1] + prefix_capss[i + 1][j]
-                    - prefix_capss[i][j]
-                    + capss[i][j];
-            }
-        }
-        let mut diffs = Vec::new();
-        for i in 0..(n - k + 1) {
-            for j in 0..(m - k + 1) {
-                let diff = prefix_capss[i + k][j + k] + prefix_capss[i][j]
-                    - prefix_capss[i][j + k]
-                    - prefix_capss[i + k][j];
-                if diff != 0 {
-                    diffs.push(diff);
-                }
-            }
-        }
-        if diffs.is_empty() {
-            if cap_height_diff == 0 {
-                pt.println("YES");
+        if l1 == l2 {
+            if r1 < r2 {
+                pt.println(r1 - l1 + 1);
+            } else if r1 > r2 {
+                pt.println(r2 - l1 + 1);
             } else {
-                pt.println("NO");
+                pt.println(r1 - l1);
             }
         } else {
-            let mut gcd = diffs[0];
-            for &diff in diffs.iter().skip(1) {
-                gcd = get_gcd(gcd, diff);
-            }
-            if cap_height_diff % gcd == 0 {
-                pt.println("YES");
+            if r1 < l2 {
+                pt.println(1);
+            } else if r1 < r2 {
+                pt.println(r1 - l2 + 2);
+            } else if r1 > r2 {
+                pt.println(r2 - l2 + 2);
             } else {
-                pt.println("NO");
+                pt.println(r1 - l2 + 1);
             }
         }
     }

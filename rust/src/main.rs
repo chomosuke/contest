@@ -27,76 +27,18 @@ type I = i128;
 type U = u128;
 
 fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
-    let n = sc.next::<usize>();
-    let q = sc.next::<usize>();
-    let cs = sc
-        .next_n::<String>(n)
-        .into_iter()
-        .map(|s| {
-            let s = s.chars().collect::<Vec<_>>();
-            [s[0], s[1]]
-        })
-        .collect::<Vec<_>>();
-
-    let mut city_of_colors = HashMap::new();
-    city_of_colors.insert(['B', 'G'], BTreeSet::new());
-    city_of_colors.insert(['B', 'R'], BTreeSet::new());
-    city_of_colors.insert(['B', 'Y'], BTreeSet::new());
-    city_of_colors.insert(['G', 'R'], BTreeSet::new());
-    city_of_colors.insert(['G', 'Y'], BTreeSet::new());
-    city_of_colors.insert(['R', 'Y'], BTreeSet::new());
-    for (i, c) in cs.iter().enumerate() {
-        city_of_colors.get_mut(c).unwrap().insert(i);
-    }
-
-    'q: for _ in 0..q {
-        let mut x = sc.next::<usize>() - 1;
-        let mut y = sc.next::<usize>() - 1;
-        if x > y {
-            mem::swap(&mut x, &mut y);
-        }
-
-        let mut mcs = Vec::new();
-        for i in 0..2 {
-            for j in 0..2 {
-                if cs[x][i] == cs[y][j] {
-                    pt.println(x.abs_diff(y));
-                    continue 'q;
-                }
-                let mut ncs = [cs[x][i], cs[y][j]];
-                ncs.sort();
-                mcs.push(ncs);
-            }
-        }
-
-        let mut dist = usize::MAX;
-        for mc in mcs {
-            let mut ps = Vec::new();
-            if let Some(&p) = city_of_colors[&mc].range(..x).next_back() {
-                ps.push(p);
-            }
-            if let Some(&p) = city_of_colors[&mc].range(x..).next() {
-                ps.push(p);
-            }
-            for p in ps {
-                dist = dist.min(x.abs_diff(p) + y.abs_diff(p));
-            }
-        }
-        if dist == usize::MAX {
-            pt.println(-1);
-        } else {
-            pt.println(dist);
-        }
-    }
+    let n = sc.next::<u32>();
+    let ans = 3 * 4_u128.pow(n - 2) * 2 + (n as U - 3) * 4_u128.pow(n - 3) * 9;
+    pt.println(ans);
 }
 
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    let test_cases = sc.next::<usize>();
-    'test: for _ in 0..test_cases {
-        solve(&mut sc, &mut pt);
-    }
+    // let test_cases = sc.next::<usize>();
+    // 'test: for _ in 0..test_cases {
+    solve(&mut sc, &mut pt);
+    // }
 }
 
 mod io {

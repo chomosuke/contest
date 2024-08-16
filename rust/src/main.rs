@@ -26,10 +26,75 @@ use std::{
 type I = i128;
 type U = u128;
 
+fn mat_multi(m1: &Vec<Vec<U>>, m2: &Vec<Vec<U>>, modulo: U) -> Vec<Vec<U>> {
+    let mut mr = vec![vec![0; m2[0].len()]; m1.len()];
+    assert_eq!(m1[0].len(), m2.len());
+    for i in 0..m1.len() {
+        for j in 0..m2[0].len() {
+            for k in 0..m2.len() {
+                mr[i][j] += m2[k][j] * m1[i][k];
+                mr[i][j] %= modulo;
+            }
+        }
+    }
+    mr
+}
+
+fn apply_n<E: Clone>(x: &E, n: U, f: &impl Fn(&E, &E) -> E) -> E {
+    if n == 0 {
+        panic!("This function does not have an Id element.");
+    } else if n == 1 {
+        x.clone()
+    } else if n % 2 == 0 {
+        let x = apply_n(x, n / 2, f);
+        f(&x, &x)
+    } else {
+        f(&apply_n(x, n - 1, f), x)
+    }
+}
+
 fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
-    let n = sc.next::<u32>();
-    let ans = 3 * 4_u128.pow(n - 2) * 2 + (n as U - 3) * 4_u128.pow(n - 3) * 9;
-    pt.println(ans);
+    let n = sc.next::<U>();
+    let m = sc.next::<usize>();
+    let k = sc.next::<usize>();
+    let pairs = sc.next_n::<String>(k).into_iter().map(|s| {
+        let cs = s
+            .into_bytes()
+            .into_iter()
+            .map(|c| {
+                if c.is_ascii_lowercase() {
+                    c - b'a'
+                } else {
+                    assert!(c.is_ascii_uppercase());
+                    26 + c - b'A'
+                }
+            })
+            .collect::<Vec<_>>();
+        [cs[0], cs[1]]
+    });
+
+    if n == 1 {
+        pt.println(m);
+        return;
+    }
+
+    let mut adj_mat = vec![vec![1; m]; m];
+    for [s, d] in pairs {
+        adj_mat[s as usize][d as usize] = 0;
+    }
+
+    let modulo = 10_u128.pow(9) + 7;
+
+    let path_counts = apply_n(&adj_mat, n - 1, &|a, b| mat_multi(a, b, modulo));
+
+    let mut counts = 0;
+    for i in 0..m {
+        for j in 0..m {
+            counts += path_counts[i][j];
+            counts %= modulo;
+        }
+    }
+    pt.println(counts);
 }
 
 fn main() {

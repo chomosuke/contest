@@ -26,75 +26,78 @@ use std::{
 type I = i128;
 type U = u128;
 
-fn mat_multi(m1: &Vec<Vec<U>>, m2: &Vec<Vec<U>>, modulo: U) -> Vec<Vec<U>> {
-    let mut mr = vec![vec![0; m2[0].len()]; m1.len()];
-    assert_eq!(m1[0].len(), m2.len());
-    for i in 0..m1.len() {
-        for j in 0..m2[0].len() {
-            for k in 0..m2.len() {
-                mr[i][j] += m2[k][j] * m1[i][k];
-                mr[i][j] %= modulo;
-            }
-        }
-    }
-    mr
-}
-
-fn apply_n<E: Clone>(x: &E, n: U, f: &impl Fn(&E, &E) -> E) -> E {
+fn apply_n<E: Clone>(x: &E, n: usize, f: &impl Fn(&E, &E) -> E) -> E {
     if n == 0 {
         panic!("This function does not have an Id element.");
     } else if n == 1 {
         x.clone()
     } else if n % 2 == 0 {
-        let x = apply_n(x, n / 2, f);
-        f(&x, &x)
+        if n / 2 == 1 {
+            f(x, x)
+        } else {
+            let x = apply_n(x, n / 2, f);
+            f(&x, &x)
+        }
     } else {
         f(&apply_n(x, n - 1, f), x)
     }
 }
 
+fn l2(cost_count: &Vec<U>, cost_count2: &Vec<U>, modulo: U) -> Vec<U> {
+    let m = cost_count.len();
+    assert_eq!(cost_count.len(), cost_count2.len());
+    let mut new_cost_count = vec![0; m];
+    for i in 0..m {
+        for j in 0..m {
+            new_cost_count[i] += cost_count[j] * cost_count2[(m - j + i) % m];
+            new_cost_count[i] %= modulo;
+        }
+    }
+    new_cost_count
+}
+
 fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
-    let n = sc.next::<U>();
+    let n = sc.next::<usize>();
+    let l = sc.next::<usize>();
     let m = sc.next::<usize>();
-    let k = sc.next::<usize>();
-    let pairs = sc.next_n::<String>(k).into_iter().map(|s| {
-        let cs = s
-            .into_bytes()
-            .into_iter()
-            .map(|c| {
-                if c.is_ascii_lowercase() {
-                    c - b'a'
-                } else {
-                    assert!(c.is_ascii_uppercase());
-                    26 + c - b'A'
-                }
-            })
-            .collect::<Vec<_>>();
-        [cs[0], cs[1]]
-    });
-
-    if n == 1 {
-        pt.println(m);
-        return;
-    }
-
-    let mut adj_mat = vec![vec![1; m]; m];
-    for [s, d] in pairs {
-        adj_mat[s as usize][d as usize] = 0;
-    }
+    let in_cost = sc.next_n::<usize>(n);
+    let bet_cost = sc.next_n::<usize>(n);
+    let out_cost = sc.next_n::<usize>(n);
 
     let modulo = 10_u128.pow(9) + 7;
 
-    let path_counts = apply_n(&adj_mat, n - 1, &|a, b| mat_multi(a, b, modulo));
-
-    let mut counts = 0;
-    for i in 0..m {
-        for j in 0..m {
-            counts += path_counts[i][j];
-            counts %= modulo;
-        }
+    let mut in_cost_count = vec![0; m];
+    for &i in &in_cost {
+        let i = i % m;
+        in_cost_count[i] += 1;
+        in_cost_count[i] %= modulo;
     }
-    pt.println(counts);
+    let mut bet_cost_count = vec![0; m];
+    for &i in &bet_cost {
+        let i = i % m;
+        bet_cost_count[i] += 1;
+        bet_cost_count[i] %= modulo;
+    }
+
+    let bet_cost_count = if l == 2 {
+        let mut b = vec![0; m];
+        b[0] = 1;
+        b
+    } else {
+        apply_n(&bet_cost_count, l - 2, &|a, b| l2(a, b, modulo))
+    };
+
+    let cost_count = l2(&in_cost_count, &bet_cost_count, modulo);
+
+    let mut out_cost_count = vec![0; m];
+    for (&i, &i2) in out_cost.iter().zip(bet_cost.iter()) {
+        let i = (i + i2) % m;
+        out_cost_count[i] += 1;
+        out_cost_count[i] %= modulo;
+    }
+
+    let cost_count = l2(&out_cost_count, &cost_count, modulo);
+    pt.println(cost_count[0]);
 }
 
 fn main() {

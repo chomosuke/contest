@@ -26,87 +26,26 @@ use std::{
 type I = i128;
 type U = u128;
 
-fn apply_n<E: Clone>(x: &E, n: usize, f: &impl Fn(&E, &E) -> E) -> E {
-    if n == 0 {
-        panic!("This function does not have an Id element.");
-    } else if n == 1 {
-        x.clone()
-    } else if n % 2 == 0 {
-        if n / 2 == 1 {
-            f(x, x)
-        } else {
-            let x = apply_n(x, n / 2, f);
-            f(&x, &x)
-        }
-    } else {
-        f(&apply_n(x, n - 1, f), x)
-    }
-}
-
-fn l2(cost_count: &Vec<U>, cost_count2: &Vec<U>, modulo: U) -> Vec<U> {
-    let m = cost_count.len();
-    assert_eq!(cost_count.len(), cost_count2.len());
-    let mut new_cost_count = vec![0; m];
-    for i in 0..m {
-        for j in 0..m {
-            new_cost_count[i] += cost_count[j] * cost_count2[(m - j + i) % m];
-            new_cost_count[i] %= modulo;
-        }
-    }
-    new_cost_count
-}
-
 fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
     let n = sc.next::<usize>();
-    let l = sc.next::<usize>();
-    let m = sc.next::<usize>();
-    let in_cost = sc.next_n::<usize>(n);
-    let bet_cost = sc.next_n::<usize>(n);
-    let out_cost = sc.next_n::<usize>(n);
-
-    let modulo = 10_u128.pow(9) + 7;
-
-    let mut in_cost_count = vec![0; m];
-    for &i in &in_cost {
-        let i = i % m;
-        in_cost_count[i] += 1;
-        in_cost_count[i] %= modulo;
+    let arr = sc.next_n::<U>(n);
+    let mut map = HashMap::<U, usize>::new();
+    for &a in &arr {
+        let e = map.entry(a).or_default();
+        *e += 1;
     }
-    let mut bet_cost_count = vec![0; m];
-    for &i in &bet_cost {
-        let i = i % m;
-        bet_cost_count[i] += 1;
-        bet_cost_count[i] %= modulo;
-    }
-
-    let bet_cost_count = if l == 2 {
-        let mut b = vec![0; m];
-        b[0] = 1;
-        b
-    } else {
-        apply_n(&bet_cost_count, l - 2, &|a, b| l2(a, b, modulo))
-    };
-
-    let cost_count = l2(&in_cost_count, &bet_cost_count, modulo);
-
-    let mut out_cost_count = vec![0; m];
-    for (&i, &i2) in out_cost.iter().zip(bet_cost.iter()) {
-        let i = (i + i2) % m;
-        out_cost_count[i] += 1;
-        out_cost_count[i] %= modulo;
-    }
-
-    let cost_count = l2(&out_cost_count, &cost_count, modulo);
-    pt.println(cost_count[0]);
+    let group = map.into_values().collect::<Vec<_>>();
+    let &m = group.iter().max().unwrap();
+    pt.println(arr.len() - m);
 }
 
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    // let test_cases = sc.next::<usize>();
-    // 'test: for _ in 0..test_cases {
-    solve(&mut sc, &mut pt);
-    // }
+    let test_cases = sc.next::<usize>();
+    'test: for _ in 0..test_cases {
+        solve(&mut sc, &mut pt);
+    }
 }
 
 mod io {

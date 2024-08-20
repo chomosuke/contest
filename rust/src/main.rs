@@ -26,23 +26,44 @@ use std::{
 type I = i128;
 type U = u128;
 
-fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
-    let n = sc.next::<usize>();
-    if n % 2 == 0 {
-        pt.println(-1);
-    } else {
-        let mut i = 1;
-        let mut out = VecDeque::new();
-        out.push_back(i);
-        i += 1;
-        while i <= n {
-            out.push_back(i);
-            i += 1;
-            out.push_front(i);
-            i += 1;
-        }
-        pt.print_iter(out.iter());
+fn query(sc: &mut Scanner<Stdin>, a: usize, b: usize) -> usize {
+    println!("? {} {}", a + 1, b + 1);
+    sc.next::<usize>() - 1
+}
+
+fn ans(edges: &Vec<(usize, usize)>) {
+    print!("!");
+    for (v, u) in edges {
+        print!(" {} {}", v + 1, u + 1);
     }
+    println!();
+}
+
+fn solve(sc: &mut Scanner<Stdin>, _pt: &mut Printer<Stdout>) {
+    let n = sc.next::<usize>();
+    let mut edges = Vec::with_capacity(n);
+    let mut unknown = BTreeSet::new();
+    for i in 1..n {
+        unknown.insert(i);
+    }
+    while let Some(&(mut b)) = unknown.last() {
+        // get an edge
+        let mut a = 0;
+        loop {
+            let x = query(sc, a, b);
+            if x == a {
+                unknown.remove(&b);
+                edges.push((a, b));
+                break;
+            }
+            if unknown.contains(&x) {
+                b = x;
+            } else {
+                a = x;
+            }
+        }
+    }
+    ans(&edges);
 }
 
 fn main() {

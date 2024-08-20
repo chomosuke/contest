@@ -28,15 +28,21 @@ type U = u128;
 
 fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
     let n = sc.next::<usize>();
-    let arr = sc.next_n::<U>(n);
-    let mut map = HashMap::<U, usize>::new();
-    for &a in &arr {
-        let e = map.entry(a).or_default();
-        *e += 1;
+    if n % 2 == 0 {
+        pt.println(-1);
+    } else {
+        let mut i = 1;
+        let mut out = VecDeque::new();
+        out.push_back(i);
+        i += 1;
+        while i <= n {
+            out.push_back(i);
+            i += 1;
+            out.push_front(i);
+            i += 1;
+        }
+        pt.print_iter(out.iter());
     }
-    let group = map.into_values().collect::<Vec<_>>();
-    let &m = group.iter().max().unwrap();
-    pt.println(arr.len() - m);
 }
 
 fn main() {

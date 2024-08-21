@@ -26,71 +26,34 @@ use std::{
 type I = i128;
 type U = u128;
 
-type Int = U;
-
-fn mat_multi(m1: &Vec<Vec<Int>>, m2: &Vec<Vec<Int>>, modulo: Int) -> Vec<Vec<Int>> {
-    let mut mr = vec![vec![0; m2[0].len()]; m1.len()];
-    assert_eq!(m1[0].len(), m2.len());
-    for i in 0..m1.len() {
-        for j in 0..m2[0].len() {
-            for k in 0..m2.len() {
-                mr[i][j] += m2[k][j] * m1[i][k];
-                mr[i][j] %= modulo;
-            }
-        }
-    }
-    mr
-}
-
-fn mat_pow(m: &Vec<Vec<Int>>, n: Int, modulo: Int) -> Vec<Vec<Int>> {
-    if n == 0 {
-        let mut mr = vec![vec![0; m.len()]; m.len()];
-        for i in 0..m.len() {
-            mr[i][i] = 1;
-        }
-        mr
-    } else if n == 1 {
-        m.clone()
-    } else if n % 2 == 0 {
-        let m2 = mat_pow(m, n / 2, modulo);
-        mat_multi(&m2, &m2, modulo)
+fn gcd(a: U, b: U) -> U {
+    let (a, b) = if a < b { (b, a) } else { (a, b) };
+    let m = a % b;
+    if m == 0 {
+        b
     } else {
-        mat_multi(m, &mat_pow(m, n - 1, modulo), modulo)
+        gcd(b, m)
     }
 }
 
 fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
-    let n = sc.next::<U>();
-    let m = sc.next::<usize>();
-
-    let modulo = 10_u128.pow(9) + 7;
-
-    // f(n) = f(n - 1) + f(n - m)
-    // transition matrix:
-    let mut mat = vec![vec![0; m]; m];
-    for i in 1..m {
-        mat[i][i - 1] = 1;
+    let a = sc.next::<U>();
+    let b = sc.next::<U>();
+    let lcm = a * b / gcd(a, b);
+    if lcm == b {
+        pt.println(b * b / a);
+    } else {
+        pt.println(lcm);
     }
-    mat[0][m - 1] = 1;
-    mat[m - 1][m - 1] = 1;
-
-    let v = vec![1; m];
-    if n < m as U {
-        pt.println(1);
-        return;
-    }
-    let mat = mat_pow(&mat, n - m as U + 1, modulo);
-    let v2 = mat_multi(&vec![v], &mat, modulo);
-    pt.println(v2[0][m - 1]);
 }
 
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    // let test_cases = sc.next::<usize>();
-    // 'test: for _ in 0..test_cases {
+    let test_cases = sc.next::<usize>();
+    'test: for _ in 0..test_cases {
         solve(&mut sc, &mut pt);
-    // }
+    }
 }
 
 mod io {

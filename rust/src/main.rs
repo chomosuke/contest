@@ -27,23 +27,37 @@ type I = i128;
 type U = u128;
 
 fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
-    let _n = sc.next::<usize>();
-    let str = sc.next_line().into_bytes();
-    let mut freq = [0_usize; 26];
-    for &b in &str {
-        freq[(b - b'a') as usize] += 1;
+    let n = sc.next::<usize>();
+    let m = sc.next::<U>();
+    let mut arrs = Vec::with_capacity(n);
+    for _ in 0..n {
+        let l = sc.next::<usize>();
+        arrs.push(sc.next_n::<U>(l));
     }
-    let mut end = Vec::new();
-    let mut i = 0;
-    while end.len() < str.len() {
-        if freq[i] > 0 {
-            freq[i] -= 1;
-            end.push((i as u8) + b'a');
-        }
-        i += 1;
-        i %= 26;
+    let missings = arrs
+        .iter()
+        .map(|arr| {
+            let arr = BTreeSet::from_iter(arr.iter().cloned());
+            let mut missing = Vec::new();
+            let mut i = 0;
+            while missing.len() < 2 {
+                if !arr.contains(&i) {
+                    missing.push(i);
+                }
+                i += 1;
+            }
+            [missing[0], missing[1]]
+        })
+        .collect::<Vec<_>>();
+
+    let largest_snd_missing = missings.iter().map(|&[_m, m2]| m2).max().unwrap();
+
+    let mut ans = (m + 1) * largest_snd_missing;
+    if m > largest_snd_missing {
+        let n = m - largest_snd_missing;
+        ans += n * (n + 1) / 2;
     }
-    pt.println(String::from_utf8(end).unwrap());
+    pt.println(ans);
 }
 
 fn main() {

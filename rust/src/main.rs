@@ -24,7 +24,7 @@ use std::{
 };
 
 type I = i128;
-type U = u128;
+type U = u64;
 
 fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
     let n = sc.next::<usize>();
@@ -37,7 +37,7 @@ fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
     let missings = arrs
         .iter()
         .map(|arr| {
-            let arr = BTreeSet::from_iter(arr.iter().cloned());
+            let arr: HashSet<U> = HashSet::from_iter(arr.iter().cloned());
             let mut missing = Vec::new();
             let mut i = 0;
             while missing.len() < 2 {
@@ -50,12 +50,80 @@ fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
         })
         .collect::<Vec<_>>();
 
-    let largest_snd_missing = missings.iter().map(|&[_m, m2]| m2).max().unwrap();
+    // Get duplicated_fst
+    let mut fst_map = HashMap::<U, usize>::new();
+    for &[m1, _m2] in &missings {
+        *fst_map.entry(m1).or_default() += 1;
+    }
+    let duplicated_fst = fst_map
+        .into_iter()
+        .filter_map(|(m1, count)| if count >= 2 { Some(m1) } else { None })
+        .collect::<HashSet<_>>();
 
-    let mut ans = (m + 1) * largest_snd_missing;
-    if m > largest_snd_missing {
-        let n = m - largest_snd_missing;
+    // Get graphs
+    let mut graph = HashMap::<U, Vec<U>>::new();
+    let mut graph_rev = HashMap::<U, Vec<U>>::new();
+    for &[m1, m2] in &missings {
+        graph.entry(m1).or_default().push(m2);
+        graph_rev.entry(m2).or_default().push(m1);
+    }
+
+    // Get largest_reachable
+    let mut reachable = HashSet::new();
+    let mut to_visit = duplicated_fst.into_iter().collect::<VecDeque<_>>();
+    while let Some(n) = to_visit.pop_front() {
+        if !reachable.contains(&n) {
+            reachable.insert(n);
+            if let Some(children) = graph.get(&n) {
+                to_visit.extend(children);
+            }
+        }
+    }
+    reachable.extend(missings.iter().map(|&[f, _]| f));
+    let &largest_reachable = reachable.iter().max().unwrap();
+
+    let mut snd_missings = missings
+        .iter()
+        .map(|&[_m, m2]| m2)
+        .filter(|&m2| m2 > largest_reachable)
+        .collect::<Vec<_>>();
+
+    snd_missings.sort();
+
+    let mut to_snd_missing = Vec::new();
+    let mut all_to_snd = HashSet::new();
+    for &m in snd_missings.iter().rev() {
+        let mut to_snd = HashSet::new();
+        let mut to_visit = VecDeque::new();
+        to_visit.push_back(m);
+        while let Some(n) = to_visit.pop_front() {
+            if !all_to_snd.contains(&n) {
+                all_to_snd.insert(n);
+                to_snd.insert(n);
+                if let Some(children) = graph_rev.get(&n) {
+                    to_visit.extend(children);
+                }
+            }
+        }
+        to_snd_missing.push((m, to_snd));
+    }
+
+    let mut ans = (m + 1) * largest_reachable;
+    if m > largest_reachable {
+        let n = m - largest_reachable;
         ans += n * (n + 1) / 2;
+    }
+
+    for (higher, to_m) in to_snd_missing {
+        for t in to_m {
+            if t <= m {
+                if largest_reachable > t {
+                    ans += higher - largest_reachable;
+                } else {
+                    ans += higher - t;
+                }
+            }
+        }
     }
     pt.println(ans);
 }

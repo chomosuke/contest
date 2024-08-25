@@ -27,13 +27,15 @@ type I = i128;
 type U = u128;
 
 fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
-    sc.next::<usize>();
-    let str = sc.next_line().into_bytes();
-    if str[0] != str[str.len() - 1] {
-        pt.println("Yes");
-    } else {
-        pt.println("No");
+    let n = sc.next::<usize>();
+    let mut arr = sc.next_n::<U>(n);
+    arr.sort();
+    let mut arr = VecDeque::from(arr);
+    while arr.len() > 2 {
+        arr.pop_front();
+        arr.pop_back();
     }
+    pt.println(arr.into_iter().max().unwrap());
 }
 
 fn main() {

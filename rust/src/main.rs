@@ -26,69 +26,23 @@ use std::{
 type I = i128;
 type U = u128;
 
-/// Will look for first i such that p(i) == false.
-fn search(start: i32, step: i32, p: impl Fn(i32) -> bool) -> i32 {
-    assert!(p(start));
-    let mut index = start;
-    let mut step = step;
-    while step > 0 {
-        if p(index + step) {
-            index += step;
-        } else {
-            step /= 2;
-        }
-    }
-    index + 1
-}
-
 fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
-    let d = "shikanokonokonokoshitantan".bytes();
-    let s = "brrskibididopdopyesyesshtibididipdipww".bytes();
-    let mut d_map = [0; 26];
-    let mut s_map = [0; 26];
-    for d in d {
-        d_map[(d - b'a') as usize] += 1;
-    }
-    for s in s {
-        s_map[(s - b'a') as usize] += 1;
-    }
-
-    let n = sc.next::<i32>();
+    sc.next::<usize>();
     let str = sc.next_line().into_bytes();
-    let mut str_map = [0; 26];
-    for s in str {
-        str_map[(s - b'a') as usize] += 1;
-    }
-
-    let mut max_br = 0;
-    for d_count in 0..n * 2 {
-        let mut str_map = str_map;
-        for i in 0..26 {
-            str_map[i] -= d_map[i] * d_count;
-            if str_map[i] < 0 {
-                pt.println(max_br);
-                return;
-            }
-        }
-        let s_count = search(0, n, |s_count| {
-            for i in 0..26 {
-                if str_map[i] < s_map[i] * s_count {
-                    return false;
-                }
-            }
-            true
-        }) - 1;
-        max_br = max_br.max(d_count + s_count);
+    if str[0] != str[str.len() - 1] {
+        pt.println("Yes");
+    } else {
+        pt.println("No");
     }
 }
 
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    // let test_cases = sc.next::<usize>();
-    // 'test: for _ in 0..test_cases {
+    let test_cases = sc.next::<usize>();
+    'test: for _ in 0..test_cases {
         solve(&mut sc, &mut pt);
-    // }
+    }
 }
 
 mod io {

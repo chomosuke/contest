@@ -27,15 +27,23 @@ type I = i128;
 type U = u128;
 
 fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
-    let n = sc.next::<usize>();
-    let mut arr = sc.next_n::<U>(n);
-    arr.sort();
-    let mut arr = VecDeque::from(arr);
-    while arr.len() > 2 {
-        arr.pop_front();
-        arr.pop_back();
+    let _n = sc.next::<usize>();
+    let str = sc.next_line().into_bytes();
+    let mut freq = [0_usize; 26];
+    for &b in &str {
+        freq[(b - b'a') as usize] += 1;
     }
-    pt.println(arr.into_iter().max().unwrap());
+    let mut end = Vec::new();
+    let mut i = 0;
+    while end.len() < str.len() {
+        if freq[i] > 0 {
+            freq[i] -= 1;
+            end.push((i as u8) + b'a');
+        }
+        i += 1;
+        i %= 26;
+    }
+    pt.println(String::from_utf8(end).unwrap());
 }
 
 fn main() {

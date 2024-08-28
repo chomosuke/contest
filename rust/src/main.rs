@@ -26,79 +26,173 @@ use std::{
 type I = i128;
 type U = u128;
 
-fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
-    let n = sc.next::<usize>();
-    let prr = sc.next_n(n).into_iter().map(|p: usize| p).collect::<Vec<usize>>();
-    // Find completely connected components.
-    // Every completely connected components with more than 2 members where
-    // the smallest value is l and the largest value is r can be fixed with
-    // interval (l + r - 1, l + r) or (l + r, l + r + 1).
-    let mut visited = vec![false; n];
-    let mut components = Vec::new();
-    for &p in &prr {
-        if !visited[p - 1] {
-            visited[p - 1] = true;
-            let mut component = Vec::new();
-            let mut i = p;
-            while prr[i - 1] != p {
-                i = prr[i - 1];
-                visited[i - 1] = true;
-                component.push(i);
-            }
-            if !component.is_empty() {
-                component.push(p);
-                components.push(component);
-            }
-        }
+type Int = i128;
+
+fn find_linear_comb(a: Int, b: Int) -> (Int, Int, Int) {
+    let mut x_a1 = 1;
+    let mut y_a1 = 0;
+    let mut x_b1 = 0;
+    let mut y_b1 = 1;
+    let mut a1 = a;
+    let mut b1 = b;
+    while b1 != 0 {
+        let q = a1 / b1;
+        let a2 = b1;
+        let b2 = a1 - q * b1;
+        let x_a2 = x_b1;
+        let y_a2 = y_b1;
+        let x_b2 = x_a1 - q * x_b1;
+        let y_b2 = y_a1 - q * y_b1;
+
+        a1 = a2;
+        b1 = b2;
+        x_a1 = x_a2;
+        y_a1 = y_a2;
+        x_b1 = x_b2;
+        y_b1 = y_b2;
+    }
+    (a1, x_a1, y_a1)
+}
+
+struct LDESIter {
+    xy: (Int, Int),
+    diff: (Int, Int),
+    k_range: Range<Int>,
+}
+impl Iterator for LDESIter {
+    type Item = (Int, Int);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let k = self.k_range.next()?;
+        Some((self.xy.0 + k * self.diff.0, self.xy.1 + k * self.diff.1))
+    }
+}
+
+fn linear_diophantine_eq_sols(
+    a: Int,
+    b: Int,
+    c: Int,
+    x_range: Range<Int>,
+    y_range: Range<Int>,
+) -> impl Iterator<Item = (Int, Int)> {
+    let (gcd, x, y) = find_linear_comb(a, b);
+    if c % gcd != 0 {
+        return LDESIter {
+            xy: (0, 0),
+            diff: (0, 0),
+            k_range: 0..0,
+        };
+    }
+    let n = c / gcd;
+    let x = x * n;
+    let y = y * n;
+
+    let mut x_diff = b / gcd;
+    let mut y_diff = -a / gcd;
+    if x_diff < 0 {
+        x_diff = -x_diff;
+        y_diff = -y_diff;
     }
 
-    // handle special case
-    if components.is_empty() {
-        // everything can do
-        pt.println((n * 2 + 1) * (n * 2) / 2);
-        return;
-    }
+    let x_end = x_range.end - 1;
+    let x_start = x_range.start;
+    let y_end = y_range.end - 1;
+    let y_start = y_range.start;
 
-    let mut sum = 0;
-    if components.iter().all(|c| c.len() == 2) {
-        let s = components[0][0] + components[0][1];
-        if components.iter().skip(1).all(|c| c[0] + c[1] == s) {
-            sum += 1;
-        }
-    }
-
-    let mut max_swap = 1;
-    let mut min_swap = n;
-    for &p in &prr {
-        if p != prr[p - 1] {
-            max_swap = max_swap.max(p);
-            min_swap = min_swap.min(p);
-        }
-    }
-
-    let mut l = 1;
-    let mut r = max_swap + 1;
-    while r <= n * 2 {
-        if l <= min_swap + n {
-            sum += n * 2 - r + 1;
+    fn div_ceil(x: Int, y: Int) -> Int {
+        if (x < 0) != (y < 0) {
+            x / y
         } else {
-            break;
+            (x - 1) / y + 1
         }
-
-        l += 1;
-        r = r.max(l + 1);
     }
 
-    pt.println(sum);
+    fn div_floor(x: Int, y: Int) -> Int {
+        if (x < 0) != (y < 0) {
+            (x + 1) / y - 1
+        } else {
+            x / y
+        }
+    }
+
+    let mut k_start = Int::MIN;
+    let mut k_end = Int::MAX;
+    if x_diff == 0 {
+        if x_start <= x && x < x_end {
+            return LDESIter {
+                xy: (x, 0),
+                diff: (0, 1),
+                k_range: y_start..(y_end + 1),
+            };
+        } else {
+            return LDESIter {
+                xy: (0, 0),
+                diff: (0, 0),
+                k_range: 0..0,
+            };
+        }
+    }
+    if x_diff < 0 {
+        k_start = k_start.max(div_ceil(x_end - x, x_diff));
+        k_end = k_end.min(div_floor(x_start - x, x_diff));
+    } else {
+        k_start = k_start.max(div_ceil(x_start - x, x_diff));
+        k_end = k_end.min(div_floor(x_end - x, x_diff));
+    }
+
+    if y_diff == 0 {
+        if y_start <= y && y < y_end {
+            return LDESIter {
+                xy: (0, y),
+                diff: (1, 0),
+                k_range: x_start..(x_end + 1),
+            };
+        } else {
+            return LDESIter {
+                xy: (0, 0),
+                diff: (0, 0),
+                k_range: 0..0,
+            };
+        }
+    }
+    if y_diff < 0 {
+        k_start = k_start.max(div_ceil(y_end - y, y_diff));
+        k_end = k_end.min(div_floor(y_start - y, y_diff));
+    } else {
+        k_start = k_start.max(div_ceil(y_start - y, y_diff));
+        k_end = k_end.min(div_floor(y_end - y, y_diff));
+    }
+
+    LDESIter {
+        xy: (x, y),
+        diff: (x_diff, y_diff),
+        k_range: k_start..(k_end + 1),
+    }
+}
+
+fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
+    let x = sc.next::<I>();
+    let y = sc.next::<I>();
+    let range = -(10_i128.pow(18))..(10_i128.pow(18) + 1);
+    if let Some((b, a)) = linear_diophantine_eq_sols(x, -y, 2, range.clone(), range.clone()).next()
+    {
+        pt.println(format!("{a} {b}"));
+    } else if let Some((b, a)) =
+        linear_diophantine_eq_sols(x, -y, -2, range.clone(), range.clone()).next()
+    {
+        pt.println(format!("{a} {b}"));
+    } else {
+        pt.println(-1);
+    }
 }
 
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    let test_cases = sc.next::<usize>();
-    'test: for _ in 0..test_cases {
-        solve(&mut sc, &mut pt);
-    }
+    // let test_cases = sc.next::<usize>();
+    // 'test: for _ in 0..test_cases {
+    solve(&mut sc, &mut pt);
+    // }
 }
 
 mod io {

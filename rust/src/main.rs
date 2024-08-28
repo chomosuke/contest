@@ -18,114 +18,78 @@ use std::{
     mem::{self, swap},
     ops::{
         Bound::{Excluded, Included, Unbounded},
-        Deref, RangeBounds,
+        Deref, Range, RangeBounds,
     },
     usize,
 };
 
 type I = i128;
-type U = u64;
+type U = u128;
 
 fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
     let n = sc.next::<usize>();
-    let m = sc.next::<U>();
-    let mut arrs = Vec::with_capacity(n);
-    for _ in 0..n {
-        let l = sc.next::<usize>();
-        arrs.push(sc.next_n::<U>(l));
-    }
-    let missings = arrs
-        .iter()
-        .map(|arr| {
-            let arr: HashSet<U> = HashSet::from_iter(arr.iter().cloned());
-            let mut missing = Vec::new();
-            let mut i = 0;
-            while missing.len() < 2 {
-                if !arr.contains(&i) {
-                    missing.push(i);
-                }
-                i += 1;
+    let prr = sc.next_n(n).into_iter().map(|p: usize| p).collect::<Vec<usize>>();
+    // Find completely connected components.
+    // Every completely connected components with more than 2 members where
+    // the smallest value is l and the largest value is r can be fixed with
+    // interval (l + r - 1, l + r) or (l + r, l + r + 1).
+    let mut visited = vec![false; n];
+    let mut components = Vec::new();
+    for &p in &prr {
+        if !visited[p - 1] {
+            visited[p - 1] = true;
+            let mut component = Vec::new();
+            let mut i = p;
+            while prr[i - 1] != p {
+                i = prr[i - 1];
+                visited[i - 1] = true;
+                component.push(i);
             }
-            [missing[0], missing[1]]
-        })
-        .collect::<Vec<_>>();
-
-    // Get duplicated_fst
-    let mut fst_map = HashMap::<U, usize>::new();
-    for &[m1, _m2] in &missings {
-        *fst_map.entry(m1).or_default() += 1;
-    }
-    let duplicated_fst = fst_map
-        .into_iter()
-        .filter_map(|(m1, count)| if count >= 2 { Some(m1) } else { None })
-        .collect::<HashSet<_>>();
-
-    // Get graphs
-    let mut graph = HashMap::<U, Vec<U>>::new();
-    let mut graph_rev = HashMap::<U, Vec<U>>::new();
-    for &[m1, m2] in &missings {
-        graph.entry(m1).or_default().push(m2);
-        graph_rev.entry(m2).or_default().push(m1);
-    }
-
-    // Get largest_reachable
-    let mut reachable = HashSet::new();
-    let mut to_visit = duplicated_fst.into_iter().collect::<VecDeque<_>>();
-    while let Some(n) = to_visit.pop_front() {
-        if !reachable.contains(&n) {
-            reachable.insert(n);
-            if let Some(children) = graph.get(&n) {
-                to_visit.extend(children);
+            if !component.is_empty() {
+                component.push(p);
+                components.push(component);
             }
         }
     }
-    reachable.extend(missings.iter().map(|&[f, _]| f));
-    let &largest_reachable = reachable.iter().max().unwrap();
 
-    let mut snd_missings = missings
-        .iter()
-        .map(|&[_m, m2]| m2)
-        .filter(|&m2| m2 > largest_reachable)
-        .collect::<Vec<_>>();
-
-    snd_missings.sort();
-
-    let mut to_snd_missing = Vec::new();
-    let mut all_to_snd = HashSet::new();
-    for &m in snd_missings.iter().rev() {
-        let mut to_snd = HashSet::new();
-        let mut to_visit = VecDeque::new();
-        to_visit.push_back(m);
-        while let Some(n) = to_visit.pop_front() {
-            if !all_to_snd.contains(&n) {
-                all_to_snd.insert(n);
-                to_snd.insert(n);
-                if let Some(children) = graph_rev.get(&n) {
-                    to_visit.extend(children);
-                }
-            }
-        }
-        to_snd_missing.push((m, to_snd));
+    // handle special case
+    if components.is_empty() {
+        // everything can do
+        pt.println((n * 2 + 1) * (n * 2) / 2);
+        return;
     }
 
-    let mut ans = (m + 1) * largest_reachable;
-    if m > largest_reachable {
-        let n = m - largest_reachable;
-        ans += n * (n + 1) / 2;
-    }
-
-    for (higher, to_m) in to_snd_missing {
-        for t in to_m {
-            if t <= m {
-                if largest_reachable > t {
-                    ans += higher - largest_reachable;
-                } else {
-                    ans += higher - t;
-                }
-            }
+    let mut sum = 0;
+    if components.iter().all(|c| c.len() == 2) {
+        let s = components[0][0] + components[0][1];
+        if components.iter().skip(1).all(|c| c[0] + c[1] == s) {
+            sum += 1;
         }
     }
-    pt.println(ans);
+
+    let mut max_swap = 1;
+    let mut min_swap = n;
+    for &p in &prr {
+        if p != prr[p - 1] {
+            max_swap = max_swap.max(p);
+            min_swap = min_swap.min(p);
+        }
+    }
+
+    let mut l = 1;
+    let mut r = max_swap + 1;
+    while r <= n * 2 {
+        if l <= min_swap + n {
+            sum += n * 2 - r + 1;
+        } else {
+            break;
+        }
+
+        l += 1;
+        r = r.max(l + 1);
+    }
+
+    pt.println(sum);
 }
 
 fn main() {

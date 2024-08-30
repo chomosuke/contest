@@ -26,37 +26,103 @@ use std::{
 type I = i128;
 type U = u128;
 
-/// O(log(x))
-pub fn get_gcd(mut x: U, mut y: U) -> U {
-    while y != 0 {
-        let ty = y;
-        y = x.rem_euclid(y);
-        x = ty;
+pub fn edges_to_adj_nodes(edges: &[(usize, usize)]) -> Vec<Vec<usize>> {
+    let mut adj_nodes = Vec::new();
+    for &(u, v) in edges {
+        let max_node = max(u, v);
+        while max_node >= adj_nodes.len() {
+            adj_nodes.push(Vec::new());
+        }
+        adj_nodes[u].push(v);
+        adj_nodes[v].push(u);
     }
-    x
+    adj_nodes
+}
+
+pub struct RootedTree {
+    parents: Vec<Option<usize>>,
+    childrens: Vec<Vec<usize>>,
+}
+
+pub fn root_tree(adj_nodes: &Vec<Vec<usize>>, root: usize) -> RootedTree {
+    let mut parents = vec![None; adj_nodes.len()];
+    let mut childrens = vec![Vec::new(); adj_nodes.len()];
+
+    let mut to_visit = adj_nodes[root]
+        .iter()
+        .map(|&n| (root, n))
+        .collect::<Vec<_>>();
+    let mut visited = vec![false; adj_nodes.len()];
+    while let Some((parent, node)) = to_visit.pop() {
+        assert!(!visited[node], "There's a cycle in your tree");
+        visited[node] = true;
+        parents[node] = Some(parent);
+        childrens[parent].push(node);
+        to_visit.extend(adj_nodes[node].iter().filter_map(|&n| {
+            if n == parent {
+                None
+            } else {
+                Some((node, n))
+            }
+        }));
+    }
+
+    RootedTree { parents, childrens }
 }
 
 fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
     let n = sc.next::<usize>();
-    let a = sc.next::<U>();
-    let b = sc.next::<U>();
-    let cs = sc.next_n::<U>(n);
-    let g = get_gcd(a, b);
-    let mut cs = cs.into_iter().map(|c| c % g).collect::<Vec<_>>();
-    cs.sort_unstable();
-    let mut biggest_gap = 0;
-    for i in 0..cs.len() {
-        if i + 1 < cs.len() {
-            let c1 = cs[i];
-            let c2 = cs[i + 1];
-            biggest_gap = biggest_gap.max(c2 - c1);
-        } else {
-            let c1 = cs[i];
-            let c2 = cs[0] + g;
-            biggest_gap = biggest_gap.max(c2 - c1);
+    let mut edges = Vec::with_capacity(n);
+    for _ in 0..n - 1 {
+        let u = sc.next::<usize>() - 1;
+        let v = sc.next::<usize>() - 1;
+        edges.push((u, v));
+    }
+    let RootedTree { parents, childrens } = root_tree(&edges_to_adj_nodes(&edges), 0);
+    let values = sc.next_line().into_bytes();
+    let mut root_value = values[0];
+    let mut leaf_value = Vec::new();
+    let mut node_blank = 0;
+    for (i, c) in childrens.into_iter().enumerate() {
+        if c.is_empty() {
+            leaf_value.push(values[i]);
+        } else if i != 0 && values[i] == b'?' {
+            node_blank += 1;
         }
     }
-    pt.println(g - biggest_gap);
+    let count0 = leaf_value.iter().filter(|&&v| v == b'0').count();
+    let count1 = leaf_value.iter().filter(|&&v| v == b'1').count();
+    let count_blank = leaf_value.iter().filter(|&&v| v == b'?').count();
+
+    let mut iris_turn = true;
+    if root_value != b'?' || count1 != count0 || count_blank % 2 == 0 || node_blank % 2 == 0 {
+        if root_value == b'?' {
+            iris_turn = false;
+            let count0 = leaf_value.iter().filter(|&&v| v == b'0').count();
+            let count1 = leaf_value.iter().filter(|&&v| v == b'1').count();
+            if count0 > count1 {
+                root_value = b'1';
+            } else {
+                root_value = b'0';
+            }
+        }
+        let mut count_same = leaf_value.iter().filter(|&&v| v == root_value).count();
+        let mut count_blank = count_blank;
+        let mut count_diff = leaf_value.len() - count_same - count_blank;
+        while count_blank > 0 {
+            if iris_turn {
+                iris_turn = false;
+                count_diff += 1;
+            } else {
+                iris_turn = true;
+                count_same += 1;
+            }
+            count_blank -= 1;
+        }
+        pt.println(count_diff);
+    } else {
+        pt.println(count1 + count_blank / 2 + 1);
+    }
 }
 
 fn main() {

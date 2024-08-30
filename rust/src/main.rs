@@ -26,16 +26,37 @@ use std::{
 type I = i128;
 type U = u128;
 
+/// O(log(x))
+pub fn get_gcd(mut x: U, mut y: U) -> U {
+    while y != 0 {
+        let ty = y;
+        y = x.rem_euclid(y);
+        x = ty;
+    }
+    x
+}
+
 fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
-    let r = sc.next::<U>();
-    let l = sc.next::<U>();
-    let mut odd_count = 0;
-    for n in r..=l {
-        if n % 2 == 1 {
-            odd_count += 1;
+    let n = sc.next::<usize>();
+    let a = sc.next::<U>();
+    let b = sc.next::<U>();
+    let cs = sc.next_n::<U>(n);
+    let g = get_gcd(a, b);
+    let mut cs = cs.into_iter().map(|c| c % g).collect::<Vec<_>>();
+    cs.sort_unstable();
+    let mut biggest_gap = 0;
+    for i in 0..cs.len() {
+        if i + 1 < cs.len() {
+            let c1 = cs[i];
+            let c2 = cs[i + 1];
+            biggest_gap = biggest_gap.max(c2 - c1);
+        } else {
+            let c1 = cs[i];
+            let c2 = cs[0] + g;
+            biggest_gap = biggest_gap.max(c2 - c1);
         }
     }
-    pt.println(odd_count / 2);
+    pt.println(g - biggest_gap);
 }
 
 fn main() {

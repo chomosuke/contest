@@ -26,103 +26,59 @@ use std::{
 type I = i128;
 type U = u128;
 
-pub fn edges_to_adj_nodes(edges: &[(usize, usize)]) -> Vec<Vec<usize>> {
-    let mut adj_nodes = Vec::new();
-    for &(u, v) in edges {
-        let max_node = max(u, v);
-        while max_node >= adj_nodes.len() {
-            adj_nodes.push(Vec::new());
+/// Will look for last i such that p(i) == true.
+fn search(start: U, step: U, p: impl Fn(U) -> bool) -> U {
+    assert!(p(start));
+    let mut index = start;
+    let mut step = step;
+    while step > 0 {
+        if p(index + step) {
+            index += step;
+        } else {
+            step /= 2;
         }
-        adj_nodes[u].push(v);
-        adj_nodes[v].push(u);
     }
-    adj_nodes
-}
-
-pub struct RootedTree {
-    parents: Vec<Option<usize>>,
-    childrens: Vec<Vec<usize>>,
-}
-
-pub fn root_tree(adj_nodes: &Vec<Vec<usize>>, root: usize) -> RootedTree {
-    let mut parents = vec![None; adj_nodes.len()];
-    let mut childrens = vec![Vec::new(); adj_nodes.len()];
-
-    let mut to_visit = adj_nodes[root]
-        .iter()
-        .map(|&n| (root, n))
-        .collect::<Vec<_>>();
-    let mut visited = vec![false; adj_nodes.len()];
-    while let Some((parent, node)) = to_visit.pop() {
-        assert!(!visited[node], "There's a cycle in your tree");
-        visited[node] = true;
-        parents[node] = Some(parent);
-        childrens[parent].push(node);
-        to_visit.extend(adj_nodes[node].iter().filter_map(|&n| {
-            if n == parent {
-                None
-            } else {
-                Some((node, n))
-            }
-        }));
-    }
-
-    RootedTree { parents, childrens }
+    index
 }
 
 fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
     let n = sc.next::<usize>();
-    let mut edges = Vec::with_capacity(n);
-    for _ in 0..n - 1 {
-        let u = sc.next::<usize>() - 1;
-        let v = sc.next::<usize>() - 1;
-        edges.push((u, v));
-    }
-    let RootedTree { parents, childrens } = root_tree(&edges_to_adj_nodes(&edges), 0);
-    let values = sc.next_line().into_bytes();
-    let mut root_value = values[0];
-    let mut leaf_value = Vec::new();
-    let mut node_blank = 0;
-    for (i, c) in childrens.into_iter().enumerate() {
-        if c.is_empty() {
-            leaf_value.push(values[i]);
-        } else if i != 0 && values[i] == b'?' {
-            node_blank += 1;
-        }
-    }
-    let count0 = leaf_value.iter().filter(|&&v| v == b'0').count();
-    let count1 = leaf_value.iter().filter(|&&v| v == b'1').count();
-    let count_blank = leaf_value.iter().filter(|&&v| v == b'?').count();
+    let k = sc.next::<U>();
+    let mut freq = sc.next_n::<U>(n);
+    let n = n as U;
+    freq.sort();
 
-    let mut iris_turn = true;
-    if root_value != b'?' || count1 != count0 || count_blank % 2 == 0 || node_blank % 2 == 0 {
-        if root_value == b'?' {
-            iris_turn = false;
-            let count0 = leaf_value.iter().filter(|&&v| v == b'0').count();
-            let count1 = leaf_value.iter().filter(|&&v| v == b'1').count();
-            if count0 > count1 {
-                root_value = b'1';
+    let score = search(freq[0] * n - n + 1, k + n, |score| {
+        let shortest = (score + n - 1) / n;
+        let snd_shortest_count = (score + n - 1) % n;
+        let mut shortest_count = n - snd_shortest_count;
+        let snd_shortest = shortest + 1;
+
+        let mut k = k;
+        for &f in &freq {
+            if shortest_count > 0 {
+                shortest_count -= 1;
+                if f < shortest {
+                    if shortest - f <= k {
+                        k -= shortest - f;
+                    } else {
+                        return false;
+                    }
+                }
             } else {
-                root_value = b'0';
+                if f < snd_shortest {
+                    if snd_shortest - f <= k {
+                        k -= snd_shortest - f;
+                    } else {
+                        return false;
+                    }
+                }
             }
         }
-        let mut count_same = leaf_value.iter().filter(|&&v| v == root_value).count();
-        let mut count_blank = count_blank;
-        let mut count_diff = leaf_value.len() - count_same - count_blank;
-        while count_blank > 0 {
-            if iris_turn {
-                iris_turn = false;
-                count_diff += 1;
-            } else {
-                iris_turn = true;
-                count_same += 1;
-            }
-            count_blank -= 1;
-        }
-        pt.println(count_diff);
-    } else {
-        pt.println(count1 + count_blank / 2 + 1);
-    }
+        true
+    });
+
+    pt.println(score);
 }
 
 fn main() {

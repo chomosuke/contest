@@ -20,39 +20,20 @@ use std::{
         Bound::{Excluded, Included, Unbounded},
         Deref, Range, RangeBounds,
     },
-    usize,
 };
 
 type I = i128;
 type U = u128;
 
-/// Will look for last i such that p(i) == true.
-fn search(start: U, step: U, p: impl Fn(U) -> bool) -> U {
-    // assert!(p(start));
-    let mut index = start;
-    let mut step = step;
-    while step > 0 {
-        if p(index + step) {
-            index += step;
-        } else {
-            step /= 2;
-        }
-    }
-    index
-}
-
 fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
-    let n = sc.next::<U>();
-    let m = sc.next::<U>();
-    let mut sum = 0;
-    for b in 1..=m {
-        let max_k = (n + b) / (b * b);
-        let min_k = if b == 1 { 2 } else { 1 };
-        if max_k >= min_k {
-            sum += max_k - min_k + 1;
-        }
+    let n = sc.next::<usize>();
+    let letters = "aeiou".as_bytes();
+    let mut i = 0;
+    while i < n {
+        pt.print(letters[i * letters.len() / n] as char);
+        i += 1;
     }
-    pt.println(sum);
+    pt.println("");
 }
 
 fn main() {

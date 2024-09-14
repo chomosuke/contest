@@ -26,14 +26,24 @@ type I = i128;
 type U = u128;
 
 fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
-    let n = sc.next::<usize>();
-    let letters = "aeiou".as_bytes();
-    let mut i = 0;
-    while i < n {
-        pt.print(letters[i * letters.len() / n] as char);
-        i += 1;
+    let n = sc.next::<I>();
+    let m = sc.next::<usize>();
+    let q = sc.next::<usize>();
+    let mut brr = sc.next_n::<I>(m);
+    brr.sort();
+    let arr = sc.next_n::<I>(q);
+    for a in arr {
+        let bi = brr.binary_search(&a).err().unwrap();
+        if bi == 0 {
+            pt.println(brr[bi] - 1);
+        } else if bi == brr.len() {
+            pt.println(n - brr[brr.len() - 1]);
+        } else {
+            let b1 = brr[bi - 1];
+            let b2  = brr[bi];
+            pt.println((b2 - b1) / 2);
+        }
     }
-    pt.println("");
 }
 
 fn main() {

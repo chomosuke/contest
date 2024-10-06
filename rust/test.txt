@@ -1,17 +1,8 @@
-4
-5 2
-nn
-aa
-rr
-ee
-kk
-1 5
-narek
-1 4
-nare
-5 7
-nrrarek
-nrnekan
-uuuuuuu
-ppppppp
-nkarekz
+3
+5
+1 7 8 4 5
+3
+2 6 5
+5
+1 2 2 3 3
+

@@ -25,60 +25,16 @@ use std::{
 type I = i128;
 type U = u128;
 
-const NAREK: &[u8] = "narek".as_bytes();
-
-fn calculate_score(str: &[u8], start: usize, score: I) -> (I, usize, bool) {
-    let mut i = start;
-    let mut score = score;
-    let mut crossed = false;
-    for &s in str {
-        if NAREK.contains(&s) {
-            score -= 1;
-            if s == NAREK[i] {
-                i += 1;
-                if i >= NAREK.len() {
-                    crossed = true;
-                    score += NAREK.len() as I * 2;
-                    i %= NAREK.len();
-                }
-            }
-        }
-    }
-    (score, i, crossed)
-}
-
 fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
     let n = sc.next::<usize>();
-    let m = sc.next::<usize>();
-    let strs = sc
-        .next_n::<String>(n)
-        .into_iter()
-        .map(|s| {
-            assert_eq!(s.len(), m);
-            s.into_bytes()
-        })
-        .collect::<Vec<_>>();
-
-    let mut end_to_score = vec![I::MIN / 2; NAREK.len()];
-    end_to_score[0] = 0;
-    for str in strs {
-        let mut next_end_to_score = end_to_score.clone();
-        for i in 0..NAREK.len() {
-            let (score, end, crossed) = calculate_score(&str, i, end_to_score[i]);
-            for j in 0..NAREK.len() {
-                if end < j {
-                    if crossed {
-                        next_end_to_score[j] = next_end_to_score[j].max(score - NAREK.len() as I * 2);
-                    }
-                } else {
-                    next_end_to_score[j] = next_end_to_score[j].max(score);
-                }
-            }
-        }
-        end_to_score = next_end_to_score;
+    let mut arr = sc.next_n::<U>(n);
+    arr.sort();
+    let mut sum = (arr[0] + arr[1]) / 2;
+    for i in 2..arr.len() {
+        sum += arr[i];
+        sum /= 2;
     }
-
-    pt.println(end_to_score.iter().max().unwrap());
+    pt.println(sum);
 }
 
 fn main() {

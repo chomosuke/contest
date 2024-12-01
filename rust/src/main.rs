@@ -25,16 +25,99 @@ use std::{
 type I = i128;
 type U = u128;
 
+const YES: &str = "YA";
+const NO: &str = "TIDAK";
+
+fn get_succ(o: &Vec<usize>, i: usize) -> Option<usize> {
+    if i + 1 < o.len() {
+        Some(o[i + 1])
+    } else {
+        None
+    }
+}
+
+fn get_first_order_succ() -> {
+
+}
+
+fn result(succ_diff_count: usize, pt: &mut Printer<Stdout>) {
+    if succ_diff_count == 0 {
+        pt.println(YES);
+    } else {
+        pt.println(NO);
+    }
+}
+
 fn solve(sc: &mut Scanner<Stdin>, pt: &mut Printer<Stdout>) {
     let n = sc.next::<usize>();
-    let mut arr = sc.next_n::<U>(n);
-    arr.sort();
-    let mut sum = (arr[0] + arr[1]) / 2;
-    for i in 2..arr.len() {
-        sum += arr[i];
-        sum /= 2;
+    let m = sc.next::<usize>();
+    let q = sc.next::<usize>();
+    let arr = sc
+        .next_n::<usize>(n)
+        .into_iter()
+        .map(|n| n - 1)
+        .collect::<Vec<_>>();
+    let mut brr = sc
+        .next_n::<usize>(m)
+        .into_iter()
+        .map(|n| n - 1)
+        .collect::<Vec<_>>();
+    brr.extend(&arr);
+
+    let mut first_slide_order = Vec::new();
+    let mut used_b = BTreeSet::new();
+    for &b in &brr {
+        if !used_b.contains(&b) {
+            used_b.insert(b);
+            first_slide_order.push(b);
+        }
     }
-    pt.println(sum);
+
+    let mut appearances = vec![BTreeSet::new(); n];
+    for (i, &b) in brr.iter().enumerate() {
+        appearances[b].insert(i);
+    }
+
+    let mut first_slide_order = BTreeMap::new();
+
+    let mut succ_diff_count = 0_usize;
+    for i in 0..arr.len() {
+        if get_succ(&arr, i) != get_first_order_succ() {
+            succ_diff_count += 1;
+        }
+    }
+
+    for _ in 0..q {
+        result(succ_diff_count, pt);
+        let i = sc.next::<usize>();
+        let t = sc.next::<usize>();
+        let b = brr[i];
+        if b == t {
+            continue;
+        }
+
+        let bf_before = *appearances[b].first().unwrap();
+        appearances[b].remove(&i);
+        let bf_after = *appearances[b].first().unwrap();
+
+        let tf_before = *appearances[t].first().unwrap();
+        appearances[t].remove(&i);
+        let tf_after = *appearances[t].first().unwrap();
+
+        if bf_before == bf_after {
+            if *appearances[t].first().unwrap() == i {
+            } else {
+            }
+        } else {
+            if *appearances[t].first().unwrap() == i {
+            } else {
+            }
+        }
+
+        // update brr
+        brr[i] = t;
+    }
+    result(succ_diff_count, pt);
 }
 
 fn main() {

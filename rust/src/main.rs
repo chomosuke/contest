@@ -29,18 +29,16 @@ fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
     let mut xs = Vec::new();
-    let mut ys = Vec::new();
+    let mut ys = HashMap::<I, I>::new();
     for _ in 0..1000 {
         xs.push(sc.next::<I>());
-        ys.push(sc.next::<I>());
+        *ys.entry(sc.next::<I>()).or_default() += 1;
     }
-    xs.sort();
-    ys.sort();
-    let mut sum = 0;
-    for (x, y) in xs.into_iter().zip(ys.into_iter()) {
-        sum += x.abs_diff(y);
+    let mut sim = 0;
+    for x in xs {
+        sim += x * ys.get(&x).unwrap_or(&0);
     }
-    pt.println(sum);
+    pt.println(sim);
 }
 
 mod io {

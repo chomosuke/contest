@@ -28,17 +28,26 @@ type U = u128;
 fn main() {
     let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    let mut xs = Vec::new();
-    let mut ys = HashMap::<I, I>::new();
-    for _ in 0..1000 {
-        xs.push(sc.next::<I>());
-        *ys.entry(sc.next::<I>()).or_default() += 1;
+    let mut safe = 0;
+    'outer: for _ in 0..1000 {
+        let report = sc
+            .next_line()
+            .split(' ')
+            .map(|s| s.parse::<I>().unwrap())
+            .collect::<Vec<_>>();
+        let diff = report[0] - report[1];
+        for i in 0..report.len() - 1 {
+            let d = report[i] - report[i + 1];
+            if d.cmp(&0) != diff.cmp(&0) {
+                continue 'outer;
+            }
+            if d.abs() < 1 || d.abs() > 3 {
+                continue 'outer;
+            }
+        }
+        safe += 1;
     }
-    let mut sim = 0;
-    for x in xs {
-        sim += x * ys.get(&x).unwrap_or(&0);
-    }
-    pt.println(sim);
+    pt.println(safe);
 }
 
 mod io {

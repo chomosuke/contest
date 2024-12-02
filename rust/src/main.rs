@@ -35,17 +35,31 @@ fn main() {
             .split(' ')
             .map(|s| s.parse::<I>().unwrap())
             .collect::<Vec<_>>();
-        let diff = report[0] - report[1];
-        for i in 0..report.len() - 1 {
-            let d = report[i] - report[i + 1];
-            if d.cmp(&0) != diff.cmp(&0) {
-                continue 'outer;
+        let mut is_safe = false;
+        for j in 0..report.len() {
+            let mut report = report.clone();
+            report.remove(j);
+            let mut safe = true;
+            let diff = report[0] - report[1];
+            for i in 0..report.len() - 1 {
+                let d = report[i] - report[i + 1];
+                if d.cmp(&0) != diff.cmp(&0) {
+                    safe = false;
+                    break;
+                }
+                if d.abs() < 1 || d.abs() > 3 {
+                    safe = false;
+                    break;
+                }
             }
-            if d.abs() < 1 || d.abs() > 3 {
-                continue 'outer;
+            if safe {
+                is_safe = true;
+                break;
             }
         }
-        safe += 1;
+        if is_safe {
+            safe += 1;
+        }
     }
     pt.println(safe);
 }

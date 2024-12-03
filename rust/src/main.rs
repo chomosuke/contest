@@ -35,11 +35,24 @@ static input: &str = r###"},;who()^>',mul(594,203)~  ~*$'*select()mul(693,99)*>&
 fn main() {
     // let mut sc = Scanner::new(stdin());
     let mut pt = Printer::new(stdout());
-    let re = Regex::new(r"mul\((?<lhs>\d{1,3})\,(?<rhs>\d{1,3})\)").unwrap();
+    let re =
+        Regex::new(r"mul\((?<lhs>\d{1,3})\,(?<rhs>\d{1,3})\)|(?<do>do\(\))|(?<dont>don't\(\))")
+            .unwrap();
     let muls = re.captures_iter(input);
     let mut sum: U = 0;
+    let mut turn_on = true;
     for mul in muls {
-        sum += mul["lhs"].parse::<U>().unwrap() * mul["rhs"].parse::<U>().unwrap();
+        if mul.name("do").is_some() {
+            turn_on = true;
+        }
+        if mul.name("dont").is_some() {
+            turn_on = false;
+        }
+        if turn_on {
+            if let (Some(lhs), Some(rhs)) = (mul.name("lhs"), mul.name("rhs")) {
+                sum += lhs.as_str().parse::<U>().unwrap() * rhs.as_str().parse::<U>().unwrap();
+            }
+        }
     }
     pt.println(sum);
 }

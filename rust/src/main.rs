@@ -21,41 +21,49 @@ use std::{
         Bound::{Excluded, Included, Unbounded},
         Deref, Range, RangeBounds,
     },
-    usize,
 };
 
 mod input;
+
+use input::*;
 
 type I = i128;
 type U = u128;
 
 fn main() {
-    let lines = input::INPUT.lines();
-    let mut vec = Vec::new();
-    for line in lines {
-        vec.push(line.as_bytes().to_owned());
+    let orders = ORDERS.lines().map(|l| {
+        let ss = l
+            .split('|')
+            .map(|s| s.parse::<U>().unwrap())
+            .collect::<Vec<_>>();
+        (ss[0], ss[1])
+    });
+    let mut orders_map = HashMap::<U, Vec<U>>::new();
+    for (before, after) in orders {
+        orders_map.entry(before).or_default().push(after);
     }
-    let mut count = 0;
-    for i in 1..(vec.len() - 1) {
-        for j in 1..(vec[i].len() - 1) {
-            if vec[i][j] != b'A' {
-                continue;
+    let updates = UPDATES.lines().map(|l| {
+        l.split(',')
+            .map(|s| s.parse::<U>().unwrap())
+            .collect::<Vec<_>>()
+    });
+    let mut mid = 0;
+    'outer: for update in updates {
+        assert!(update.len() % 2 == 1);
+        let mut befores = HashSet::new();
+        for &u in update.iter() {
+            if let Some(afters) = orders_map.get(&u) {
+                for after in afters {
+                    if befores.contains(after) {
+                        continue 'outer;
+                    }
+                }
             }
-            let tr  = vec[i - 1][j - 1];
-            let tl  = vec[i - 1][j + 1];
-            let br  = vec[i + 1][j - 1];
-            let bl  = vec[i + 1][j + 1];
-            let p1 = (tr, bl);
-            let p2 = (tl, br);
-            let o1 = (b'M', b'S');
-            let o2 = (b'S', b'M');
-            if (p1 != o1 && p1 != o2) || (p2 != o1 && p2 != o2) {
-                continue;
-            }
-            count += 1;
+            befores.insert(u);
         }
+        mid += update[update.len() / 2];
     }
-    println!("{count}");
+    println!("{mid}");
 }
 
 mod io {

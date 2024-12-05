@@ -32,59 +32,27 @@ type U = u128;
 fn main() {
     let lines = input::INPUT.lines();
     let mut vec = Vec::new();
-    let sequence = "XMAS".as_bytes().to_owned();
     for line in lines {
         vec.push(line.as_bytes().to_owned());
     }
-    fn hori(i: usize, j: usize, k: usize) -> (usize, usize) {
-        (i + k, j)
-    }
-    fn vert(i: usize, j: usize, k: usize) -> (usize, usize) {
-        (i, j + k)
-    }
-    fn diag1(i: usize, j: usize, k: usize) -> (usize, usize) {
-        (i + k, j + k)
-    }
-    fn diag2(i: usize, j: usize, k: usize) -> (usize, usize) {
-        if k > j {
-            (usize::MAX, usize::MAX)
-        } else {
-            (i + k, j - k)
-        }
-    }
-    let mods = [hori, vert, diag1, diag2];
     let mut count = 0;
-    for i in 0..vec.len() {
-        for j in 0..vec[i].len() {
-            for f in mods {
-                let mut m0 = true;
-                let mut m1 = true;
-                for k in 0..sequence.len() {
-                    let (i, j) = f(i, j, k);
-                    let Some(row) = vec.get(i) else {
-                        m0 = false;
-                        m1 = false;
-                        break;
-                    };
-                    let Some(&c) = row.get(j) else {
-                        m0 = false;
-                        m1 = false;
-                        break;
-                    };
-                    if c != sequence[k] {
-                        m0 = false;
-                    }
-                    if c != sequence[sequence.len() - k - 1] {
-                        m1 = false;
-                    }
-                }
-                if m0 {
-                    count += 1
-                }
-                if m1 {
-                    count += 1
-                }
+    for i in 1..(vec.len() - 1) {
+        for j in 1..(vec[i].len() - 1) {
+            if vec[i][j] != b'A' {
+                continue;
             }
+            let tr  = vec[i - 1][j - 1];
+            let tl  = vec[i - 1][j + 1];
+            let br  = vec[i + 1][j - 1];
+            let bl  = vec[i + 1][j + 1];
+            let p1 = (tr, bl);
+            let p2 = (tl, br);
+            let o1 = (b'M', b'S');
+            let o2 = (b'S', b'M');
+            if (p1 != o1 && p1 != o2) || (p2 != o1 && p2 != o2) {
+                continue;
+            }
+            count += 1;
         }
     }
     println!("{count}");

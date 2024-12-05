@@ -47,7 +47,7 @@ fn main() {
             .map(|s| s.parse::<U>().unwrap())
             .collect::<Vec<_>>()
     });
-    let mut mid = 0;
+    let mut invalids = Vec::new();
     'outer: for update in updates {
         assert!(update.len() % 2 == 1);
         let mut befores = HashSet::new();
@@ -55,15 +55,105 @@ fn main() {
             if let Some(afters) = orders_map.get(&u) {
                 for after in afters {
                     if befores.contains(after) {
+                        invalids.push(update);
                         continue 'outer;
                     }
                 }
             }
             befores.insert(u);
         }
-        mid += update[update.len() / 2];
+    }
+
+    let mut mid = 0;
+    for invalid in invalids {
+        let pages = HashSet::<U>::from_iter(invalid.iter().cloned());
+        let node_to_page = invalid;
+        let page_to_node = HashMap::<U, usize>::from_iter(
+            node_to_page.iter().cloned().enumerate().map(|e| (e.1, e.0)),
+        );
+        let mut edges = Vec::new();
+        for page in &pages {
+            for after in orders_map.get(page).unwrap_or(&Vec::new()) {
+                if pages.contains(after) {
+                    edges.push((page_to_node[page], page_to_node[after]));
+                }
+            }
+        }
+        let sort = DirectedGraph::from_edges(edges, pages.len()).get_topological_sort(None).unwrap();
+        mid += node_to_page[sort[sort.len() / 2]];
     }
     println!("{mid}");
+}
+
+pub struct DirectedGraph {
+    adj_nodess: Vec<Vec<usize>>,
+}
+impl DirectedGraph {
+    /// O(m + n)
+    pub fn from_edges(edges: Vec<(usize, usize)>, node_count: usize) -> Self {
+        let mut g = Self {
+            adj_nodess: vec![Vec::new(); node_count],
+        };
+        for edge in edges {
+            g.add_edge(edge);
+        }
+        g
+    }
+
+    pub fn node_count(&self) -> usize {
+        self.adj_nodess.len()
+    }
+
+    /// O(1)
+    pub fn add_edge(&mut self, edge: (usize, usize)) {
+        self.adj_nodess[edge.0].push(edge.1);
+    }
+
+    /// O(n + m)
+    pub fn get_topological_sort(&self, from: Option<usize>) -> Result<Vec<usize>, Vec<usize>> {
+        let mut rev_sort = Vec::with_capacity(self.node_count());
+        let mut states = vec![0; self.node_count()];
+        fn have_cycle(
+            current: usize,
+            rev_sort: &mut Vec<usize>,
+            states: &mut [u8],
+            adj_nodess: &[Vec<usize>],
+        ) -> Option<Vec<usize>> {
+            states[current] = 1;
+            for &adj_node in &adj_nodess[current] {
+                if states[adj_node] == 2 {
+                    continue;
+                }
+                if states[adj_node] == 1 {
+                    return Some(vec![adj_node, current]);
+                }
+                if let Some(mut cycle) = have_cycle(adj_node, rev_sort, states, adj_nodess) {
+                    if cycle[0] != *cycle.last().unwrap() {
+                        // cycle isn't complete yet
+                        cycle.push(current);
+                    }
+                    return Some(cycle);
+                }
+            }
+            states[current] = 2;
+            rev_sort.push(current);
+            None
+        }
+        let origins = if let Some(from) = from {
+            from..(from + 1)
+        } else {
+            0..states.len()
+        };
+        for node in origins {
+            if states[node] == 0 {
+                let cycle = have_cycle(node, &mut rev_sort, &mut states, &self.adj_nodess);
+                if let Some(cycle) = cycle {
+                    return Err(cycle.into_iter().skip(1).rev().collect());
+                }
+            }
+        }
+        Ok(rev_sort.into_iter().rev().collect())
+    }
 }
 
 mod io {

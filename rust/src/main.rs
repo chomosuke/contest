@@ -31,58 +31,71 @@ type I = i128;
 type U = u128;
 
 fn main() {
-    let orders = ORDERS.lines().map(|l| {
-        let ss = l
-            .split('|')
-            .map(|s| s.parse::<U>().unwrap())
-            .collect::<Vec<_>>();
-        (ss[0], ss[1])
-    });
-    let mut orders_map = HashMap::<U, Vec<U>>::new();
-    for (before, after) in orders {
-        orders_map.entry(before).or_default().push(after);
-    }
-    let updates = UPDATES.lines().map(|l| {
-        l.split(',')
-            .map(|s| s.parse::<U>().unwrap())
-            .collect::<Vec<_>>()
-    });
-    let mut invalids = Vec::new();
-    'outer: for update in updates {
-        assert!(update.len() % 2 == 1);
-        let mut befores = HashSet::new();
-        for &u in update.iter() {
-            if let Some(afters) = orders_map.get(&u) {
-                for after in afters {
-                    if befores.contains(after) {
-                        invalids.push(update);
-                        continue 'outer;
-                    }
-                }
-            }
-            befores.insert(u);
-        }
-    }
-
-    let mut mid = 0;
-    for invalid in invalids {
-        let pages = HashSet::<U>::from_iter(invalid.iter().cloned());
-        let node_to_page = invalid;
-        let page_to_node = HashMap::<U, usize>::from_iter(
-            node_to_page.iter().cloned().enumerate().map(|e| (e.1, e.0)),
-        );
-        let mut edges = Vec::new();
-        for page in &pages {
-            for after in orders_map.get(page).unwrap_or(&Vec::new()) {
-                if pages.contains(after) {
-                    edges.push((page_to_node[page], page_to_node[after]));
-                }
+    let mut lines = input::INPUT
+        .lines()
+        .map(|l| l.as_bytes().to_owned())
+        .collect::<Vec<_>>();
+    let mut current = (0, 0);
+    'outer: for i in 0..lines.len() {
+        for j in 0..lines[i].len() {
+            if lines[i][j] == b'^' {
+                current = (i, j);
+                break 'outer;
             }
         }
-        let sort = DirectedGraph::from_edges(edges, pages.len()).get_topological_sort(None).unwrap();
-        mid += node_to_page[sort[sort.len() / 2]];
     }
-    println!("{mid}");
+    fn next_loc(mut i: i64, mut j: i64, dir: i32) -> (i64, i64) {
+        if dir == 0 {
+            i -= 1;
+        }
+        if dir == 2 {
+            i += 1;
+        }
+        if dir == 1 {
+            j += 1;
+        }
+        if dir == 3 {
+            j -= 1;
+        }
+        (i, j)
+    }
+    fn prev_loc(mut i: i64, mut j: i64, dir: i32) -> (i64, i64) {
+        if dir == 0 {
+            i += 1;
+        }
+        if dir == 2 {
+            i -= 1;
+        }
+        if dir == 1 {
+            j -= 1;
+        }
+        if dir == 3 {
+            j += 1;
+        }
+        (i, j)
+    }
+    let mut i = current.0 as i64;
+    let mut j = current.1 as i64;
+    let mut dir = 0;
+    while i >= 0 && i < lines.len() as i64 && j >= 0 && j < lines[i as usize].len() as i64 {
+        if lines[i as usize][j as usize] == b'#' {
+            (i, j) = prev_loc(i, j, dir);
+            dir += 1;
+            dir %= 4;
+        } else {
+            lines[i as usize][j as usize] = b'X';
+        }
+        (i, j) = next_loc(i, j, dir);
+    }
+    let mut count = 0;
+    for i in 0..lines.len() {
+        for j in 0..lines[i].len() {
+            if lines[i][j] == b'X' {
+                count += 1;
+            }
+        }
+    }
+    println!("{count}");
 }
 
 pub struct DirectedGraph {

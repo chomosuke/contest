@@ -44,7 +44,7 @@ fn main() {
             }
         }
     }
-    fn next_loc(mut i: i64, mut j: i64, dir: i32) -> (i64, i64) {
+    fn next_loc(mut i: i64, mut j: i64, dir: u8) -> (i64, i64) {
         if dir == 0 {
             i -= 1;
         }
@@ -59,7 +59,7 @@ fn main() {
         }
         (i, j)
     }
-    fn prev_loc(mut i: i64, mut j: i64, dir: i32) -> (i64, i64) {
+    fn prev_loc(mut i: i64, mut j: i64, dir: u8) -> (i64, i64) {
         if dir == 0 {
             i += 1;
         }
@@ -73,24 +73,35 @@ fn main() {
             j += 1;
         }
         (i, j)
-    }
-    let mut i = current.0 as i64;
-    let mut j = current.1 as i64;
-    let mut dir = 0;
-    while i >= 0 && i < lines.len() as i64 && j >= 0 && j < lines[i as usize].len() as i64 {
-        if lines[i as usize][j as usize] == b'#' {
-            (i, j) = prev_loc(i, j, dir);
-            dir += 1;
-            dir %= 4;
-        } else {
-            lines[i as usize][j as usize] = b'X';
-        }
-        (i, j) = next_loc(i, j, dir);
     }
     let mut count = 0;
-    for i in 0..lines.len() {
-        for j in 0..lines[i].len() {
-            if lines[i][j] == b'X' {
+    for i0 in 0..lines.len() {
+        for j0 in 0..lines[i0].len() {
+            if lines[i0][j0] != b'.' {
+                continue;
+            }
+            let mut lines = lines.clone();
+            lines[i0][j0] = b'#';
+            let mut i = current.0 as i64;
+            let mut j = current.1 as i64;
+            let mut dir = 0u8;
+            let mut l = false;
+            while i >= 0 && i < lines.len() as i64 && j >= 0 && j < lines[i as usize].len() as i64 {
+                if lines[i as usize][j as usize] == b'#' {
+                    (i, j) = prev_loc(i, j, dir);
+                    dir += 1;
+                    dir %= 4;
+                } else {
+                    if lines[i as usize][j as usize] != dir {
+                        lines[i as usize][j as usize] = dir;
+                    } else {
+                        l = true;
+                        break;
+                    }
+                }
+                (i, j) = next_loc(i, j, dir);
+            }
+            if l {
                 count += 1;
             }
         }

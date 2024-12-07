@@ -24,160 +24,44 @@ use std::{
 };
 
 mod input;
-
 use input::*;
 
 type I = i128;
 type U = u128;
 
+type N = U;
+
+fn get_nth_bit(a: N, n: usize) -> bool {
+    (a >> n) % 2 == 1
+}
+
 fn main() {
-    let mut lines = input::INPUT
-        .lines()
-        .map(|l| l.as_bytes().to_owned())
-        .collect::<Vec<_>>();
-    let mut current = (0, 0);
-    'outer: for i in 0..lines.len() {
-        for j in 0..lines[i].len() {
-            if lines[i][j] == b'^' {
-                current = (i, j);
-                break 'outer;
-            }
-        }
-    }
-    fn next_loc(mut i: i64, mut j: i64, dir: u8) -> (i64, i64) {
-        if dir == 0 {
-            i -= 1;
-        }
-        if dir == 2 {
-            i += 1;
-        }
-        if dir == 1 {
-            j += 1;
-        }
-        if dir == 3 {
-            j -= 1;
-        }
-        (i, j)
-    }
-    fn prev_loc(mut i: i64, mut j: i64, dir: u8) -> (i64, i64) {
-        if dir == 0 {
-            i += 1;
-        }
-        if dir == 2 {
-            i -= 1;
-        }
-        if dir == 1 {
-            j -= 1;
-        }
-        if dir == 3 {
-            j += 1;
-        }
-        (i, j)
-    }
-    let mut count = 0;
-    for i0 in 0..lines.len() {
-        for j0 in 0..lines[i0].len() {
-            if lines[i0][j0] != b'.' {
-                continue;
-            }
-            let mut lines = lines.clone();
-            lines[i0][j0] = b'#';
-            let mut i = current.0 as i64;
-            let mut j = current.1 as i64;
-            let mut dir = 0u8;
-            let mut l = false;
-            while i >= 0 && i < lines.len() as i64 && j >= 0 && j < lines[i as usize].len() as i64 {
-                if lines[i as usize][j as usize] == b'#' {
-                    (i, j) = prev_loc(i, j, dir);
-                    dir += 1;
-                    dir %= 4;
+    let eqs = INPUT.lines().map(|l| {
+        let eq = l.split(':').collect::<Vec<_>>();
+        assert_eq!(eq.len(), 2);
+        let lhs = eq[0].parse::<U>().unwrap();
+        let rhs = eq[1].split_whitespace().map(|n| n.parse::<U>().unwrap()).collect::<Vec<_>>();
+        (lhs, rhs)
+    }).collect::<Vec<_>>();
+
+    let mut sum = 0;
+    for (lhs, rhs) in eqs {
+        for perm in 0..2_u128.pow(rhs.len() as u32 - 1) {
+            let mut res = rhs[0];
+            for i in 1..rhs.len() {
+                if get_nth_bit(perm, i - 1) {
+                    res += rhs[i];
                 } else {
-                    if lines[i as usize][j as usize] != dir {
-                        lines[i as usize][j as usize] = dir;
-                    } else {
-                        l = true;
-                        break;
-                    }
+                    res *= rhs[i];
                 }
-                (i, j) = next_loc(i, j, dir);
             }
-            if l {
-                count += 1;
+            if res == lhs {
+                sum += res;
+                break;
             }
         }
     }
-    println!("{count}");
-}
-
-pub struct DirectedGraph {
-    adj_nodess: Vec<Vec<usize>>,
-}
-impl DirectedGraph {
-    /// O(m + n)
-    pub fn from_edges(edges: Vec<(usize, usize)>, node_count: usize) -> Self {
-        let mut g = Self {
-            adj_nodess: vec![Vec::new(); node_count],
-        };
-        for edge in edges {
-            g.add_edge(edge);
-        }
-        g
-    }
-
-    pub fn node_count(&self) -> usize {
-        self.adj_nodess.len()
-    }
-
-    /// O(1)
-    pub fn add_edge(&mut self, edge: (usize, usize)) {
-        self.adj_nodess[edge.0].push(edge.1);
-    }
-
-    /// O(n + m)
-    pub fn get_topological_sort(&self, from: Option<usize>) -> Result<Vec<usize>, Vec<usize>> {
-        let mut rev_sort = Vec::with_capacity(self.node_count());
-        let mut states = vec![0; self.node_count()];
-        fn have_cycle(
-            current: usize,
-            rev_sort: &mut Vec<usize>,
-            states: &mut [u8],
-            adj_nodess: &[Vec<usize>],
-        ) -> Option<Vec<usize>> {
-            states[current] = 1;
-            for &adj_node in &adj_nodess[current] {
-                if states[adj_node] == 2 {
-                    continue;
-                }
-                if states[adj_node] == 1 {
-                    return Some(vec![adj_node, current]);
-                }
-                if let Some(mut cycle) = have_cycle(adj_node, rev_sort, states, adj_nodess) {
-                    if cycle[0] != *cycle.last().unwrap() {
-                        // cycle isn't complete yet
-                        cycle.push(current);
-                    }
-                    return Some(cycle);
-                }
-            }
-            states[current] = 2;
-            rev_sort.push(current);
-            None
-        }
-        let origins = if let Some(from) = from {
-            from..(from + 1)
-        } else {
-            0..states.len()
-        };
-        for node in origins {
-            if states[node] == 0 {
-                let cycle = have_cycle(node, &mut rev_sort, &mut states, &self.adj_nodess);
-                if let Some(cycle) = cycle {
-                    return Err(cycle.into_iter().skip(1).rev().collect());
-                }
-            }
-        }
-        Ok(rev_sort.into_iter().rev().collect())
-    }
+    println!("{sum}");
 }
 
 mod io {

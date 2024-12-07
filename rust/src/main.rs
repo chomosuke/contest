@@ -31,28 +31,36 @@ type U = u128;
 
 type N = U;
 
-fn get_nth_bit(a: N, n: usize) -> bool {
-    (a >> n) % 2 == 1
+fn get_nth_bit(a: N, n: usize) -> N {
+    a / 3_u128.pow(n as u32) % 3
 }
 
 fn main() {
-    let eqs = INPUT.lines().map(|l| {
-        let eq = l.split(':').collect::<Vec<_>>();
-        assert_eq!(eq.len(), 2);
-        let lhs = eq[0].parse::<U>().unwrap();
-        let rhs = eq[1].split_whitespace().map(|n| n.parse::<U>().unwrap()).collect::<Vec<_>>();
-        (lhs, rhs)
-    }).collect::<Vec<_>>();
+    let eqs = INPUT
+        .lines()
+        .map(|l| {
+            let eq = l.split(':').collect::<Vec<_>>();
+            assert_eq!(eq.len(), 2);
+            let lhs = eq[0].parse::<U>().unwrap();
+            let rhs = eq[1]
+                .split_whitespace()
+                .map(|n| n.parse::<U>().unwrap())
+                .collect::<Vec<_>>();
+            (lhs, rhs)
+        })
+        .collect::<Vec<_>>();
 
     let mut sum = 0;
     for (lhs, rhs) in eqs {
-        for perm in 0..2_u128.pow(rhs.len() as u32 - 1) {
+        for perm in 0..3_u128.pow(rhs.len() as u32 - 1) {
             let mut res = rhs[0];
             for i in 1..rhs.len() {
-                if get_nth_bit(perm, i - 1) {
-                    res += rhs[i];
-                } else {
-                    res *= rhs[i];
+                let b = get_nth_bit(perm, i - 1);
+                match b {
+                    0 => res = format!("{}{}", res, rhs[i]).parse::<U>().unwrap(),
+                    1 => res += rhs[i],
+                    2 => res *= rhs[i],
+                    _ => unreachable!(),
                 }
             }
             if res == lhs {

@@ -30,36 +30,55 @@ use input::*;
 type I = i128;
 type U = u128;
 
+type Int = i128;
+
+fn get_gcd(mut a: Int, mut b: Int) -> Int {
+    while b != 0 {
+        let rem = a % b;
+        a = b;
+        b = rem;
+    }
+    a
+}
+
 fn main() {
     let map = INPUT
         .lines()
         .map(|l| l.as_bytes().to_owned())
         .collect::<Vec<_>>();
-    let mut antennas = HashMap::<u8, Vec<(i64, i64)>>::new();
+    let mut antennas = HashMap::<u8, Vec<(I, I)>>::new();
     for i in 0..map.len() {
         for j in 0..map[i].len() {
             if map[i][j] != b'.' {
                 antennas
                     .entry(map[i][j])
                     .or_default()
-                    .push((i as i64, j as i64));
+                    .push((i as I, j as I));
             }
         }
     }
-    let mut antinodes = HashSet::<(i64, i64)>::new();
+    let mut antinodes = HashSet::<(I, I)>::new();
+    let n = map.len() as I;
+    let m = map[0].len() as I;
     for (_, antennas) in antennas {
         for i in 0..antennas.len() {
             for j in i + 1..antennas.len() {
-                let antinode1 = (
-                    antennas[j].0 + (antennas[i].0 - antennas[j].0) * 2,
-                    antennas[j].1 + (antennas[i].1 - antennas[j].1) * 2,
-                );
-                let antinode2 = (
-                    antennas[i].0 + (antennas[j].0 - antennas[i].0) * 2,
-                    antennas[i].1 + (antennas[j].1 - antennas[i].1) * 2,
-                );
-                antinodes.insert(antinode1);
-                antinodes.insert(antinode2);
+                let mut diff = (antennas[i].0 - antennas[j].0, antennas[i].1 - antennas[j].1);
+                let g = get_gcd(diff.0, diff.1);
+                diff.0 /= g;
+                diff.1 /= g;
+                let mut anti = antennas[i];
+                while anti.0 >= 0 && anti.0 < n && anti.1 >= 0 && anti.1 < m {
+                    antinodes.insert(anti);
+                    anti.0 -= diff.0;
+                    anti.1 -= diff.1;
+                }
+                let mut anti = antennas[i];
+                while anti.0 >= 0 && anti.0 < n && anti.1 >= 0 && anti.1 < m {
+                    antinodes.insert(anti);
+                    anti.0 += diff.0;
+                    anti.1 += diff.1;
+                }
             }
         }
     }

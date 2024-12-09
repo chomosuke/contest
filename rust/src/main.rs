@@ -30,65 +30,46 @@ use input::*;
 type I = i128;
 type U = u128;
 
-type Int = i128;
-
-fn get_gcd(mut a: Int, mut b: Int) -> Int {
-    while b != 0 {
-        let rem = a % b;
-        a = b;
-        b = rem;
-    }
-    a
-}
-
 fn main() {
-    let map = INPUT
-        .lines()
-        .map(|l| l.as_bytes().to_owned())
-        .collect::<Vec<_>>();
-    let mut antennas = HashMap::<u8, Vec<(I, I)>>::new();
-    for i in 0..map.len() {
-        for j in 0..map[i].len() {
-            if map[i][j] != b'.' {
-                antennas
-                    .entry(map[i][j])
-                    .or_default()
-                    .push((i as I, j as I));
+    let map = INPUT.into_iter().map(|b| b - b'0');
+    let mut disk = VecDeque::new();
+    let mut id = 0 as U;
+    let mut is_blank = false;
+    for b in map {
+        if is_blank {
+            is_blank = false;
+            for _ in 0..b {
+                disk.push_back(None);
             }
-        }
-    }
-    let mut antinodes = HashSet::<(I, I)>::new();
-    let n = map.len() as I;
-    let m = map[0].len() as I;
-    for (_, antennas) in antennas {
-        for i in 0..antennas.len() {
-            for j in i + 1..antennas.len() {
-                let mut diff = (antennas[i].0 - antennas[j].0, antennas[i].1 - antennas[j].1);
-                let g = get_gcd(diff.0, diff.1);
-                diff.0 /= g;
-                diff.1 /= g;
-                let mut anti = antennas[i];
-                while anti.0 >= 0 && anti.0 < n && anti.1 >= 0 && anti.1 < m {
-                    antinodes.insert(anti);
-                    anti.0 -= diff.0;
-                    anti.1 -= diff.1;
-                }
-                let mut anti = antennas[i];
-                while anti.0 >= 0 && anti.0 < n && anti.1 >= 0 && anti.1 < m {
-                    antinodes.insert(anti);
-                    anti.0 += diff.0;
-                    anti.1 += diff.1;
-                }
+        } else {
+            is_blank = true;
+            for _ in 0..b {
+                disk.push_back(Some(id));
             }
+            id += 1;
         }
     }
-    let mut count = 0;
-    for (i, j) in antinodes {
-        if i >= 0 && (i as usize) < map.len() && j >= 0 && (j as usize) < map[i as usize].len() {
-            count += 1;
+    let mut compact = Vec::new();
+    'outer: while let Some(d) = disk.pop_front() {
+        if let Some(d) = d {
+            compact.push(d);
+        } else {
+            let d = loop {
+                let Some(d) = disk.pop_back() else {
+                    break 'outer;
+                };
+                if let Some(d) = d {
+                    break d;
+                }
+            };
+            compact.push(d);
         }
     }
-    println!("{count}");
+    let mut sum = 0;
+    for (i, d) in compact.into_iter().enumerate() {
+        sum += (i as U) * d;
+    }
+    println!("{sum}");
 }
 
 mod io {
@@ -193,14 +174,14 @@ mod io {
         }
 
         pub fn newline(&mut self) {
-            self.print_bytes(&[b'\n']);
+            self.print_bytes(b"\n");
         }
 
         pub fn print_iter(&mut self, mut iter: impl Iterator<Item = impl Display>) {
             if let Some(e) = iter.next() {
                 self.print(&e);
                 for e in iter {
-                    self.print_bytes(&[b' ']);
+                    self.print_bytes(b" ");
                     self.print(&e);
                 }
             }

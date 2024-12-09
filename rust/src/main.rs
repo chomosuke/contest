@@ -31,43 +31,53 @@ type I = i128;
 type U = u128;
 
 fn main() {
-    let map = INPUT.into_iter().map(|b| b - b'0');
-    let mut disk = VecDeque::new();
-    let mut id = 0 as U;
+    let map = INPUT.iter().map(|b| b - b'0');
+
+    let mut spaces_start_len = BTreeMap::<usize, usize>::new();
+    let mut files_start_len = Vec::<(usize, usize)>::new();
+
+    let mut start = 0;
+
     let mut is_blank = false;
-    for b in map {
+    for len in map {
+        let len = len as usize;
         if is_blank {
             is_blank = false;
-            for _ in 0..b {
-                disk.push_back(None);
-            }
+            spaces_start_len.insert(start, len);
         } else {
             is_blank = true;
-            for _ in 0..b {
-                disk.push_back(Some(id));
+            files_start_len.push((start, len));
+        }
+        start += len;
+    }
+
+    let mut compact_start_id_len = BTreeMap::<usize, (usize, usize)>::new();
+    while let Some((start, len)) = files_start_len.pop() {
+        let id = files_start_len.len();
+        let mut large_space = start;
+        for (&space_start, &space_len) in &spaces_start_len {
+            if space_start >= large_space {
+                break;
             }
-            id += 1;
+            if space_len >= len {
+                large_space = space_start;
+                break;
+            }
+        }
+        compact_start_id_len.insert(large_space, (id, len));
+        if let Some(space_len) = spaces_start_len.remove(&large_space) {
+            let new_space_len = space_len - len;
+            if new_space_len > 0 {
+                spaces_start_len.insert(large_space + len, new_space_len);
+            }
         }
     }
-    let mut compact = Vec::new();
-    'outer: while let Some(d) = disk.pop_front() {
-        if let Some(d) = d {
-            compact.push(d);
-        } else {
-            let d = loop {
-                let Some(d) = disk.pop_back() else {
-                    break 'outer;
-                };
-                if let Some(d) = d {
-                    break d;
-                }
-            };
-            compact.push(d);
-        }
-    }
+
     let mut sum = 0;
-    for (i, d) in compact.into_iter().enumerate() {
-        sum += (i as U) * d;
+    for (start, (id, len)) in compact_start_id_len {
+        for i in 0..len {
+            sum += (start + i) * id;
+        }
     }
     println!("{sum}");
 }

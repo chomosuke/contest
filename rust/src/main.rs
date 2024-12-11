@@ -42,6 +42,7 @@ fn main() {
                 let mut visited = vec![vec![false; map[i].len()]; map.len()];
                 visited[i][j] = true;
                 let mut to_visits = vec![(i, j)];
+                let mut ends = Vec::new();
                 while let Some((i, j)) = to_visits.pop() {
                     let mut ijs = Vec::new();
                     if i > 0 {
@@ -61,8 +62,37 @@ fn main() {
                             to_visits.push((ni, nj));
                             visited[ni][nj] = true;
                             if map[ni][nj] == 9 {
-                                count += 1;
+                                ends.push((ni, nj));
                             }
+                        }
+                    }
+                }
+                for (i, j) in ends {
+                    let mut to_visits = vec![(i, j)];
+                    count += 1;
+                    while let Some((i, j)) = to_visits.pop() {
+                        let mut ijs = Vec::new();
+                        if i > 0 {
+                            ijs.push((i - 1, j));
+                        }
+                        if j > 0 {
+                            ijs.push((i, j - 1));
+                        }
+                        if i < map.len() - 1 {
+                            ijs.push((i + 1, j));
+                        }
+                        if j < map[i].len() - 1 {
+                            ijs.push((i, j + 1));
+                        }
+                        let mut splits = 0;
+                        for (ni, nj) in ijs {
+                            if map[ni][nj] == map[i][j] - 1 && visited[ni][nj] {
+                                to_visits.push((ni, nj));
+                                splits += 1;
+                            }
+                        }
+                        if splits != 0 {
+                            count += splits - 1;
                         }
                     }
                 }

@@ -31,55 +31,45 @@ type I = i128;
 type U = u128;
 
 fn main() {
-    let map = INPUT.iter().map(|b| b - b'0');
-
-    let mut spaces_start_len = BTreeMap::<usize, usize>::new();
-    let mut files_start_len = Vec::<(usize, usize)>::new();
-
-    let mut start = 0;
-
-    let mut is_blank = false;
-    for len in map {
-        let len = len as usize;
-        if is_blank {
-            is_blank = false;
-            spaces_start_len.insert(start, len);
-        } else {
-            is_blank = true;
-            files_start_len.push((start, len));
-        }
-        start += len;
-    }
-
-    let mut compact_start_id_len = BTreeMap::<usize, (usize, usize)>::new();
-    while let Some((start, len)) = files_start_len.pop() {
-        let id = files_start_len.len();
-        let mut large_space = start;
-        for (&space_start, &space_len) in &spaces_start_len {
-            if space_start >= large_space {
-                break;
-            }
-            if space_len >= len {
-                large_space = space_start;
-                break;
-            }
-        }
-        compact_start_id_len.insert(large_space, (id, len));
-        if let Some(space_len) = spaces_start_len.remove(&large_space) {
-            let new_space_len = space_len - len;
-            if new_space_len > 0 {
-                spaces_start_len.insert(large_space + len, new_space_len);
+    let map = INPUT
+        .lines()
+        .map(|l| l.as_bytes().iter().map(|b| b - b'0').collect::<Vec<_>>())
+        .collect::<Vec<_>>();
+    let mut count = 0;
+    for i in 0..map.len() {
+        for j in 0..map[i].len() {
+            if map[i][j] == 0 {
+                let mut visited = vec![vec![false; map[i].len()]; map.len()];
+                visited[i][j] = true;
+                let mut to_visits = vec![(i, j)];
+                while let Some((i, j)) = to_visits.pop() {
+                    let mut ijs = Vec::new();
+                    if i > 0 {
+                        ijs.push((i - 1, j));
+                    }
+                    if j > 0 {
+                        ijs.push((i, j - 1));
+                    }
+                    if i < map.len() - 1 {
+                        ijs.push((i + 1, j));
+                    }
+                    if j < map[i].len() - 1 {
+                        ijs.push((i, j + 1));
+                    }
+                    for (ni, nj) in ijs {
+                        if map[ni][nj] == map[i][j] + 1 && !visited[ni][nj] {
+                            to_visits.push((ni, nj));
+                            visited[ni][nj] = true;
+                            if map[ni][nj] == 9 {
+                                count += 1;
+                            }
+                        }
+                    }
+                }
             }
         }
     }
-
-    let mut sum = 0;
-    for (start, (id, len)) in compact_start_id_len {
-        for i in 0..len {
-            sum += (start + i) * id;
-        }
-    }
-    println!("{sum}");
+    println!("{count}");
 }
 
 mod io {

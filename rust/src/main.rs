@@ -30,28 +30,39 @@ use input::*;
 type I = i128;
 type U = u128;
 
-fn main() {
-    let mut stones = INPUT
-        .split_whitespace()
-        .map(|s| s.parse::<U>().unwrap())
-        .collect::<Vec<_>>();
-
-    for _ in 0..25 {
-        let mut new_stones = Vec::new();
-        for stone in stones {
-            if stone == 0 {
-                new_stones.push(1);
-            } else if stone.to_string().len() % 2 == 0 {
-                let s = stone.to_string();
-                new_stones.push(s[..s.len() / 2].parse().unwrap());
-                new_stones.push(s[s.len() / 2..].parse().unwrap());
-            } else {
-                new_stones.push(stone * 2024);
+fn count(stone: U, blinks: usize, mem: &mut HashMap<(U, usize), U>) -> U {
+    let k = (stone, blinks);
+    if !mem.contains_key(&k) {
+        let r = 'f: {
+            if blinks == 0 {
+                break 'f 1;
             }
-        }
-        stones = new_stones;
+            if stone == 0 {
+                break 'f count(1, blinks - 1, mem);
+            }
+            if stone.to_string().len() % 2 == 0 {
+                let s = stone.to_string();
+                break 'f count(s[..s.len() / 2].parse().unwrap(), blinks - 1, mem)
+                    + count(s[s.len() / 2..].parse().unwrap(), blinks - 1, mem);
+            }
+            break 'f count(stone * 2024, blinks - 1, mem);
+        };
+        mem.insert(k, r);
     }
-    println!("{}", stones.len());
+    mem[&k]
+}
+
+fn main() {
+    let stones = INPUT.split_whitespace().map(|s| s.parse::<U>().unwrap());
+
+    let mut c = 0;
+    let mut mem = HashMap::new();
+
+    for stone in stones {
+        c += count(stone, 75, &mut mem);
+    }
+
+    println!("{}", c);
 }
 
 mod io {

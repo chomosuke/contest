@@ -31,75 +31,27 @@ type I = i128;
 type U = u128;
 
 fn main() {
-    let map = INPUT
-        .lines()
-        .map(|l| l.as_bytes().iter().map(|b| b - b'0').collect::<Vec<_>>())
+    let mut stones = INPUT
+        .split_whitespace()
+        .map(|s| s.parse::<U>().unwrap())
         .collect::<Vec<_>>();
-    let mut count = 0;
-    for i in 0..map.len() {
-        for j in 0..map[i].len() {
-            if map[i][j] == 0 {
-                let mut visited = vec![vec![false; map[i].len()]; map.len()];
-                visited[i][j] = true;
-                let mut to_visits = vec![(i, j)];
-                let mut ends = Vec::new();
-                while let Some((i, j)) = to_visits.pop() {
-                    let mut ijs = Vec::new();
-                    if i > 0 {
-                        ijs.push((i - 1, j));
-                    }
-                    if j > 0 {
-                        ijs.push((i, j - 1));
-                    }
-                    if i < map.len() - 1 {
-                        ijs.push((i + 1, j));
-                    }
-                    if j < map[i].len() - 1 {
-                        ijs.push((i, j + 1));
-                    }
-                    for (ni, nj) in ijs {
-                        if map[ni][nj] == map[i][j] + 1 && !visited[ni][nj] {
-                            to_visits.push((ni, nj));
-                            visited[ni][nj] = true;
-                            if map[ni][nj] == 9 {
-                                ends.push((ni, nj));
-                            }
-                        }
-                    }
-                }
-                for (i, j) in ends {
-                    let mut to_visits = vec![(i, j)];
-                    count += 1;
-                    while let Some((i, j)) = to_visits.pop() {
-                        let mut ijs = Vec::new();
-                        if i > 0 {
-                            ijs.push((i - 1, j));
-                        }
-                        if j > 0 {
-                            ijs.push((i, j - 1));
-                        }
-                        if i < map.len() - 1 {
-                            ijs.push((i + 1, j));
-                        }
-                        if j < map[i].len() - 1 {
-                            ijs.push((i, j + 1));
-                        }
-                        let mut splits = 0;
-                        for (ni, nj) in ijs {
-                            if map[ni][nj] == map[i][j] - 1 && visited[ni][nj] {
-                                to_visits.push((ni, nj));
-                                splits += 1;
-                            }
-                        }
-                        if splits != 0 {
-                            count += splits - 1;
-                        }
-                    }
-                }
+
+    for _ in 0..25 {
+        let mut new_stones = Vec::new();
+        for stone in stones {
+            if stone == 0 {
+                new_stones.push(1);
+            } else if stone.to_string().len() % 2 == 0 {
+                let s = stone.to_string();
+                new_stones.push(s[..s.len() / 2].parse().unwrap());
+                new_stones.push(s[s.len() / 2..].parse().unwrap());
+            } else {
+                new_stones.push(stone * 2024);
             }
         }
+        stones = new_stones;
     }
-    println!("{count}");
+    println!("{}", stones.len());
 }
 
 mod io {

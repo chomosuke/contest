@@ -43,7 +43,8 @@ fn main() {
                 continue;
             }
             let mut area = 0_u128;
-            let mut fence = 0_u128;
+            let mut fence_v = HashMap::<(I, I), Vec<I>>::new();
+            let mut fence_h = HashMap::<(I, I), Vec<I>>::new();
             let color = garden[i][j];
 
             let mut to_visits = vec![(i, j)];
@@ -54,25 +55,41 @@ fn main() {
 
                 let i = i as i128;
                 let j = j as i128;
-                for (i, j) in [(i, j + 1), (i + 1, j), (i, j - 1), (i - 1, j)] {
-                    if i >= 0 && j >= 0 {
-                        let i = i as usize;
-                        let j = j as usize;
+                for (ni, nj) in [(i, j + 1), (i + 1, j), (i, j - 1), (i - 1, j)] {
+                    if ni >= 0 && nj >= 0 {
+                        let i = ni as usize;
+                        let j = nj as usize;
                         if i < garden.len() && j < garden[i].len() && garden[i][j] == color {
                             if !visited[i][j] {
                                 visited[i][j] = true;
                                 to_visits.push((i, j));
                             }
-                        } else {
-                            fence += 1;
+                            continue;
                         }
+                    }
+                    if ni != i {
+                        fence_v.entry((i, ni)).or_default().push(j);
                     } else {
+                        assert_ne!(nj, j);
+                        fence_h.entry((j, nj)).or_default().push(i);
+                    }
+                }
+            }
+
+            let mut fence = 0;
+            for mut vs in fence_v.into_values().chain(fence_h.into_values()) {
+                vs.sort();
+                fence += 1;
+                for i in 1..vs.len() {
+                    if vs[i] - vs[i - 1] != 1 {
                         fence += 1;
                     }
                 }
             }
 
             price += fence * area;
+
+            // println!("{} {fence}", color as char);
         }
     }
     println!("{price}");

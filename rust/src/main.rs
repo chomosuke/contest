@@ -30,39 +30,52 @@ use input::*;
 type I = i128;
 type U = u128;
 
-fn count(stone: U, blinks: usize, mem: &mut HashMap<(U, usize), U>) -> U {
-    let k = (stone, blinks);
-    if !mem.contains_key(&k) {
-        let r = 'f: {
-            if blinks == 0 {
-                break 'f 1;
-            }
-            if stone == 0 {
-                break 'f count(1, blinks - 1, mem);
-            }
-            if stone.to_string().len() % 2 == 0 {
-                let s = stone.to_string();
-                break 'f count(s[..s.len() / 2].parse().unwrap(), blinks - 1, mem)
-                    + count(s[s.len() / 2..].parse().unwrap(), blinks - 1, mem);
-            }
-            break 'f count(stone * 2024, blinks - 1, mem);
-        };
-        mem.insert(k, r);
-    }
-    mem[&k]
-}
-
 fn main() {
-    let stones = INPUT.split_whitespace().map(|s| s.parse::<U>().unwrap());
+    let garden = INPUT
+        .lines()
+        .map(|s| s.as_bytes().to_owned())
+        .collect::<Vec<_>>();
+    let mut visited = vec![vec![false; garden[0].len()]; garden.len()];
+    let mut price = 0;
+    for i in 0..garden.len() {
+        for j in 0..garden[i].len() {
+            if visited[i][j] {
+                continue;
+            }
+            let mut area = 0_u128;
+            let mut fence = 0_u128;
+            let color = garden[i][j];
 
-    let mut c = 0;
-    let mut mem = HashMap::new();
+            let mut to_visits = vec![(i, j)];
+            visited[i][j] = true;
+            while let Some((i, j)) = to_visits.pop() {
+                area += 1;
+                assert_eq!(color, garden[i][j]);
 
-    for stone in stones {
-        c += count(stone, 75, &mut mem);
+                let i = i as i128;
+                let j = j as i128;
+                for (i, j) in [(i, j + 1), (i + 1, j), (i, j - 1), (i - 1, j)] {
+                    if i >= 0 && j >= 0 {
+                        let i = i as usize;
+                        let j = j as usize;
+                        if i < garden.len() && j < garden[i].len() && garden[i][j] == color {
+                            if !visited[i][j] {
+                                visited[i][j] = true;
+                                to_visits.push((i, j));
+                            }
+                        } else {
+                            fence += 1;
+                        }
+                    } else {
+                        fence += 1;
+                    }
+                }
+            }
+
+            price += fence * area;
+        }
     }
-
-    println!("{}", c);
+    println!("{price}");
 }
 
 mod io {

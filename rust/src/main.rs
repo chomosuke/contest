@@ -24,75 +24,208 @@ use std::{
     },
 };
 
+type Int = i128;
+
+fn find_linear_comb(a: Int, b: Int) -> (Int, Int, Int) {
+    let mut x_a1 = 1;
+    let mut y_a1 = 0;
+    let mut x_b1 = 0;
+    let mut y_b1 = 1;
+    let mut a1 = a;
+    let mut b1 = b;
+    while b1 != 0 {
+        let q = a1 / b1;
+        let a2 = b1;
+        let b2 = a1 - q * b1;
+        let x_a2 = x_b1;
+        let y_a2 = y_b1;
+        let x_b2 = x_a1 - q * x_b1;
+        let y_b2 = y_a1 - q * y_b1;
+
+        a1 = a2;
+        b1 = b2;
+        x_a1 = x_a2;
+        y_a1 = y_a2;
+        x_b1 = x_b2;
+        y_b1 = y_b2;
+    }
+    (a1, x_a1, y_a1)
+}
+
+struct LDESIter {
+    xy: (Int, Int),
+    diff: (Int, Int),
+    k_range: Range<Int>,
+}
+impl Iterator for LDESIter {
+    type Item = (Int, Int);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let k = self.k_range.next()?;
+        Some((self.xy.0 + k * self.diff.0, self.xy.1 + k * self.diff.1))
+    }
+}
+
+fn linear_diophantine_eq_sols(
+    a: Int,
+    b: Int,
+    c: Int,
+    x_range: Range<Int>,
+    y_range: Range<Int>,
+) -> impl Iterator<Item = (Int, Int)> {
+    let (gcd, x, y) = find_linear_comb(a, b);
+    if c % gcd != 0 {
+        return LDESIter {
+            xy: (0, 0),
+            diff: (0, 0),
+            k_range: 0..0,
+        };
+    }
+    let n = c / gcd;
+    let x = x * n;
+    let y = y * n;
+
+    let mut x_diff = b / gcd;
+    let mut y_diff = -a / gcd;
+    if x_diff < 0 {
+        x_diff = -x_diff;
+        y_diff = -y_diff;
+    }
+
+    let x_end = x_range.end - 1;
+    let x_start = x_range.start;
+    let y_end = y_range.end - 1;
+    let y_start = y_range.start;
+
+    fn div_ceil(x: Int, y: Int) -> Int {
+        if (x < 0) != (y < 0) {
+            x / y
+        } else {
+            (x - 1) / y + 1
+        }
+    }
+
+    fn div_floor(x: Int, y: Int) -> Int {
+        if (x < 0) != (y < 0) {
+            (x + 1) / y - 1
+        } else {
+            x / y
+        }
+    }
+
+    let mut k_start = Int::MIN;
+    let mut k_end = Int::MAX;
+    if x_diff == 0 {
+        if x_start <= x && x < x_end {
+            return LDESIter {
+                xy: (x, 0),
+                diff: (0, 1),
+                k_range: y_start..(y_end + 1),
+            };
+        } else {
+            return LDESIter {
+                xy: (0, 0),
+                diff: (0, 0),
+                k_range: 0..0,
+            };
+        }
+    }
+    if x_diff < 0 {
+        k_start = k_start.max(div_ceil(x_end - x, x_diff));
+        k_end = k_end.min(div_floor(x_start - x, x_diff));
+    } else {
+        k_start = k_start.max(div_ceil(x_start - x, x_diff));
+        k_end = k_end.min(div_floor(x_end - x, x_diff));
+    }
+
+    if y_diff == 0 {
+        if y_start <= y && y < y_end {
+            return LDESIter {
+                xy: (0, y),
+                diff: (1, 0),
+                k_range: x_start..(x_end + 1),
+            };
+        } else {
+            return LDESIter {
+                xy: (0, 0),
+                diff: (0, 0),
+                k_range: 0..0,
+            };
+        }
+    }
+    if y_diff < 0 {
+        k_start = k_start.max(div_ceil(y_end - y, y_diff));
+        k_end = k_end.min(div_floor(y_start - y, y_diff));
+    } else {
+        k_start = k_start.max(div_ceil(y_start - y, y_diff));
+        k_end = k_end.min(div_floor(y_end - y, y_diff));
+    }
+
+    LDESIter {
+        xy: (x, y),
+        diff: (x_diff, y_diff),
+        k_range: k_start..(k_end + 1),
+    }
+}
+
 mod input;
 use input::*;
 
 type I = i128;
 type U = u128;
 
+struct XY {
+    x: I,
+    y: I,
+}
+
+struct Machine {
+    a: XY,
+    b: XY,
+    p: XY,
+}
+
 fn main() {
-    let garden = INPUT
-        .lines()
-        .map(|s| s.as_bytes().to_owned())
-        .collect::<Vec<_>>();
-    let mut visited = vec![vec![false; garden[0].len()]; garden.len()];
-    let mut price = 0;
-    for i in 0..garden.len() {
-        for j in 0..garden[i].len() {
-            if visited[i][j] {
-                continue;
+    let re = Regex::new(
+        r"Button A: X\+(?<AX>\d+), Y\+(?<AY>\d+)
+Button B: X\+(?<BX>\d+), Y\+(?<BY>\d+)
+Prize: X=(?<PX>\d+), Y=(?<PY>\d+)",
+    )
+    .unwrap();
+
+    let machines = re.captures_iter(INPUT).map(|cap| Machine {
+        a: XY {
+            x: cap.name("AX").unwrap().as_str().parse().unwrap(),
+            y: cap.name("AY").unwrap().as_str().parse().unwrap(),
+        },
+        b: XY {
+            x: cap.name("BX").unwrap().as_str().parse().unwrap(),
+            y: cap.name("BY").unwrap().as_str().parse().unwrap(),
+        },
+        p: XY {
+            x: cap.name("PX").unwrap().as_str().parse().unwrap(),
+            y: cap.name("PY").unwrap().as_str().parse().unwrap(),
+        },
+    });
+
+    let mut tokens = 0;
+
+    for m in machines {
+        let x =
+            linear_diophantine_eq_sols(m.a.x, m.b.x, m.p.x, 0..101, 0..101).collect::<HashSet<_>>();
+        let y = linear_diophantine_eq_sols(m.a.y, m.b.y, m.p.y, 0..101, 0..101);
+        let mut t = I::MAX;
+        for ab in y {
+            if x.contains(&ab) {
+                t = t.min(ab.0 * 3 + ab.1);
             }
-            let mut area = 0_u128;
-            let mut fence_v = HashMap::<(I, I), Vec<I>>::new();
-            let mut fence_h = HashMap::<(I, I), Vec<I>>::new();
-            let color = garden[i][j];
-
-            let mut to_visits = vec![(i, j)];
-            visited[i][j] = true;
-            while let Some((i, j)) = to_visits.pop() {
-                area += 1;
-                assert_eq!(color, garden[i][j]);
-
-                let i = i as i128;
-                let j = j as i128;
-                for (ni, nj) in [(i, j + 1), (i + 1, j), (i, j - 1), (i - 1, j)] {
-                    if ni >= 0 && nj >= 0 {
-                        let i = ni as usize;
-                        let j = nj as usize;
-                        if i < garden.len() && j < garden[i].len() && garden[i][j] == color {
-                            if !visited[i][j] {
-                                visited[i][j] = true;
-                                to_visits.push((i, j));
-                            }
-                            continue;
-                        }
-                    }
-                    if ni != i {
-                        fence_v.entry((i, ni)).or_default().push(j);
-                    } else {
-                        assert_ne!(nj, j);
-                        fence_h.entry((j, nj)).or_default().push(i);
-                    }
-                }
-            }
-
-            let mut fence = 0;
-            for mut vs in fence_v.into_values().chain(fence_h.into_values()) {
-                vs.sort();
-                fence += 1;
-                for i in 1..vs.len() {
-                    if vs[i] - vs[i - 1] != 1 {
-                        fence += 1;
-                    }
-                }
-            }
-
-            price += fence * area;
-
-            // println!("{} {fence}", color as char);
+        }
+        if t != I::MAX {
+            tokens += t;
         }
     }
-    println!("{price}");
+
+    println!("{tokens}");
 }
 
 mod io {

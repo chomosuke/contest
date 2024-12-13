@@ -72,7 +72,7 @@ fn linear_diophantine_eq_sols(
     c: Int,
     x_range: Range<Int>,
     y_range: Range<Int>,
-) -> impl Iterator<Item = (Int, Int)> {
+) -> LDESIter {
     let (gcd, x, y) = find_linear_comb(a, b);
     if c % gcd != 0 {
         return LDESIter {
@@ -203,25 +203,35 @@ Prize: X=(?<PX>\d+), Y=(?<PY>\d+)",
             y: cap.name("BY").unwrap().as_str().parse().unwrap(),
         },
         p: XY {
-            x: cap.name("PX").unwrap().as_str().parse().unwrap(),
-            y: cap.name("PY").unwrap().as_str().parse().unwrap(),
+            x: cap.name("PX").unwrap().as_str().parse::<I>().unwrap() + 10000000000000,
+            y: cap.name("PY").unwrap().as_str().parse::<I>().unwrap() + 10000000000000,
         },
     });
 
     let mut tokens = 0;
 
-    for m in machines {
-        let x =
-            linear_diophantine_eq_sols(m.a.x, m.b.x, m.p.x, 0..101, 0..101).collect::<HashSet<_>>();
-        let y = linear_diophantine_eq_sols(m.a.y, m.b.y, m.p.y, 0..101, 0..101);
-        let mut t = I::MAX;
-        for ab in y {
-            if x.contains(&ab) {
-                t = t.min(ab.0 * 3 + ab.1);
-            }
+    for Machine { a, b, p } in machines {
+        let bd = b.y * a.x - b.x * a.y;
+        if bd == 0 {
+            continue;
         }
-        if t != I::MAX {
-            tokens += t;
+        let bn = p.y * a.x - p.x * a.y;
+        if bn % bd != 0 {
+            continue;
+        }
+        let be = bn / bd;
+
+        let ad = a.x;
+        if ad == 0 {
+            continue;
+        }
+        let an = p.x - be * b.x;
+        if an % ad != 0 {
+            continue;
+        }
+        let ae = an / a.x;
+        if ae >= 0 && be >= 0 {
+            tokens += ae * 3 + be;
         }
     }
 

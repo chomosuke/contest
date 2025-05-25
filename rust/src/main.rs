@@ -9,7 +9,6 @@
 )]
 use core::hash::Hash;
 use io::*;
-use regex::Regex;
 use std::{
     cmp::{max, min, Ordering, Reverse},
     collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, VecDeque},
@@ -24,66 +23,53 @@ use std::{
     },
 };
 
-mod input;
-use input::*;
-
-type I = i128;
-type U = u128;
-
-struct XY {
-    x: I,
-    y: I,
-}
-
-struct Robot {
-    p: XY,
-    v: XY,
+fn pow(x: usize, n: usize, m: usize) -> usize {
+    let x = x.rem_euclid(m);
+    if n == 0 {
+        1
+    } else if n % 2 == 0 {
+        pow(x, n / 2, m).pow(2).rem_euclid(m)
+    } else {
+        (pow(x, n - 1, m) * x).rem_euclid(m)
+    }
 }
 
 fn main() {
-    let re = Regex::new(r"p=(?<px>-?\d+),(?<py>-?\d+) v=(?<vx>-?\d+),(?<vy>-?\d+)").unwrap();
-
-    let mut robots = re
-        .captures_iter(INPUT)
-        .map(|cap| Robot {
-            p: XY {
-                x: cap.name("px").unwrap().as_str().parse::<I>().unwrap(),
-                y: cap.name("py").unwrap().as_str().parse::<I>().unwrap(),
-            },
-            v: XY {
-                x: cap.name("vx").unwrap().as_str().parse::<I>().unwrap(),
-                y: cap.name("vy").unwrap().as_str().parse::<I>().unwrap(),
-            },
-        })
-        .collect::<Vec<_>>();
-
-    let width = 101;
-    let height = 103;
-
-    for r in &mut robots {
-        r.p.x += r.v.x * 100;
-        r.p.x = r.p.x.rem_euclid(width);
-        r.p.y += r.v.y * 100;
-        r.p.y = r.p.y.rem_euclid(height);
-    }
-
-    let mut quats = (0_usize, 0_usize, 0_usize, 0_usize);
-    for Robot { p, .. } in &robots {
-        if p.x < width / 2 && p.y < height / 2 {
-            quats.0 += 1;
+    let mut sc = Scanner::new(stdin());
+    let mut pt = Printer::new(stdout());
+    let test_case_count = sc.next::<usize>();
+    let modulo = 10_usize.pow(9) + 7;
+    for _ in 0..test_case_count {
+        let n = sc.next::<usize>();
+        let m = sc.next::<usize>();
+        let k = sc.next::<usize>();
+        let mut g_edge = (n - 2 + m - 2) * 2;
+        let mut black_edge = 0_usize;
+        for _ in 0..k {
+            let x = sc.next::<usize>();
+            let y = sc.next::<usize>();
+            let c = sc.next::<u8>();
+            let x_edge = x == 1 || x == n;
+            let y_edge = y == 1 || y == m;
+            if x_edge != y_edge {
+                g_edge -= 1;
+                if c == 1 {
+                    black_edge += 1;
+                }
+            }
         }
-        if p.x > width / 2 && p.y < height / 2 {
-            quats.1 += 1;
-        }
-        if p.x > width / 2 && p.y > height / 2 {
-            quats.2 += 1;
-        }
-        if p.x < width / 2 && p.y > height / 2 {
-            quats.3 += 1;
+        let g_total = n * m - k;
+
+        if g_edge > 0 {
+            pt.println(pow(2, g_total - 1, modulo));
+        } else {
+            if black_edge % 2 == 0 {
+                pt.println(pow(2, g_total, modulo));
+            } else {
+                pt.println(0);
+            }
         }
     }
-
-    println!("{}", quats.0 * quats.1 * quats.2 * quats.3);
 }
 
 mod io {
